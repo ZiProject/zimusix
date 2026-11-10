@@ -1,0 +1,23 @@
+[package]
+name = "zimusix"
+version = "0.1.0"
+description = "Zimusix - trình phát nhạc chạy trên app và bot Discord voice"
+edition = "2021"
+
+[lib]
+name = "zimusix_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+uuid = { version = "1", features = ["v4"] }
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true
