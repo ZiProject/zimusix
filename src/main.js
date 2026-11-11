@@ -39,6 +39,10 @@ const ICONS = {
   link: '<path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>',
   video:
     '<path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>',
+  sidebar:
+    '<path d="M3 4h18a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm5 2v12h12V6H8zM4 6v12h2V6H4z"/>',
+  fullscreen:
+    '<path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z"/>',
   refresh:
     '<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>',
 };
@@ -122,17 +126,22 @@ const app = {
   },
   guilds: [],
   voiceByGuild: {}, // guildId -> {channelId, channelName}
+  stateByTarget: {},
   dragging: false,
   receivedAt: 0,
   videoBg: true, // video background bằng player.saveVideo
+  videoOpacity: 100,
+  sidebarHidden: false,
   lyrics: null, // lời bài hát đồng bộ
   lyricsLoading: false,
-  selectedVoiceLink: { guildId: "", channelId: "" }, // chọn kênh để nối dây
+  wiringOpen: false,
+  webAudioSourceTarget: "local",
 };
 
 const root = document.getElementById("app");
 const refs = {};
 let stopWatching = null;
+let activeWireDrag = null;
 
 /* --------------------------------------------------------------------- toast */
 
@@ -231,6 +240,12 @@ function switchView(view) {
   if (view === "lyrics") loadLyrics();
 }
 
+function toggleSidebar() {
+  app.sidebarHidden = !app.sidebarHidden;
+  root.classList.toggle("sidebar-hidden", app.sidebarHidden);
+  renderMain();
+}
+
 /* -------------------------------------------------------- video background */
 
 function seekVideoIfBuffered(video, targetSec) {
@@ -269,7 +284,7 @@ function updateVideoBg() {
       bgVideo.style.opacity = "0";
     });
     bgVideo.addEventListener("playing", () => {
-      if (app.videoBg) bgVideo.style.opacity = "1";
+      if (app.videoBg) bgVideo.style.opacity = String(app.videoOpacity / 100);
     });
     bgVideo.addEventListener("canplay", () => {
       if (app.videoBg && app.state?.isPlaying && !app.state?.isPaused) {
@@ -290,7 +305,7 @@ function updateVideoBg() {
     if (app.state?.isPlaying && !app.state?.isPaused) {
       seekVideoIfBuffered(bgVideo, currentPosition() / 1000);
       bgVideo.play().catch(() => {});
-      bgVideo.style.opacity = "1";
+      bgVideo.style.opacity = String(app.videoOpacity / 100);
     } else {
       bgVideo.pause();
     }
@@ -313,6 +328,29 @@ function toggleVideoBg() {
   );
   updateVideoBg();
   renderPlayer();
+}
+
+function setVideoOpacity(value) {
+  app.videoOpacity = Number(value);
+  const output = document.querySelector(".video-opacity-value");
+  if (output) output.textContent = `${app.videoOpacity}%`;
+  const bgVideo = document.getElementById("bg-video");
+  if (bgVideo && app.videoBg && app.state?.currentTrack)
+    bgVideo.style.opacity = String(app.videoOpacity / 100);
+}
+
+async function toggleFullscreen() {
+  await act(async () => {
+    if (api.isTauri()) {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const window = getCurrentWindow();
+      await window.setFullscreen(!(await window.isFullscreen()));
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await root.requestFullscreen();
+    }
+  });
 }
 
 /* ------------------------------------------------------------------ lyrics */
@@ -386,31 +424,72 @@ function updateLyricsSync() {
 
 /* ------------------------------------------------------------- voice link */
 
-async function linkVoiceAction(guildId, channelId) {
-  if (!guildId || !channelId)
-    return toast("Vui lòng chọn server và kênh thoại", "error");
+async function linkVoiceAction(sourceTarget, guildId, channelId) {
+  if (!sourceTarget || !guildId || !channelId)
+    return toast("Vui lòng chọn nguồn phát và kênh thoại đích", "error");
   const state = await act(
-    () => api.post("/voice/link", { target: app.target, guildId, channelId }),
-    "Đã kéo dây link: Âm thanh phát cả trong App và Discord Voice!",
+    () =>
+      api.post("/voice/link", {
+        target: sourceTarget,
+        guildId,
+        channelId,
+      }),
+    "Đã nối nguồn phát tới Discord Voice",
   );
-  if (state?.activeTarget && state.activeTarget !== app.target) {
-    app.listen = true;
-    await setTarget(state.activeTarget);
-    app.listen = true;
-    await syncAudio();
-  } else if (state) {
-    app.listen = true;
-    setState(state);
-    await syncAudio();
+  if (!state) {
+    const [sourceState, destinationState] = await Promise.all([
+      act(() => api.get(`/state?target=${encodeURIComponent(sourceTarget)}`)),
+      act(() => api.get(`/state?target=${encodeURIComponent(guildId)}`)),
+    ]);
+    if (sourceState) {
+      app.stateByTarget[sourceTarget] = sourceState;
+      if (sourceTarget === app.target) setState(sourceState);
+    }
+    if (destinationState) {
+      app.stateByTarget[guildId] = destinationState;
+      app.voiceByGuild[guildId] = destinationState.voice ?? undefined;
+    }
+    renderSidebar();
+    renderPlayer();
+    return;
   }
+  const activeTarget = state.activeTarget || sourceTarget;
+  if (activeTarget !== app.target) await setTarget(activeTarget);
+  if (state.sourceState)
+    app.stateByTarget[state.sourceState.target] = state.sourceState;
+  app.voiceByGuild[guildId] = {
+    channelId,
+    channelName: state.linkedVoice?.channelName,
+  };
+  if (state.target === app.target) setState(state);
+  else app.stateByTarget[state.target] = state;
+  if (state.destinationState)
+    app.stateByTarget[state.destinationState.target] = state.destinationState;
+  renderSidebar();
+  renderPlayer();
 }
 
-async function unlinkVoiceAction() {
+async function unlinkVoiceAction(target = app.target) {
   const state = await act(
-    () => api.post("/voice/unlink", { target: app.target }),
-    "Đã rút dây ngắt liên kết Discord Voice",
+    () => api.post("/voice/unlink", { target }),
+    "Đã rút dây kết nối Voice",
   );
-  if (state) setState(state);
+  if (!state) return;
+  app.stateByTarget[target] = state;
+  if (state.relatedState)
+    app.stateByTarget[state.relatedState.target] = state.relatedState;
+  if (state.target === app.target) setState(state);
+  renderSidebar();
+  renderPlayer();
+}
+
+async function connectToApp(sourceTarget) {
+  if (sourceTarget !== app.target) await setTarget(sourceTarget);
+  app.webAudioSourceTarget = sourceTarget;
+  app.listen = true;
+  renderPlayer();
+  await syncAudio();
+  toast("Đã nối nguồn phát tới ứng dụng", "ok");
 }
 
 /* ----------------------------------------------------------------- related */
@@ -444,6 +523,7 @@ function setState(state) {
   const prevTrackKey = app.state?.currentTrack?.key;
   const trackChanged = prevTrackKey !== state.currentTrack?.key;
   app.state = state;
+  app.stateByTarget[state.target] = state;
   app.receivedAt = performance.now();
   if (state.target !== "local")
     app.voiceByGuild[state.target] = state.voice ?? undefined;
@@ -455,7 +535,7 @@ function setState(state) {
     loadLyrics();
   }
   if (
-    ["queue", "related", "voicelink"].includes(app.view) ||
+    ["queue", "related"].includes(app.view) ||
     (app.view === "lyrics" && trackChanged)
   ) {
     renderMain();
@@ -473,16 +553,14 @@ function watch() {
 async function setTarget(target) {
   if (target === app.target) return;
   app.target = target;
-  app.listen =
-    target === "local" ||
-    Boolean(app.state?.isVoiceLinked || app.state?.linkedVoice);
+  app.listen = target === app.webAudioSourceTarget;
   lastActiveLyricIdx = -1;
   watch();
   renderSidebar();
   renderPlayer();
   updateVideoBg();
   loadLyrics();
-  if (["queue", "related", "voicelink", "lyrics"].includes(app.view))
+  if (["queue", "related", "lyrics"].includes(app.view))
     renderMain();
   await syncAudio();
 }
@@ -609,7 +687,10 @@ async function loadGuilds() {
       guilds.map((g) => api.get(`/state?target=${g.id}`).catch(() => null)),
     );
     states.forEach(
-      (s, i) => (app.voiceByGuild[guilds[i].id] = s?.voice ?? undefined),
+      (s, i) => {
+        app.voiceByGuild[guilds[i].id] = s?.voice ?? undefined;
+        if (s) app.stateByTarget[guilds[i].id] = s;
+      },
     );
   } catch (error) {
     app.guilds = [];
@@ -704,7 +785,6 @@ function renderSidebar() {
     ["queue", "queue", "Hàng đợi"],
     ["related", "sparkles", "Gợi ý"],
     ["lyrics", "mic", "Lời bài hát"],
-    ["voicelink", "link", "Nối dây Voice"],
     ["discord", "discord", "Discord"],
   ];
   const targets = [
@@ -736,9 +816,6 @@ function renderSidebar() {
             : null,
           view === "related" && app.state?.related?.length
             ? h("span", { class: "count" }, app.state.related.length)
-            : null,
-          view === "voicelink" && app.state?.isVoiceLinked
-            ? h("span", { class: "dot ready", style: { marginLeft: "auto" } })
             : null,
         ),
       ),
@@ -1253,253 +1330,6 @@ function viewLyrics() {
   );
 }
 
-function viewVoiceLink() {
-  const state = app.state;
-  const isLinked = Boolean(state?.isVoiceLinked || state?.linkedVoice);
-  const linkedVoice = state?.linkedVoice;
-  const d = app.discord;
-
-  if (!app.selectedVoiceLink.guildId && app.guilds.length > 0) {
-    app.selectedVoiceLink.guildId = app.guilds[0].id;
-  }
-  const currentGuild =
-    app.guilds.find((g) => g.id === app.selectedVoiceLink.guildId) ||
-    app.guilds[0];
-  const channels = currentGuild?.channels || [];
-  if (!app.selectedVoiceLink.channelId && channels.length > 0) {
-    app.selectedVoiceLink.channelId = channels[0].id;
-  }
-
-  return h(
-    "section",
-    { class: "view" },
-    h(
-      "div",
-      { class: "view-head" },
-      h(
-        "div",
-        null,
-        h("h2", null, "Nối dây Voice (Kéo dây link Audio)"),
-        h(
-          "p",
-          { class: "muted" },
-          "Kết nối phát trong app kéo dây link với Discord Voice để cả hai cùng phát chung một Player!",
-        ),
-      ),
-    ),
-    h(
-      "div",
-      { class: "patchbay" },
-      h(
-        "div",
-        { class: "jack-box source" },
-        h(
-          "div",
-          { class: "jack-box-head" },
-          icon("headphones", 20),
-          "Máy này (App Audio)",
-        ),
-        h(
-          "small",
-          { class: "muted" },
-          state?.currentTrack
-            ? `Đang phát: ${state.currentTrack.title}`
-            : "Nghe trực tiếp trong app",
-        ),
-        h(
-          "div",
-          { class: "jack-socket-wrap" },
-          h("div", {
-            class: `jack-socket ${isLinked ? "connected" : ""}`,
-            title: isLinked ? "Cổng ra: Đã nối dây" : "Cổng ra âm thanh",
-            onclick: () =>
-              isLinked
-                ? unlinkVoiceAction()
-                : linkVoiceAction(
-                    app.selectedVoiceLink.guildId,
-                    app.selectedVoiceLink.channelId,
-                  ),
-          }),
-        ),
-        h(
-          "span",
-          { class: `badge ${isLinked ? "attachments" : ""}` },
-          isLinked ? "OUTPUT: LINKED" : "OUTPUT: READY",
-        ),
-      ),
-      h(
-        "div",
-        { class: "patch-center" },
-        h(
-          "svg",
-          {
-            class: "cable-svg",
-            viewBox: "0 0 200 100",
-            preserveAspectRatio: "none",
-          },
-          h("path", {
-            d: isLinked
-              ? "M 10 50 C 70 85 130 85 190 50"
-              : "M 10 50 C 40 90 60 110 70 120",
-            class: `cable-wire ${isLinked ? "pulse" : ""}`,
-          }),
-        ),
-        h(
-          "button",
-          {
-            class: isLinked ? "danger small" : "primary small",
-            onclick: () =>
-              isLinked
-                ? unlinkVoiceAction()
-                : linkVoiceAction(
-                    app.selectedVoiceLink.guildId,
-                    app.selectedVoiceLink.channelId,
-                  ),
-            disabled: d.status !== "ready" || !channels.length,
-          },
-          isLinked ? "Rút dây (Unlink)" : "⚡ Kéo dây nối",
-        ),
-      ),
-      h(
-        "div",
-        { class: "jack-box destination" },
-        h(
-          "div",
-          { class: "jack-box-head" },
-          icon("discord", 20),
-          "Discord Voice",
-        ),
-        d.status !== "ready"
-          ? h(
-              "div",
-              null,
-              h("small", { class: "muted" }, "Bot Discord chưa đăng nhập."),
-              h(
-                "button",
-                {
-                  class: "small",
-                  style: { marginTop: "8px" },
-                  onclick: () => switchView("discord"),
-                },
-                "Đăng nhập bot",
-              ),
-            )
-          : h(
-              "div",
-              {
-                style: { display: "flex", flexDirection: "column", gap: "8px" },
-              },
-              h(
-                "select",
-                {
-                  onchange: (e) => {
-                    app.selectedVoiceLink.guildId = e.target.value;
-                    const g = app.guilds.find((x) => x.id === e.target.value);
-                    if (g?.channels?.[0])
-                      app.selectedVoiceLink.channelId = g.channels[0].id;
-                    renderMain();
-                  },
-                },
-                app.guilds.map((g) =>
-                  h(
-                    "option",
-                    {
-                      value: g.id,
-                      selected: g.id === app.selectedVoiceLink.guildId,
-                    },
-                    g.name,
-                  ),
-                ),
-              ),
-              h(
-                "select",
-                {
-                  onchange: (e) => {
-                    app.selectedVoiceLink.channelId = e.target.value;
-                    renderMain();
-                  },
-                },
-                channels.map((c) =>
-                  h(
-                    "option",
-                    {
-                      value: c.id,
-                      selected: c.id === app.selectedVoiceLink.channelId,
-                    },
-                    `🔊 ${c.name}`,
-                  ),
-                ),
-              ),
-              h(
-                "div",
-                { class: "jack-socket-wrap" },
-                h("div", {
-                  class: `jack-socket ${isLinked ? "connected" : ""}`,
-                  title: isLinked
-                    ? "Cổng vào: Đã nối dây"
-                    : "Cổng vào kênh thoại Discord",
-                  onclick: () =>
-                    isLinked
-                      ? unlinkVoiceAction()
-                      : linkVoiceAction(
-                          app.selectedVoiceLink.guildId,
-                          app.selectedVoiceLink.channelId,
-                        ),
-                }),
-              ),
-            ),
-        h(
-          "span",
-          { class: `badge ${isLinked ? "youtube" : ""}` },
-          isLinked ? "INPUT: LINKED" : "INPUT: WAITING",
-        ),
-      ),
-    ),
-    h(
-      "div",
-      { class: `wire-status-card ${isLinked ? "active" : ""}` },
-      h(
-        "div",
-        null,
-        h(
-          "b",
-          null,
-          isLinked
-            ? "🔗 Đã kéo dây link thành công!"
-            : "⚪ Chưa nối dây Discord Voice",
-        ),
-        h(
-          "p",
-          { class: "muted small", style: { margin: "4px 0 0" } },
-          isLinked
-            ? `Cả 2 đang phát cùng 1 Player: âm thanh phát song song ra loa/tai nghe máy này VÀ kênh #${linkedVoice?.channelName || "thoại"} (${linkedVoice?.guildName || "Discord"})!`
-            : "Khi nối dây, một Player duy nhất sẽ phát đồng thời tới cả loa trong app và kênh Discord đã chọn mà không cần thêm bot phụ hay transcode.",
-        ),
-      ),
-      isLinked
-        ? h(
-            "button",
-            { class: "danger", onclick: unlinkVoiceAction },
-            "Rút dây",
-          )
-        : d.status === "ready" && channels.length
-          ? h(
-              "button",
-              {
-                class: "primary",
-                onclick: () =>
-                  linkVoiceAction(
-                    app.selectedVoiceLink.guildId,
-                    app.selectedVoiceLink.channelId,
-                  ),
-              },
-              "Kéo dây link ngay",
-            )
-          : null,
-    ),
-  );
-}
-
 function viewDiscord() {
   const d = app.discord;
   if (d.status !== "ready") {
@@ -1635,12 +1465,51 @@ function renderMain() {
     queue: viewQueue,
     related: viewRelated,
     lyrics: viewLyrics,
-    voicelink: viewVoiceLink,
     discord: viewDiscord,
   };
   // giữ focus & vị trí con trỏ của ô tìm kiếm khi re-render
   const hadFocus = document.activeElement?.matches?.('input[type="search"]');
-  refs.main.replaceChildren(views[app.view]());
+  refs.main.replaceChildren(
+    h(
+      "div",
+      { class: "main-toolbar" },
+      h(
+        "label",
+        { class: "video-opacity-control", title: "Độ mờ video nền" },
+        h("span", null, "Độ đậm"),
+        h("input", {
+          type: "range",
+          min: 0,
+          max: 100,
+          value: app.videoOpacity,
+          "aria-label": "Độ mờ video nền",
+          oninput: (event) => setVideoOpacity(event.target.value),
+        }),
+        h("output", { class: "video-opacity-value" }, `${app.videoOpacity}%`),
+      ),
+      h(
+        "button",
+        {
+          class: "icon-btn",
+          title: app.sidebarHidden ? "Hiện thanh bên" : "Ẩn thanh bên",
+          "aria-label": app.sidebarHidden ? "Hiện thanh bên" : "Ẩn thanh bên",
+          onclick: () => toggleSidebar(),
+        },
+        icon("sidebar", 18),
+      ),
+      h(
+        "button",
+        {
+          class: "icon-btn",
+          title: "Bật / tắt toàn màn hình",
+          "aria-label": "Bật / tắt toàn màn hình",
+          onclick: () => toggleFullscreen(),
+        },
+        icon("fullscreen", 18),
+      ),
+    ),
+    views[app.view](),
+  );
   if (hadFocus) refs.main.querySelector('input[type="search"]')?.focus();
 }
 
@@ -1648,7 +1517,345 @@ function renderMain() {
 
 let dragging = false;
 
+function wireSources() {
+  return [
+    {
+      id: "local",
+      label: "Ứng dụng",
+      detail: app.stateByTarget.local?.currentTrack?.title ?? "Player trong app",
+    },
+    ...joinedTargets().map((target) => ({
+      id: target.id,
+      label: target.name,
+      detail: `#${target.channel}`,
+    })),
+  ];
+}
+
+function routeWire(sourceTarget, destination) {
+  if (destination.type === "app") {
+    void connectToApp(sourceTarget);
+    return;
+  }
+  if (sourceTarget === destination.guildId) {
+    toast("Chọn một server voice khác với đầu ra nguồn", "error");
+    return;
+  }
+  linkVoiceAction(sourceTarget, destination.guildId, destination.channelId);
+}
+
+function parseWireDestination(event) {
+  const element = document
+    .elementFromPoint(event.clientX, event.clientY)
+    ?.closest("[data-wire-destination]");
+  if (!element || element.disabled) return null;
+  const [type, guildId, channelId] =
+    element.dataset.wireDestination.split(":");
+  return type === "app" ? { type } : { type, guildId, channelId };
+}
+
+function drawWires() {
+  const board = refs.wiringBoard;
+  const svg = refs.wireSvg;
+  if (!board || !svg || !app.wiringOpen) return;
+  const bounds = board.getBoundingClientRect();
+  svg.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
+  svg.replaceChildren();
+
+  const addCable = (sourceTarget, x2, y2, className) => {
+    const sourcePort = board.querySelector(
+      `[data-wire-source-id="${CSS.escape(sourceTarget)}"] .wire-source-port`,
+    );
+    if (!sourcePort) return;
+    const rect = sourcePort.getBoundingClientRect();
+    const x1 = rect.right - bounds.left;
+    const y1 = rect.top + rect.height / 2 - bounds.top;
+    const bend = Math.max(32, Math.abs(x2 - x1) * 0.4);
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute(
+      "d",
+      `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`,
+    );
+    path.setAttribute("class", className);
+    svg.append(path);
+  };
+
+  for (const source of wireSources()) {
+    const link = app.stateByTarget[source.id]?.linkedVoice;
+    if (
+      !link?.guildId ||
+      !link.channelId ||
+      (link.sourceTarget && link.sourceTarget !== source.id)
+    )
+      continue;
+    const destinationPort = board.querySelector(
+      `[data-wire-destination="voice:${CSS.escape(link.guildId)}:${CSS.escape(link.channelId)}"] .wire-destination-port`,
+    );
+    if (!destinationPort) continue;
+    const rect = destinationPort.getBoundingClientRect();
+    addCable(
+      source.id,
+      rect.left + rect.width / 2 - bounds.left,
+      rect.top + rect.height / 2 - bounds.top,
+      "wire-cable connected",
+    );
+  }
+
+  if (app.listen && app.webAudioSourceTarget) {
+    const appPort = board.querySelector(
+      '[data-wire-destination="app"] .wire-destination-port',
+    );
+    if (appPort) {
+      const rect = appPort.getBoundingClientRect();
+      addCable(
+        app.webAudioSourceTarget,
+        rect.left + rect.width / 2 - bounds.left,
+        rect.top + rect.height / 2 - bounds.top,
+        "wire-cable connected",
+      );
+    }
+  }
+
+  if (activeWireDrag) {
+    addCable(
+      activeWireDrag.sourceTarget,
+      activeWireDrag.x - bounds.left,
+      activeWireDrag.y - bounds.top,
+      "wire-cable dragging",
+    );
+  }
+}
+
+function startWireDrag(event) {
+  if (event.button !== 0 || !event.target.closest(".wire-source-port")) return;
+  const source = event.target.closest("[data-wire-source-id]");
+  if (!source) return;
+  event.preventDefault();
+  app.wireSourceTarget = source.dataset.wireSourceId;
+  activeWireDrag = {
+    sourceTarget: app.wireSourceTarget,
+    x: event.clientX,
+    y: event.clientY,
+  };
+  refs.wiringBoard?.classList.add("wiring");
+  drawWires();
+}
+
+function moveWireDrag(event) {
+  if (!activeWireDrag) return;
+  activeWireDrag.x = event.clientX;
+  activeWireDrag.y = event.clientY;
+  const target = document.elementFromPoint(event.clientX, event.clientY)
+    ?.closest("[data-wire-destination]");
+  refs.wiringBoard
+    ?.querySelectorAll(".drop-target")
+    .forEach((element) => element.classList.remove("drop-target"));
+  target?.classList.add("drop-target");
+  drawWires();
+}
+
+function finishWireDrag(event) {
+  if (!activeWireDrag) return;
+  const sourceTarget = activeWireDrag.sourceTarget;
+  const destination = parseWireDestination(event);
+  activeWireDrag = null;
+  refs.wiringBoard?.classList.remove("wiring");
+  refs.wiringBoard
+    ?.querySelectorAll(".drop-target")
+    .forEach((element) => element.classList.remove("drop-target"));
+  drawWires();
+  if (destination) routeWire(sourceTarget, destination);
+}
+
+function renderWiringPanel() {
+  const sources = wireSources();
+  if (!sources.some((source) => source.id === app.wireSourceTarget)) {
+    app.wireSourceTarget = sources[0]?.id ?? "local";
+  }
+  const sourceLinkedVoice =
+    app.stateByTarget[app.wireSourceTarget]?.linkedVoice;
+
+  const destination = (
+    name,
+    subtitle,
+    route,
+    linked = false,
+    disabled = false,
+  ) =>
+    h(
+      "button",
+      {
+        class: `wire-destination ${linked ? "linked" : ""}`,
+        disabled,
+        "data-wire-destination":
+          route.type === "app"
+            ? "app"
+            : `voice:${route.guildId}:${route.channelId}`,
+        onclick: () => routeWire(app.wireSourceTarget, route),
+      },
+      h(
+        "span",
+        { class: "wire-destination-icon" },
+        icon(route.type === "app" ? "headphones" : "discord", 18),
+      ),
+      h(
+        "span",
+        { class: "wire-destination-text" },
+        h("b", null, name),
+        h("small", null, subtitle),
+      ),
+      h(
+        "span",
+        { class: "wire-destination-port-wrap" },
+        h("span", { class: "wire-destination-port" }),
+      ),
+    );
+
+  const channels = app.guilds.flatMap((guild) =>
+    guild.channels.map((channel) => ({
+      guild,
+      channel,
+    })),
+  );
+
+  return h(
+    "section",
+    { class: "wiring-panel", "aria-label": "Bảng nối đầu ra âm thanh" },
+    h(
+      "header",
+      { class: "wiring-head" },
+      h(
+        "div",
+        null,
+        h("b", null, "Nối đầu ra"),
+        h(
+          "small",
+          { class: "muted" },
+          "Chọn một đầu ra bên trái, rồi kéo dây tới đầu vào bên phải",
+        ),
+      ),
+    ),
+    h(
+      "div",
+      {
+        class: "wiring-board",
+        onpointerdown: startWireDrag,
+      },
+      (() => {
+        const svg = document.createElementNS(SVG_NS, "svg");
+        svg.setAttribute("class", "wire-cables");
+        svg.setAttribute("aria-hidden", "true");
+        refs.wireSvg = svg;
+        return svg;
+      })(),
+      h(
+        "div",
+        { class: "wire-source-column" },
+        h("span", { class: "wire-label" }, "Đầu ra · kéo từ trái sang phải"),
+        sources.map((source) => {
+          const linked = app.stateByTarget[source.id]?.linkedVoice;
+          return h(
+            "button",
+            {
+              class: `wire-source ${app.wireSourceTarget === source.id ? "selected" : ""}`,
+              "data-wire-source-id": source.id,
+              title: `${source.label} · ${source.detail}`,
+              onclick: () => {
+                app.wireSourceTarget = source.id;
+                renderPlayer();
+              },
+            },
+            h("span", { class: "wire-source-status" }),
+            h(
+              "span",
+              { class: "wire-source-text" },
+              h("b", null, source.label),
+              h("small", null, source.detail),
+            ),
+            linked
+              ? h("span", { class: "wire-source-linked" }, "Đang nối")
+              : null,
+            h("span", { class: "wire-source-port" }),
+          );
+        }),
+      ),
+      h(
+        "div",
+        { class: "wire-destinations" },
+        h("span", { class: "wire-label" }, "Đầu vào · thả dây tại đây"),
+        destination(
+          "Ứng dụng",
+          app.webAudioSourceTarget === app.target && app.listen
+            ? "Đang nghe bằng loa / tai nghe"
+            : "Kéo dây tới đây để nghe trên máy",
+          { type: "app" },
+          app.webAudioSourceTarget === app.wireSourceTarget && app.listen,
+        ),
+        app.discord.status !== "ready"
+          ? h(
+              "button",
+              {
+                class: "wire-destination wire-login",
+                onclick: () => switchView("discord"),
+              },
+              icon("discord", 18),
+              h(
+                "span",
+                { class: "wire-destination-text" },
+                h("b", null, "Discord Voice"),
+                h("small", null, "Đăng nhập bot để kết nối"),
+              ),
+            )
+          : channels.length
+            ? channels.map(({ guild, channel }) =>
+                destination(
+                  `#${channel.name}`,
+                  guild.name,
+                  {
+                    type: "voice",
+                    guildId: guild.id,
+                    channelId: channel.id,
+                  },
+                  sources.some(
+                    (source) =>
+                      app.stateByTarget[source.id]?.linkedVoice?.sourceTarget ===
+                        source.id &&
+                      app.stateByTarget[source.id]?.linkedVoice?.guildId ===
+                        guild.id &&
+                      app.stateByTarget[source.id]?.linkedVoice?.channelId ===
+                        channel.id,
+                  ),
+                  app.wireSourceTarget === guild.id,
+                ),
+              )
+            : h(
+                "small",
+                { class: "muted" },
+                "Bot chưa có quyền truy cập kênh thoại nào.",
+              ),
+      ),
+      h(
+        "p",
+        { class: "wire-hint" },
+        "Voice → Voice: player đích subscribe đầu ra của player nguồn. Voice → Ứng dụng: chỉ phát web khi kéo dây vào Ứng dụng.",
+      ),
+    ),
+    sourceLinkedVoice
+      ? h(
+          "button",
+          {
+            class: "danger small wire-unlink",
+            onclick: () => unlinkVoiceAction(app.wireSourceTarget),
+          },
+          `Rút dây khỏi #${sourceLinkedVoice.channelName || "Voice"}`,
+        )
+      : null,
+  );
+}
+
 function buildPlayer() {
+  document.addEventListener("pointermove", moveWireDrag);
+  document.addEventListener("pointerup", finishWireDrag);
   refs.cover = h("div", { class: "cover-slot" });
   refs.title = h("div", { class: "np-title" }, "Chưa phát");
   refs.sub = h("div", { class: "np-sub" });
@@ -1676,7 +1883,17 @@ function buildPlayer() {
     {
       class: "icon-btn",
       title: "Nghe trong app",
-      onclick: () => ((app.listen = !app.listen), renderPlayer(), syncAudio()),
+      onclick: () => {
+        if (app.target !== "local" && app.webAudioSourceTarget !== app.target) {
+          app.wiringOpen = true;
+          app.wireSourceTarget = app.target;
+          renderPlayer();
+          return;
+        }
+        app.listen = !app.listen;
+        renderPlayer();
+        syncAudio();
+      },
     },
     icon("headphones", 18),
   );
@@ -1701,12 +1918,17 @@ function buildPlayer() {
   refs.btnVoiceLink = h(
     "button",
     {
-      class: "icon-btn",
-      title: "Nối dây Voice",
-      onclick: () => switchView("voicelink"),
+      class: "icon-btn wire-toggle",
+      title: "Nối đầu ra Voice",
+      onclick: () => {
+        app.wiringOpen = !app.wiringOpen;
+        if (app.wiringOpen) app.wireSourceTarget = app.target;
+        renderPlayer();
+      },
     },
     icon("link", 18),
   );
+  refs.wiringPanel = h("div", { class: "wiring-popover" });
   refs.cur = h("span", { class: "time" }, "0:00");
   refs.dur = h("span", { class: "time" }, "0:00");
   refs.seek = h("input", {
@@ -1742,6 +1964,7 @@ function buildPlayer() {
   refs.viz = h("canvas", { class: "viz", width: 160, height: 44 });
 
   refs.player.replaceChildren(
+    refs.wiringPanel,
     h(
       "div",
       { class: "np" },
@@ -1849,10 +2072,16 @@ function renderPlayer() {
   refs.btnVideo.title = app.videoBg
     ? "Đang bật Video Background (player.saveVideo)"
     : "Video Background tắt";
-  refs.btnVoiceLink.className = `icon-btn ${s?.isVoiceLinked ? "on pulse" : ""}`;
-  refs.btnVoiceLink.title = s?.isVoiceLinked
-    ? `Đã nối dây Voice: #${s.voice?.channelName || "thoại"} (bấm để xem)`
-    : "Nối dây Voice";
+  refs.btnVoiceLink.className = `icon-btn wire-toggle ${app.wiringOpen || s?.linkedVoice ? "on" : ""}`;
+  refs.btnVoiceLink.title = s?.linkedVoice
+    ? `Đang nối tới #${s.linkedVoice.channelName || "thoại"}`
+    : "Nối đầu ra Voice";
+  refs.wiringPanel.hidden = !app.wiringOpen;
+  refs.wiringPanel.replaceChildren(
+    ...(app.wiringOpen ? [renderWiringPanel()] : []),
+  );
+  refs.wiringBoard = refs.wiringPanel.querySelector(".wiring-board");
+  if (app.wiringOpen) requestAnimationFrame(drawWires);
   if (s && document.activeElement !== refs.volume)
     refs.volume.value = Math.min(100, s.volume ?? 80);
   refs.seek.disabled = !track || track.isLive || !s.duration;
@@ -1980,6 +2209,8 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+document.addEventListener("contextmenu", (event) => event.preventDefault());
+
 function showFatal(message) {
   root.replaceChildren(
     h(
@@ -2039,6 +2270,7 @@ async function boot() {
   refs.main = h("main", { class: "main" });
   refs.player = h("footer", { class: "player" });
   root.replaceChildren(refs.sidebar, refs.main, refs.player);
+  root.classList.toggle("sidebar-hidden", app.sidebarHidden);
 
   buildPlayer();
   renderSidebar();

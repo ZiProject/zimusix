@@ -303,8 +303,13 @@ for (const event of STATE_EVENTS)
 manager.on("playerDestroy", (player) => publishState(playerId(player)));
 
 function voiceInfo(player) {
-  const cfg = player.connection?.joinConfig;
-  if (!cfg?.channelId) return null;
+  const connection = player.connection;
+  if (
+    connection?.state?.status !== "ready" ||
+    !connection.joinConfig?.channelId
+  )
+    return null;
+  const cfg = connection.joinConfig;
   const channel = discord.client?.channels?.cache?.get(cfg.channelId);
   return {
     guildId: cfg.guildId,
@@ -313,10 +318,24 @@ function voiceInfo(player) {
   };
 }
 
+function activeLinkedVoice(player) {
+  const linked = player.userdata?.linkedVoice;
+  if (!linked?.destinationGuildId) return null;
+  const destination = manager.get(linked.destinationGuildId);
+  if (destination?.connection?.state?.status !== "ready") return null;
+  if (
+    linked.sourceTarget !== LOCAL_TARGET &&
+    destination.playbackMode !== "forward"
+  )
+    return null;
+  return linked;
+}
+
 function playerState(target) {
   const player = manager.get(target);
   if (!player) return { target, exists: false };
   const time = player.getTime();
+  const connectionState = player.connection?.state?.status ?? "disconnected";
   const voice = voiceInfo(player);
   return {
     target,
@@ -332,8 +351,9 @@ function playerState(target) {
     position: time.current,
     duration: time.total,
     voice,
-    linkedVoice: player.userdata?.linkedVoice || voice,
-    isVoiceLinked: Boolean(player.connection || player.userdata?.linkedVoice),
+    connectionState,
+    linkedVoice: activeLinkedVoice(player),
+    isVoiceLinked: connectionState === "ready",
     ts: Date.now(),
   };
 }
@@ -713,17 +733,33 @@ async function discordJoin(guildId, channelId) {
     publishState(guildId);
     return;
   }
-  await withTimeout(
-    player.connect(channel, { selfDeaf: true }),
-    45_000,
-    "Kết nối kênh thoại",
-  );
+  try {
+    await player.connect(channel, { selfDeaf: true });
+  } catch (error) {
+    if (error?.name !== "AbortError" && error?.code !== "ABORT_ERR") throw error;
+    const connectionState = player.connection?.state?.status ?? "disconnected";
+    console.warn(
+      `[discord voice] Kết nối chưa sẵn sàng: guild=${guildId} channel=${channelId} state=${connectionState}`,
+    );
+    const timeoutError = httpError(
+      504,
+      "Discord chưa hoàn tất kết nối Voice. Bot chưa thể phát âm thanh vào kênh. Hãy kiểm tra quyền Connect/Speak và kết nối UDP/firewall/VPN của máy, rồi thử lại.",
+    );
+    timeoutError.cause = error;
+    throw timeoutError;
+  }
+  if (player.connection?.state?.status !== "ready") {
+    throw httpError(504, "Kết nối Discord Voice chưa ở trạng thái sẵn sàng");
+  }
   publishState(guildId);
 }
 
 /* ------------------------------------------------------------- voice link */
 
 async function linkVoice(target, guildId, channelId) {
+  if (!validTarget(target)) throw httpError(400, "Nguồn phát không hợp lệ");
+  if (!guildId || !channelId)
+    throw httpError(400, "Thiếu guildId hoặc channelId");
   const client = requireDiscord();
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel || channel.guildId !== guildId || !channel.isVoiceBased()) {
@@ -737,33 +773,101 @@ async function linkVoice(target, guildId, channelId) {
     throw httpError(403, "Bot thiếu quyền Connect/Speak ở kênh này");
   }
 
-  // 1. Kết nối Discord Voice vào player của guildId (nơi bot và voice Discord hoạt động ổn định nhất)
+  if (target === guildId) {
+    const player = await ensurePlayer(guildId);
+    if (player.connection?.joinConfig?.channelId !== channelId) {
+      throw httpError(
+        409,
+        "Bot không thể nối hai kênh trong cùng server; hãy chọn kênh ở server khác",
+      );
+    }
+    return { ...playerState(guildId), activeTarget: guildId };
+  }
+
+  const sourcePlayer = await ensurePlayer(target);
+  if (target !== LOCAL_TARGET && !sourcePlayer.connection) {
+    throw httpError(409, "Nguồn phát chưa kết nối kênh thoại Discord");
+  }
+  if (
+    target === LOCAL_TARGET &&
+    !sourcePlayer.currentTrack &&
+    sourcePlayer.upcomingTracks.length === 0
+  ) {
+    throw httpError(409, "Nguồn phát chưa có bài đang phát hoặc trong hàng đợi");
+  }
   await discordJoin(guildId, channelId);
   const discordPlayer = await ensurePlayer(guildId);
 
-  // 2. Nếu target là player khác (ví dụ "local") và có bài đang phát hoặc hàng đợi:
-  // Đồng bộ bài đang phát (kèm vị trí seek) và hàng đợi sang discordPlayer để cả hai cùng phát chung một player!
-  const sourcePlayer = manager.get(target);
+  if (target !== LOCAL_TARGET) {
+    const previousLink = sourcePlayer.userdata?.linkedVoice;
+    if (
+      previousLink?.destinationGuildId &&
+      previousLink.destinationGuildId !== guildId
+    ) {
+      const previousDestination = manager.get(previousLink.destinationGuildId);
+      if (previousDestination?.playbackMode === "forward")
+        previousDestination.unsubscribeForward();
+      if (previousDestination?.connection) await previousDestination.disconnect();
+      if (previousDestination?.userdata)
+        previousDestination.userdata.linkedVoice = null;
+    }
+
+    if (!discordPlayer.subscribeTo(sourcePlayer)) {
+      throw httpError(409, "Không thể nối voice đích với player nguồn");
+    }
+
+    const voiceMeta = {
+      guildId,
+      guildName: channel.guild?.name ?? guildId,
+      channelId,
+      channelName: channel.name,
+      sourceTarget: target,
+      destinationGuildId: guildId,
+      isLinked: true,
+    };
+    sourcePlayer.userdata ??= { target };
+    sourcePlayer.userdata.linkedVoice = voiceMeta;
+    discordPlayer.userdata ??= { target: guildId };
+    discordPlayer.userdata.linkedVoice = voiceMeta;
+    publishState(target);
+    publishState(guildId);
+    return {
+      ...playerState(target),
+      activeTarget: target,
+      destinationState: playerState(guildId),
+    };
+  }
+
   if (sourcePlayer && target !== guildId) {
     const srcTrack = sourcePlayer.currentTrack;
     const srcQueue = sourcePlayer.upcomingTracks;
     const srcPos = sourcePlayer.getTime().current;
     const isPlaying = sourcePlayer.isPlaying && !sourcePlayer.isPaused;
 
-    if (srcTrack && (!discordPlayer.currentTrack || discordPlayer.isIdle)) {
-      console.log(
-        `[voice-link] Chuyển bài từ "${target}" sang "${guildId}" để phát cùng 1 player: ${srcTrack.title}`,
-      );
-      await discordPlayer.play(srcTrack, { requestedBy: REQUESTER });
+    discordPlayer.setVolume(sourcePlayer.volume);
+    discordPlayer.loop(sourcePlayer.loop());
+    discordPlayer.autoPlay(sourcePlayer.autoPlay());
+
+    if (srcTrack) {
+      if (!discordPlayer.isIdle) await discordPlayer.stop();
+      const playResult = await discordPlayer.play(srcTrack, {
+        requestedBy: REQUESTER,
+      });
+      if (playResult === false) {
+        throw httpError(409, "Không thể chuyển bài phát sang voice đích");
+      }
       if (srcPos > 1000) {
         await discordPlayer.seek(Math.floor(srcPos)).catch(() => {});
       }
-      if (srcQueue.length > 0) {
-        discordPlayer.queue.addMultiple(srcQueue);
-      }
+      discordPlayer.queue.clear();
+      if (srcQueue.length > 0) discordPlayer.queue.addMultiple(srcQueue);
       if (!isPlaying) {
         discordPlayer.pause();
       }
+      await sourcePlayer.stop().catch(() => {});
+    } else if (srcQueue.length > 0) {
+      if (!discordPlayer.isIdle) await discordPlayer.stop();
+      await enqueue(discordPlayer, srcQueue, "end");
       await sourcePlayer.stop().catch(() => {});
     }
   }
@@ -773,6 +877,8 @@ async function linkVoice(target, guildId, channelId) {
     guildName: channel.guild?.name ?? guildId,
     channelId,
     channelName: channel.name,
+    sourceTarget: target,
+    destinationGuildId: guildId,
     isLinked: true,
   };
 
@@ -789,30 +895,49 @@ async function linkVoice(target, guildId, channelId) {
   return {
     ...playerState(guildId),
     activeTarget: guildId,
+    sourceState: playerState(target),
   };
 }
 
 async function unlinkVoice(target) {
   const player = manager.get(target);
   const linked = player?.userdata?.linkedVoice;
-  if (player?.connection) {
-    await player.disconnect().catch(() => {});
-  }
-  if (player?.userdata) {
-    player.userdata.linkedVoice = null;
-  }
-  if (linked?.guildId && linked.guildId !== target) {
-    const guildPlayer = manager.get(linked.guildId);
-    if (guildPlayer?.connection) {
-      await guildPlayer.disconnect().catch(() => {});
+  const relatedTarget =
+    linked?.sourceTarget === target
+      ? linked.destinationGuildId
+      : linked?.sourceTarget;
+
+  if (linked?.sourceTarget === target && linked.destinationGuildId) {
+    const destination = manager.get(linked.destinationGuildId);
+    if (destination?.playbackMode === "forward")
+      destination.unsubscribeForward();
+    if (destination?.connection) await destination.disconnect();
+    if (destination?.userdata) destination.userdata.linkedVoice = null;
+    if (player?.userdata) player.userdata.linkedVoice = null;
+    publishState(linked.destinationGuildId);
+  } else {
+    if (player?.playbackMode === "forward") player.unsubscribeForward();
+    if (player?.connection) await player.disconnect();
+    if (linked?.sourceTarget) {
+      const source = manager.get(linked.sourceTarget);
+      if (source?.userdata) source.userdata.linkedVoice = null;
+      publishState(linked.sourceTarget);
     }
-    if (guildPlayer?.userdata) {
-      guildPlayer.userdata.linkedVoice = null;
+    if (linked?.destinationGuildId && linked.destinationGuildId !== target) {
+      const destination = manager.get(linked.destinationGuildId);
+      if (destination?.playbackMode === "forward")
+        destination.unsubscribeForward();
+      if (destination?.connection) await destination.disconnect();
+      if (destination?.userdata) destination.userdata.linkedVoice = null;
+      publishState(linked.destinationGuildId);
     }
-    publishState(linked.guildId);
+    if (player?.userdata) player.userdata.linkedVoice = null;
   }
   publishState(target);
-  return playerState(target);
+  return {
+    ...playerState(target),
+    relatedState: relatedTarget ? playerState(relatedTarget) : null,
+  };
 }
 
 /* ------------------------------------------------------------------ lyrics */

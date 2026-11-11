@@ -191,6 +191,12 @@ test("tìm bằng đường dẫn file trả về thời lượng và tag", asyn
 test("Discord: chưa đăng nhập thì báo lỗi rõ ràng", async () => {
   const s = await api("GET", "/discord/status");
   assert.equal(s.json.status, "logged-out");
+  const invalidLink = await api("POST", "/voice/link", {
+    target: "invalid target",
+    guildId: "123",
+    channelId: "456",
+  });
+  assert.equal(invalidLink.status, 400);
   const g = await api("GET", "/discord/guilds");
   assert.equal(g.status, 409);
   const j = await api("POST", "/play", {
@@ -211,6 +217,9 @@ test("state chứa thông tin related và linkedVoice", async () => {
   assert.equal(s.status, 200);
   assert.ok(Array.isArray(s.json.related));
   assert.equal(typeof s.json.isVoiceLinked, "boolean");
+  assert.equal(s.json.connectionState, "disconnected");
+  assert.equal(s.json.voice, null);
+  assert.equal(s.json.linkedVoice, null);
 
   const rel = await api("GET", "/related");
   assert.equal(rel.status, 200);

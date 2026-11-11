@@ -49,6 +49,7 @@ Chạy frontend trong trình duyệt để debug: `npm run sidecar` (in `ZIMUSIX
 | File local | Tab **File local**: chọn file, chọn thư mục (quét tối đa 3 cấp, 1000 file) hoặc **kéo thả** vào cửa sổ |
 | Phát lên Discord | Tab **Discord**: dán token → Đăng nhập → bấm vào kênh thoại. Sidebar mục **Phát tới** sẽ chuyển sang server đó, mọi điều khiển áp dụng cho bot |
 | Nghe cả trong app khi phát Discord | Nút tai nghe ở thanh dưới |
+| Nối đầu ra | Nút dây ở thanh phát: chọn nguồn, kéo từ cổng nguồn tới **Ứng dụng này** hoặc một kênh Discord. Có thể mirror từ voice của server này sang server khác; cùng một bot không thể phát đồng thời hai kênh trong cùng server |
 | Điều khiển | Phát/tạm dừng (phím Space), bài trước/sau, seek, âm lượng, lặp (tắt → hàng đợi → một bài), tự phát bài liên quan, trộn, sắp xếp/xoá trong hàng đợi |
 
 ## Bảo mật
@@ -87,5 +88,6 @@ hoặc cài FFmpeg hệ thống / đặt `FFMPEG_PATH`. Khi khởi động, nế
 
 - Nguồn trực tuyến (YouTube/SoundCloud/Spotify) phụ thuộc thư viện bên thứ ba (`youtubei.js`, `@zibot/scdl`, `spotify-url-info`) và có thể hỏng khi các nền tảng đổi API. Lỗi từng nguồn được báo trên toast; kết quả từ các nguồn còn lại vẫn hiển thị.
 - Phát nhạc lên Discord cần thư viện voice mã hoá của Discord; nếu kết nối thoại thất bại hãy kiểm tra quyền kênh và phiên bản `@discordjs/voice`/`@snazzah/davey` mà `ziplayer` kéo về.
+- Nếu nối voice báo `AbortError`/hết thời gian, bot chưa hoàn tất voice handshake nên chưa thể phát Discord. Kiểm tra quyền **Connect/Speak**, cho phép Node/Zimusix qua firewall và bảo đảm mạng/VPN không chặn UDP; giao diện chỉ đánh dấu dây đã nối khi kết nối Discord đã sẵn sàng.
 - Sidecar giữ một cache nhỏ các `Track` kết quả tìm kiếm để phát lại đúng object (giữ metadata và tag file local đã đọc) thay vì tìm lại qua mạng.
 - Bản dev của `ziplayer`/`@ziplayer/plugin` (tag `dev`) được dùng vì `WebAudioConnection` chưa có ở bản `latest`.
