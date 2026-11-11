@@ -49,7 +49,8 @@ Chạy frontend trong trình duyệt để debug: `npm run sidecar` (in `ZIMUSIX
 | File local | Tab **File local**: chọn file, chọn thư mục (quét tối đa 3 cấp, 1000 file) hoặc **kéo thả** vào cửa sổ |
 | Phát lên Discord | Tab **Discord**: dán token → Đăng nhập → bấm vào kênh thoại. Sidebar mục **Phát tới** sẽ chuyển sang server đó, mọi điều khiển áp dụng cho bot |
 | Nghe cả trong app khi phát Discord | Nút tai nghe ở thanh dưới |
-| Nối đầu ra | Nút dây ở thanh phát: chọn nguồn, kéo từ cổng nguồn tới **Ứng dụng này** hoặc một kênh Discord. Có thể mirror từ voice của server này sang server khác; cùng một bot không thể phát đồng thời hai kênh trong cùng server |
+| Nối đầu ra | Nút dây ở thanh phát: chọn nguồn, kéo từ cổng nguồn tới **Ứng dụng này** hoặc một kênh Discord. Nối Ứng dụng → Voice thì app và Discord **cùng phát** một nguồn (không bị im). Có thể mirror từ voice của server này sang server khác; cùng một bot không thể phát đồng thời hai kênh trong cùng server |
+| Ngắt kết nối | Bấm/kéo lại vào cổng đang nối, hoặc nút **Rút dây khỏi #kênh / Ứng dụng**. Rút khỏi Voice thì nhạc quay về app và tiếp tục phát; rút khỏi Ứng dụng thì chỉ ngừng nghe trên máy, bot vẫn phát. Bot bị kick/mất voice thì dây tự rút kèm thông báo |
 | Điều khiển | Phát/tạm dừng (phím Space), bài trước/sau, seek, âm lượng, lặp (tắt → hàng đợi → một bài), tự phát bài liên quan, trộn, sắp xếp/xoá trong hàng đợi |
 
 ## Bảo mật

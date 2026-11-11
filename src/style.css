@@ -150,6 +150,41 @@ input:focus {
   font-weight: 700;
   padding: 4px 8px 14px;
 }
+.logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  flex: none;
+  box-shadow: 0 2px 12px rgba(124, 92, 255, 0.45);
+}
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.brand-name {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, #c4b5fd, #f0abfc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-sub {
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fatal-logo {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  margin-bottom: 8px;
+  box-shadow: 0 6px 30px rgba(124, 92, 255, 0.5);
+}
 .logo {
   display: grid;
   place-items: center;
@@ -275,21 +310,47 @@ nav {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
-.video-opacity-control {
+.bg-control {
+  position: relative;
+}
+.bg-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 270px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(21, 21, 30, 0.96);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: 12px;
+}
+.bg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+}
+.bg-row-label {
+  display: flex;
+  justify-content: space-between;
+}
+.bg-row-label output {
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+}
+.bg-check {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: min(230px, 42vw);
-  color: var(--muted);
-  font-size: 12px;
-}
-.video-opacity-control input[type="range"] {
-  min-width: 40px;
-}
-.video-opacity-value {
-  width: 36px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  cursor: pointer;
 }
 .view {
   max-width: 880px;
@@ -747,7 +808,9 @@ input[type="range"]:disabled {
   #app {
     grid-template-columns: 70px 1fr;
   }
-  .sidebar .brand,
+  .sidebar .brand-text {
+    display: none;
+  }
   .nav-item,
   .target-text,
   .section-title,
@@ -770,35 +833,49 @@ input[type="range"]:disabled {
 
 /* -------------------------------------------------------- video background */
 
-.bg-video {
+.bg-layer {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
   z-index: 0;
-  opacity: 0;
-  transition:
-    opacity 1.2s ease,
-    filter 0.5s ease;
+  overflow: hidden;
   pointer-events: none;
-  filter: brightness(calc(0.4 + var(--music-bass, 0) * 0.15)) contrast(1.1);
+  background: var(--bg);
 }
-
-.bg-overlay {
-  position: fixed;
+.bg-art,
+.bg-video {
+  position: absolute;
   inset: 0;
-  background: radial-gradient(
-    circle at center,
-    rgba(14, 14, 20, 0.4) 0%,
-    rgba(14, 14, 20, 0.85) 80%,
-    rgba(14, 14, 20, 0.95) 100%
-  );
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  z-index: 1;
-  pointer-events: none;
-  transition: backdrop-filter 0.5s ease;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  /* --bg-blur / --bg-opacity do slider điều khiển, --music-punch do bass (mỗi frame) */
+  transform: scale(calc(var(--bg-scale, 1.08) + var(--music-punch, 0) * 0.035));
+  filter: blur(calc(var(--bg-blur, 8) * 1px))
+    brightness(calc(0.9 + var(--music-punch, 0) * 0.3)) saturate(1.15);
+  transition: opacity 1s ease;
+  will-change: transform, filter, opacity;
+}
+/* ảnh bìa độ phân giải thấp nên blur thêm để không bị vỡ hạt */
+.bg-art {
+  filter: blur(calc(var(--bg-blur, 8) * 1px + 18px))
+    brightness(calc(0.9 + var(--music-punch, 0) * 0.3)) saturate(1.3);
+}
+.bg-art.on.loaded {
+  opacity: var(--bg-opacity, 0.6);
+}
+.bg-layer.has-video .bg-art {
+  opacity: 0;
+}
+.bg-video.ready {
+  opacity: var(--bg-opacity, 0.6);
+}
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(14, 14, 20, 0.85), transparent 45%),
+    rgba(14, 14, 20, var(--bg-dim, 0.45));
 }
 
 #app {
@@ -1064,8 +1141,15 @@ input[type="range"]:disabled {
   font-size: 12px;
 }
 
+.wire-unlink-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .wire-unlink {
-  margin: 12px 0 0 auto;
+  margin: 12px 0 0;
 }
 
 .wire-hint {

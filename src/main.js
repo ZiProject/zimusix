@@ -36,6 +36,8 @@ const ICONS = {
   sparkles:
     '<path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4zm7 13l1.2 2.8L23 19l-2.8 1.2L19 23l-1.2-2.8L15 19l2.8-1.2zm-14 0l1.2 2.8L9 19l-2.8 1.2L5 23l-1.2-2.8L1 19l2.8-1.2z"/>',
   mic: '<path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>',
+  sliders:
+    '<path d="M4 7h9.1a3 3 0 0 0 5.8 0H20V5h-1.1a3 3 0 0 0-5.8 0H4v2zm3 5a3 3 0 0 1 2.9 2H20v2H9.9A3 3 0 1 1 7 12zm0 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 17v2h4v-2H4zm0-10v-0z"/>',
   link: '<path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>',
   video:
     '<path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>',
@@ -108,6 +110,23 @@ const AUDIO_EXTENSIONS = [
 
 /* -------------------------------------------------------------------- state */
 
+const BG_DEFAULTS = {
+  opacity: 60, // độ đậm của nền (%)
+  blur: 8, // độ mờ (px)
+  dim: 45, // lớp phủ tối (%)
+  react: true, // nhún / sáng theo bass
+  art: true, // dùng ảnh bìa làm nền khi chưa có video
+};
+
+function loadBgSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("zimusix-bg") || "{}");
+    return { ...BG_DEFAULTS, ...saved };
+  } catch {
+    return { ...BG_DEFAULTS };
+  }
+}
+
 const app = {
   target: "local", // "local" hoặc guildId
   state: null,
@@ -130,7 +149,8 @@ const app = {
   dragging: false,
   receivedAt: 0,
   videoBg: true, // video background bằng player.saveVideo
-  videoOpacity: 100,
+  bgPanelOpen: false,
+  bg: loadBgSettings(),
   sidebarHidden: false,
   lyrics: null, // lời bài hát đồng bộ
   lyricsLoading: false,
@@ -177,7 +197,7 @@ let reconnectTimer = null;
 
 async function syncAudio() {
   if (audioBusy) return;
-  const want = app.listen ? app.target : null;
+  const want = app.listen ? app.webAudioSourceTarget : null;
   if (want === audioTarget && (want === null || audio)) return;
   audioBusy = true;
   try {
@@ -248,6 +268,40 @@ function toggleSidebar() {
 
 /* -------------------------------------------------------- video background */
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function saveBgSettings() {
+  try {
+    localStorage.setItem("zimusix-bg", JSON.stringify(app.bg));
+  } catch (_) {}
+}
+
+/** Đẩy cài đặt nền vào CSS variables: blur/độ đậm/độ tối đổi tức thì, không cần render lại. */
+function applyBgSettings() {
+  const { opacity, blur, dim } = app.bg;
+  const style = document.documentElement.style;
+  style.setProperty("--bg-opacity", (opacity / 100).toFixed(2));
+  style.setProperty("--bg-blur", String(blur));
+  style.setProperty("--bg-dim", (dim / 100).toFixed(2));
+  // blur càng lớn càng phải phóng to để mép ảnh không lộ viền trong suốt
+  style.setProperty("--bg-scale", (1.04 + (blur / 30) * 0.1).toFixed(3));
+}
+
+function setBgSetting(key, value) {
+  app.bg[key] = value;
+  saveBgSettings();
+  applyBgSettings();
+  if (key === "art") updateVideoBg();
+}
+
+function resetBgSettings() {
+  app.bg = { ...BG_DEFAULTS };
+  saveBgSettings();
+  applyBgSettings();
+  updateVideoBg();
+  renderMain();
+}
+
 function seekVideoIfBuffered(video, targetSec) {
   if (!video || !video.buffered || !video.buffered.length) return false;
   try {
@@ -263,80 +317,252 @@ function seekVideoIfBuffered(video, targetSec) {
   return false;
 }
 
-function updateVideoBg() {
-  let bgVideo = document.getElementById("bg-video");
-  let bgOverlay = document.getElementById("bg-overlay");
-  if (!bgVideo) {
-    bgVideo = h("video", {
-      id: "bg-video",
-      class: "bg-video",
-      autoplay: true,
-      muted: true,
-      loop: true,
-      playsinline: true,
-    });
-    bgVideo.muted = true;
-    bgVideo.defaultMuted = true;
-    bgOverlay = h("div", { id: "bg-overlay", class: "bg-overlay" });
-    document.body.prepend(bgOverlay);
-    document.body.prepend(bgVideo);
-    bgVideo.addEventListener("error", () => {
-      bgVideo.style.opacity = "0";
-    });
-    bgVideo.addEventListener("playing", () => {
-      if (app.videoBg) bgVideo.style.opacity = String(app.videoOpacity / 100);
-    });
-    bgVideo.addEventListener("canplay", () => {
-      if (app.videoBg && app.state?.isPlaying && !app.state?.isPaused) {
-        bgVideo.play().catch(() => {});
-      }
-    });
-  }
+const videoStreamUrl = (track, mode) =>
+  `${api.httpBase()}/video/stream?target=${encodeURIComponent(app.target)}&key=${encodeURIComponent(track.key)}&token=${encodeURIComponent(api.token())}${mode ? `&mode=${mode}` : ""}`;
 
-  const track = app.state?.currentTrack;
-  if (!app.videoBg || !track) {
-    bgVideo.style.opacity = "0";
-    bgVideo.pause();
-    return;
-  }
-
-  // Nếu cùng bài hát: giữ nguyên stream, không reload lại từ đầu
-  if (bgVideo.dataset.currentKey === track.key) {
-    if (app.state?.isPlaying && !app.state?.isPaused) {
-      seekVideoIfBuffered(bgVideo, currentPosition() / 1000);
-      bgVideo.play().catch(() => {});
-      bgVideo.style.opacity = String(app.videoOpacity / 100);
-    } else {
-      bgVideo.pause();
+function ensureBgLayer() {
+  let layer = document.getElementById("bg-layer");
+  if (layer) return layer;
+  const art = h("img", { id: "bg-art", class: "bg-art", alt: "" });
+  art.addEventListener("load", () => art.classList.add("loaded"));
+  art.addEventListener("error", () => art.classList.remove("loaded"));
+  const video = h("video", {
+    id: "bg-video",
+    class: "bg-video",
+    autoplay: true,
+    muted: true,
+    loop: true,
+    playsinline: true,
+  });
+  video.muted = true;
+  video.defaultMuted = true;
+  video.addEventListener("error", () => {
+    video.classList.remove("ready");
+    layer?.classList.remove("has-video");
+    video.dataset.failed = video.dataset.currentKey || "1";
+  });
+  video.addEventListener("loadeddata", () => {
+    // tới đây video mới có hình: fade vào, ảnh bìa mờ dần
+    video.classList.add("ready");
+    layer.classList.add("has-video");
+    syncBgVideo(true);
+  });
+  video.addEventListener("loadedmetadata", () => {
+    // đổi từ stream trực tiếp sang file cache: nhảy về đúng vị trí nhạc
+    if (video.dataset.resumeAt) {
+      const at = Number(video.dataset.resumeAt);
+      delete video.dataset.resumeAt;
+      try {
+        const d = video.duration;
+        video.currentTime = Number.isFinite(d) && d > 0 ? at % d : at;
+      } catch (_) {}
     }
+  });
+  layer = h(
+    "div",
+    { id: "bg-layer", class: "bg-layer" },
+    art,
+    video,
+    h("div", { id: "bg-overlay", class: "bg-overlay" }),
+  );
+  document.body.prepend(layer);
+  applyBgSettings();
+  return layer;
+}
+
+function updateVideoBg() {
+  const layer = ensureBgLayer();
+  const bgVideo = document.getElementById("bg-video");
+  const bgArt = document.getElementById("bg-art");
+  const track = app.state?.currentTrack;
+
+  // Ảnh bìa: nền nền tảng, hiện ngay cả khi chưa/không có video
+  if (app.bg.art && track?.thumbnail) {
+    if (bgArt.dataset.src !== track.thumbnail) {
+      bgArt.classList.remove("loaded");
+      bgArt.dataset.src = track.thumbnail;
+      bgArt.src = track.thumbnail;
+    }
+    bgArt.classList.add("on");
+  } else {
+    bgArt.classList.remove("on");
+  }
+
+  if (!app.videoBg || !track) {
+    bgVideo.classList.remove("ready");
+    layer.classList.remove("has-video");
+    bgVideo.pause();
+    delete bgVideo.dataset.currentKey;
     return;
   }
 
-  // Khác bài hát: nạp video mới
-  bgVideo.dataset.currentKey = track.key;
-  bgVideo.src = `${api.httpBase()}/video/stream?target=${encodeURIComponent(app.target)}&key=${encodeURIComponent(track.key)}&token=${encodeURIComponent(api.token())}`;
-  bgVideo.play().catch(() => {});
+  // Khác bài hát: nạp video mới (cùng bài thì giữ nguyên stream)
+  if (bgVideo.dataset.currentKey !== track.key) {
+    bgVideo.classList.remove("ready");
+    layer.classList.remove("has-video");
+    bgVideo.dataset.currentKey = track.key;
+    bgVideo.dataset.mode = "live";
+    delete bgVideo.dataset.failed;
+    delete bgVideo.dataset.resumeAt;
+    bgVideo.dataset.statusCheckedAt = "0";
+    bgVideo.src = videoStreamUrl(track);
+    bgVideo.playbackRate = 1;
+  }
+  syncBgVideo(true);
 }
+
+/**
+ * Giữ video bám theo vị trí nhạc:
+ *  - tạm dừng/tiếp tục theo player
+ *  - lệch lớn: seek thẳng (file cache hỗ trợ Range) hoặc chuyển từ stream trực tiếp sang file cache
+ *  - lệch nhỏ: chỉnh playbackRate nhẹ nhàng để không giật hình
+ */
+async function syncBgVideo(force = false) {
+  const video = document.getElementById("bg-video");
+  const track = app.state?.currentTrack;
+  if (!video || !track || !app.videoBg) return;
+  if (video.dataset.currentKey !== track.key || video.dataset.failed) return;
+
+  const playing = Boolean(app.state.isPlaying && !app.state.isPaused);
+  if (!playing) {
+    if (!video.paused) video.pause();
+    video.playbackRate = 1;
+    return;
+  }
+  if (video.paused) video.play().catch(() => {});
+  if (video.seeking || video.readyState < 2) return;
+
+  const targetSec = currentPosition() / 1000;
+  const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+  const wanted = duration ? targetSec % duration : targetSec;
+  let drift = video.currentTime - wanted; // >0: video chạy trước nhạc
+  if (duration && Math.abs(drift) > duration / 2)
+    drift -= Math.sign(drift) * duration; // video đã lặp vòng
+
+  const now = performance.now();
+  const absDrift = Math.abs(drift);
+
+  if (video.dataset.mode === "live") {
+    // Stream trực tiếp không seek được: kiểm tra bản cache, khi xong thì chuyển sang file.
+    if (
+      (absDrift > 1.5 || force) &&
+      now - Number(video.dataset.statusCheckedAt || 0) > 2500
+    ) {
+      video.dataset.statusCheckedAt = String(now);
+      try {
+        const res = await api.get(
+          `/video/status?key=${encodeURIComponent(track.key)}`,
+        );
+        if (res.ready && video.dataset.currentKey === track.key && absDrift > 1.5) {
+          video.dataset.mode = "file";
+          video.dataset.resumeAt = String(currentPosition() / 1000);
+          video.src = videoStreamUrl(track, "file");
+          video.play().catch(() => {});
+          return;
+        }
+      } catch (_) {}
+    }
+    if (absDrift > 0.25)
+      video.playbackRate = clamp(1 - drift * 0.25, 0.8, 1.25);
+    else if (video.playbackRate !== 1) video.playbackRate = 1;
+    return;
+  }
+
+  // file cache: seek được
+  if (absDrift > 1.2 && now - Number(video.dataset.lastSeek || 0) > 1500) {
+    video.dataset.lastSeek = String(now);
+    try {
+      video.currentTime = wanted;
+    } catch (_) {}
+    video.playbackRate = 1;
+    return;
+  }
+  if (absDrift > 0.2) video.playbackRate = clamp(1 - drift * 0.3, 0.85, 1.2);
+  else if (video.playbackRate !== 1) video.playbackRate = 1;
+}
+setInterval(() => syncBgVideo(), 500);
+
+/* Nhún nền theo bass (độc lập với canvas visualizer) */
+let punchSmooth = 0;
+let punchShown = -1;
+function bgReactLoop() {
+  requestAnimationFrame(bgReactLoop);
+  if (document.hidden) return;
+  const s = app.state;
+  const active = Boolean(
+    app.bg.react && audio && s?.isPlaying && !s.isPaused,
+  );
+  if (active) {
+    const raw = audio.getBassEnergy?.({ minHz: 45, maxHz: 120 }) ?? 0;
+    punchSmooth =
+      raw > punchSmooth ? punchSmooth * 0.2 + raw * 0.8 : punchSmooth * 0.92;
+  } else {
+    punchSmooth *= 0.9;
+  }
+  const punch = punchSmooth < 0.01 ? 0 : Math.pow(punchSmooth, 1.5);
+  if (Math.abs(punch - punchShown) < 0.004) return;
+  punchShown = punch;
+  document.documentElement.style.setProperty("--music-punch", punch.toFixed(3));
+}
+requestAnimationFrame(bgReactLoop);
 
 function toggleVideoBg() {
   app.videoBg = !app.videoBg;
   toast(
-    app.videoBg
-      ? "Đã bật Video Background (player.saveVideo)"
-      : "Đã tắt Video Background",
+    app.videoBg ? "Đã bật Video Background" : "Đã tắt Video Background",
     "info",
   );
   updateVideoBg();
   renderPlayer();
 }
 
-function setVideoOpacity(value) {
-  app.videoOpacity = Number(value);
-  const output = document.querySelector(".video-opacity-value");
-  if (output) output.textContent = `${app.videoOpacity}%`;
-  const bgVideo = document.getElementById("bg-video");
-  if (bgVideo && app.videoBg && app.state?.currentTrack)
-    bgVideo.style.opacity = String(app.videoOpacity / 100);
+function renderBgPanel() {
+  const slider = (label, key, min, max, unit) => {
+    const out = h("output", null, `${app.bg[key]}${unit}`);
+    return h(
+      "label",
+      { class: "bg-row" },
+      h("span", { class: "bg-row-label" }, label, out),
+      h("input", {
+        type: "range",
+        min,
+        max,
+        value: app.bg[key],
+        "aria-label": label,
+        oninput: (event) => {
+          const value = Number(event.target.value);
+          out.textContent = `${value}${unit}`;
+          setBgSetting(key, value);
+        },
+      }),
+    );
+  };
+  const toggle = (label, key) =>
+    h(
+      "label",
+      { class: "bg-check" },
+      h("input", {
+        type: "checkbox",
+        checked: app.bg[key],
+        onchange: (event) => setBgSetting(key, event.target.checked),
+      }),
+      h("span", null, label),
+    );
+  return h(
+    "div",
+    { class: "bg-panel", onclick: (event) => event.stopPropagation() },
+    h("b", null, "Hình nền"),
+    slider("Độ mờ", "blur", 0, 30, "px"),
+    slider("Độ đậm", "opacity", 0, 100, "%"),
+    slider("Độ tối lớp phủ", "dim", 0, 90, "%"),
+    toggle("Nhún theo bass", "react"),
+    toggle("Ảnh bìa làm nền khi chưa có video", "art"),
+    h(
+      "button",
+      { class: "small", onclick: () => resetBgSettings() },
+      "Đặt lại mặc định",
+    ),
+  );
 }
 
 async function toggleFullscreen() {
@@ -454,7 +680,12 @@ async function linkVoiceAction(sourceTarget, guildId, channelId) {
     return;
   }
   const activeTarget = state.activeTarget || sourceTarget;
+  // Bài được chuyển sang player của guild: nếu app đang nghe nguồn cũ thì dời dây
+  // sang player mới để app + Discord cùng phát, không bị im lặng.
+  if (app.listen && app.webAudioSourceTarget === sourceTarget)
+    app.webAudioSourceTarget = activeTarget;
   if (activeTarget !== app.target) await setTarget(activeTarget);
+  await syncAudio();
   if (state.sourceState)
     app.stateByTarget[state.sourceState.target] = state.sourceState;
   app.voiceByGuild[guildId] = {
@@ -478,12 +709,52 @@ async function unlinkVoiceAction(target = app.target) {
   app.stateByTarget[target] = state;
   if (state.relatedState)
     app.stateByTarget[state.relatedState.target] = state.relatedState;
+  if (state.restoredTo) await followRestoredPlayback(state.restoredTo);
   if (state.target === app.target) setState(state);
   renderSidebar();
   renderPlayer();
 }
 
+/** Bài đã được trả về player local (rút dây voice): app tiếp tục nghe, không bị im. */
+async function followRestoredPlayback(restoredTo) {
+  if (app.listen && app.webAudioSourceTarget !== restoredTo)
+    app.webAudioSourceTarget = restoredTo;
+  if (app.target !== restoredTo) await setTarget(restoredTo);
+  await syncAudio();
+}
+
+/** Rút dây phía Ứng dụng: ngừng nghe trong app, nhạc ở Discord vẫn chạy. */
+async function disconnectApp() {
+  app.listen = false;
+  renderPlayer();
+  await syncAudio();
+  toast("Đã rút dây khỏi ứng dụng", "ok");
+}
+
+/** Server báo bot mất voice / dây bị rút tự động. */
+async function onVoiceUnlinked({ message, guildId }) {
+  toast(message || "Dây nối Voice đã được rút", "info", 6000);
+  delete app.voiceByGuild[guildId];
+  const refreshed = await act(() => api.get("/state?target=local"));
+  if (refreshed) {
+    app.stateByTarget.local = refreshed;
+    if (app.webAudioSourceTarget === guildId) {
+      app.webAudioSourceTarget = "local";
+      if (app.target === guildId) await setTarget("local");
+      await syncAudio();
+    }
+    if (app.target === "local") setState(refreshed);
+  }
+  renderSidebar();
+  renderPlayer();
+}
+
 async function connectToApp(sourceTarget) {
+  if (app.listen && app.webAudioSourceTarget === sourceTarget) {
+    // Kéo/bấm lại vào cổng đã nối = rút dây.
+    await disconnectApp();
+    return;
+  }
   if (sourceTarget !== app.target) await setTarget(sourceTarget);
   app.webAudioSourceTarget = sourceTarget;
   app.listen = true;
@@ -545,15 +816,18 @@ function setState(state) {
 function watch() {
   stopWatching?.();
   app.state = null;
-  stopWatching = api.watchState(app.target, setState, ({ message, track }) =>
-    toast(track ? `${track}: ${message}` : message, "error", 10_000),
+  stopWatching = api.watchState(
+    app.target,
+    setState,
+    ({ message, track }) =>
+      toast(track ? `${track}: ${message}` : message, "error", 10_000),
+    onVoiceUnlinked,
   );
 }
 
 async function setTarget(target) {
   if (target === app.target) return;
   app.target = target;
-  app.listen = target === app.webAudioSourceTarget;
   lastActiveLyricIdx = -1;
   watch();
   renderSidebar();
@@ -796,8 +1070,13 @@ function renderSidebar() {
     h(
       "div",
       { class: "brand" },
-      h("span", { class: "logo" }, icon("music", 18)),
-      "Zimusix",
+      h("img", { class: "logo-img", src: "/logo.png", alt: "Zimusix" }),
+      h(
+        "span",
+        { class: "brand-text" },
+        h("span", { class: "brand-name" }, "Zimusix"),
+        h("small", { class: "brand-sub" }, "Music & Lifestyle"),
+      ),
     ),
     h(
       "nav",
@@ -1474,18 +1753,22 @@ function renderMain() {
       "div",
       { class: "main-toolbar" },
       h(
-        "label",
-        { class: "video-opacity-control", title: "Độ mờ video nền" },
-        h("span", null, "Độ đậm"),
-        h("input", {
-          type: "range",
-          min: 0,
-          max: 100,
-          value: app.videoOpacity,
-          "aria-label": "Độ mờ video nền",
-          oninput: (event) => setVideoOpacity(event.target.value),
-        }),
-        h("output", { class: "video-opacity-value" }, `${app.videoOpacity}%`),
+        "div",
+        { class: "bg-control" },
+        h(
+          "button",
+          {
+            class: `icon-btn ${app.bgPanelOpen ? "on" : ""}`,
+            title: "Tuỳ chỉnh hình nền (độ mờ, độ đậm…)",
+            "aria-label": "Tuỳ chỉnh hình nền",
+            onclick: () => {
+              app.bgPanelOpen = !app.bgPanelOpen;
+              renderMain();
+            },
+          },
+          icon("sliders", 18),
+        ),
+        app.bgPanelOpen ? renderBgPanel() : null,
       ),
       h(
         "button",
@@ -1532,6 +1815,10 @@ function wireSources() {
   ];
 }
 
+function wireSourceLabel(id) {
+  return wireSources().find((source) => source.id === id)?.label ?? id;
+}
+
 function routeWire(sourceTarget, destination) {
   if (destination.type === "app") {
     void connectToApp(sourceTarget);
@@ -1539,6 +1826,15 @@ function routeWire(sourceTarget, destination) {
   }
   if (sourceTarget === destination.guildId) {
     toast("Chọn một server voice khác với đầu ra nguồn", "error");
+    return;
+  }
+  const link = app.stateByTarget[sourceTarget]?.linkedVoice;
+  if (
+    link?.guildId === destination.guildId &&
+    link?.channelId === destination.channelId
+  ) {
+    // Bấm/kéo lại vào cổng đang nối = rút dây.
+    void unlinkVoiceAction(sourceTarget);
     return;
   }
   linkVoiceAction(sourceTarget, destination.guildId, destination.channelId);
@@ -1785,8 +2081,8 @@ function renderWiringPanel() {
         h("span", { class: "wire-label" }, "Đầu vào · thả dây tại đây"),
         destination(
           "Ứng dụng",
-          app.webAudioSourceTarget === app.target && app.listen
-            ? "Đang nghe bằng loa / tai nghe"
+          app.listen
+            ? `Đang nghe · nguồn: ${wireSourceLabel(app.webAudioSourceTarget)} (bấm để rút dây)`
             : "Kéo dây tới đây để nghe trên máy",
           { type: "app" },
           app.webAudioSourceTarget === app.wireSourceTarget && app.listen,
@@ -1837,19 +2133,33 @@ function renderWiringPanel() {
       h(
         "p",
         { class: "wire-hint" },
-        "Voice → Voice: player đích subscribe đầu ra của player nguồn. Voice → Ứng dụng: chỉ phát web khi kéo dây vào Ứng dụng.",
+        "Nối Ứng dụng → Voice: app và Discord cùng phát một nguồn. Bấm lại cổng đang nối (hoặc nút Rút dây) để ngắt; rút khỏi Voice thì nhạc quay về app.",
       ),
     ),
-    sourceLinkedVoice
-      ? h(
-          "button",
-          {
-            class: "danger small wire-unlink",
-            onclick: () => unlinkVoiceAction(app.wireSourceTarget),
-          },
-          `Rút dây khỏi #${sourceLinkedVoice.channelName || "Voice"}`,
-        )
-      : null,
+    h(
+      "div",
+      { class: "wire-unlink-row" },
+      sourceLinkedVoice
+        ? h(
+            "button",
+            {
+              class: "danger small wire-unlink",
+              onclick: () => unlinkVoiceAction(app.wireSourceTarget),
+            },
+            `Rút dây khỏi #${sourceLinkedVoice.channelName || "Voice"}`,
+          )
+        : null,
+      app.listen
+        ? h(
+            "button",
+            {
+              class: "danger small wire-unlink",
+              onclick: () => disconnectApp(),
+            },
+            "Rút dây khỏi Ứng dụng",
+          )
+        : null,
+    ),
   );
 }
 
@@ -1884,13 +2194,12 @@ function buildPlayer() {
       class: "icon-btn",
       title: "Nghe trong app",
       onclick: () => {
-        if (app.target !== "local" && app.webAudioSourceTarget !== app.target) {
-          app.wiringOpen = true;
-          app.wireSourceTarget = app.target;
-          renderPlayer();
+        if (app.listen) {
+          void disconnectApp();
           return;
         }
-        app.listen = !app.listen;
+        app.webAudioSourceTarget = app.target;
+        app.listen = true;
         renderPlayer();
         syncAudio();
       },
@@ -2210,13 +2519,20 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("contextmenu", (event) => event.preventDefault());
+document.addEventListener("click", (event) => {
+  if (app.bgPanelOpen && !event.target.closest(".bg-control")) {
+    app.bgPanelOpen = false;
+    renderMain();
+  }
+});
 
 function showFatal(message) {
   root.replaceChildren(
     h(
       "div",
       { class: "fatal" },
-      h("h1", null, "Zimusix"),
+      h("img", { class: "fatal-logo", src: "/logo.png", alt: "" }),
+      h("h1", { class: "brand-name" }, "Zimusix"),
       h("p", null, message),
       h(
         "button",
@@ -2248,7 +2564,8 @@ async function boot() {
     h(
       "div",
       { class: "fatal" },
-      h("h1", null, "Zimusix"),
+      h("img", { class: "fatal-logo", src: "/logo.png", alt: "" }),
+      h("h1", { class: "brand-name" }, "Zimusix"),
       h("p", { id: "boot-msg" }, "Đang khởi động bộ phát nhạc…"),
     ),
   );

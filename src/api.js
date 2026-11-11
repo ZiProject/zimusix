@@ -48,7 +48,7 @@ export const get = (path) => call("GET", path);
 export const post = (path, body = {}) => call("POST", path, body);
 
 /** Theo dõi trạng thái player qua Server-Sent Events. Trả về hàm đóng kết nối. */
-export function watchState(target, onState, onPlaybackError) {
+export function watchState(target, onState, onPlaybackError, onVoiceUnlinked) {
 	const source = new EventSource(`${httpBase()}/events?target=${encodeURIComponent(target)}&token=${encodeURIComponent(info.token)}`);
 	source.addEventListener("state", (event) => {
 		try {
@@ -58,6 +58,11 @@ export function watchState(target, onState, onPlaybackError) {
 	source.addEventListener("playback-error", (event) => {
 		try {
 			onPlaybackError?.(JSON.parse(event.data));
+		} catch {}
+	});
+	source.addEventListener("voice-unlinked", (event) => {
+		try {
+			onVoiceUnlinked?.(JSON.parse(event.data));
 		} catch {}
 	});
 	return () => source.close();

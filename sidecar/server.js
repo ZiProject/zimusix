@@ -756,6 +756,57 @@ async function discordJoin(guildId, channelId) {
 
 /* ------------------------------------------------------------- voice link */
 
+/** Chuyển bài đang phát + hàng đợi + vị trí từ player `from` sang player `to`, rồi dừng `from`. */
+async function movePlayback(from, to) {
+  const srcTrack = from.currentTrack;
+  const srcQueue = [...from.upcomingTracks];
+  const srcPos = from.getTime().current;
+  const wasPlaying = from.isPlaying && !from.isPaused;
+
+  to.setVolume(from.volume);
+  to.loop(from.loop());
+  to.autoPlay(from.autoPlay());
+
+  if (srcTrack) {
+    if (!to.isIdle) await to.stop();
+    const playResult = await to.play(srcTrack, { requestedBy: REQUESTER });
+    if (playResult === false)
+      throw httpError(409, "Không thể chuyển bài phát sang đầu ra mới");
+    if (srcPos > 1000) await to.seek(Math.floor(srcPos)).catch(() => {});
+    to.queue.clear();
+    if (srcQueue.length > 0) to.queue.addMultiple(srcQueue);
+    if (!wasPlaying) to.pause();
+    await from.stop().catch(() => {});
+  } else if (srcQueue.length > 0) {
+    if (!to.isIdle) await to.stop();
+    await enqueue(to, srcQueue, "end");
+    await from.stop().catch(() => {});
+  }
+}
+
+/**
+ * Nguồn "Ứng dụng" đang nối vào voice: bài thực sự chạy trên player của guild
+ * (output trong app vẫn gắn ở đó nên app + Discord cùng nghe một AudioPlayer).
+ * Rút dây => trả bài về player local để app tiếp tục phát, rồi mới rời voice.
+ */
+async function restoreLocalFromVoice(guildId, { leave = true } = {}) {
+  const destination = manager.get(guildId);
+  const local = manager.get(LOCAL_TARGET);
+  // Xoá link trước khi disconnect để handler "mất voice" không chạy lần hai.
+  if (destination?.userdata) destination.userdata.linkedVoice = null;
+  if (local?.userdata) local.userdata.linkedVoice = null;
+  if (destination && local) {
+    try {
+      await movePlayback(destination, local);
+    } catch (error) {
+      console.warn("[voice] không trả được bài về app:", error.message);
+    }
+  }
+  if (leave && destination?.connection) await destination.disconnect();
+  publishState(guildId);
+  publishState(LOCAL_TARGET);
+}
+
 async function linkVoice(target, guildId, channelId) {
   if (!validTarget(target)) throw httpError(400, "Nguồn phát không hợp lệ");
   if (!guildId || !channelId)
@@ -782,6 +833,19 @@ async function linkVoice(target, guildId, channelId) {
       );
     }
     return { ...playerState(guildId), activeTarget: guildId };
+  }
+
+  if (target === LOCAL_TARGET) {
+    const prev = manager.get(LOCAL_TARGET)?.userdata?.linkedVoice;
+    if (prev?.destinationGuildId === guildId && prev.channelId === channelId) {
+      return {
+        ...playerState(guildId),
+        activeTarget: guildId,
+        sourceState: playerState(LOCAL_TARGET),
+      };
+    }
+    // Đang nối sang voice khác: kéo bài về app trước rồi nối lại sang đích mới.
+    if (prev?.destinationGuildId) await restoreLocalFromVoice(prev.destinationGuildId);
   }
 
   const sourcePlayer = await ensurePlayer(target);
@@ -838,39 +902,7 @@ async function linkVoice(target, guildId, channelId) {
     };
   }
 
-  if (sourcePlayer && target !== guildId) {
-    const srcTrack = sourcePlayer.currentTrack;
-    const srcQueue = sourcePlayer.upcomingTracks;
-    const srcPos = sourcePlayer.getTime().current;
-    const isPlaying = sourcePlayer.isPlaying && !sourcePlayer.isPaused;
-
-    discordPlayer.setVolume(sourcePlayer.volume);
-    discordPlayer.loop(sourcePlayer.loop());
-    discordPlayer.autoPlay(sourcePlayer.autoPlay());
-
-    if (srcTrack) {
-      if (!discordPlayer.isIdle) await discordPlayer.stop();
-      const playResult = await discordPlayer.play(srcTrack, {
-        requestedBy: REQUESTER,
-      });
-      if (playResult === false) {
-        throw httpError(409, "Không thể chuyển bài phát sang voice đích");
-      }
-      if (srcPos > 1000) {
-        await discordPlayer.seek(Math.floor(srcPos)).catch(() => {});
-      }
-      discordPlayer.queue.clear();
-      if (srcQueue.length > 0) discordPlayer.queue.addMultiple(srcQueue);
-      if (!isPlaying) {
-        discordPlayer.pause();
-      }
-      await sourcePlayer.stop().catch(() => {});
-    } else if (srcQueue.length > 0) {
-      if (!discordPlayer.isIdle) await discordPlayer.stop();
-      await enqueue(discordPlayer, srcQueue, "end");
-      await sourcePlayer.stop().catch(() => {});
-    }
-  }
+  await movePlayback(sourcePlayer, discordPlayer);
 
   const voiceMeta = {
     guildId,
@@ -902,6 +934,17 @@ async function linkVoice(target, guildId, channelId) {
 async function unlinkVoice(target) {
   const player = manager.get(target);
   const linked = player?.userdata?.linkedVoice;
+
+  // Nguồn là "Ứng dụng": trả bài về app, app vẫn nghe tiếp, chỉ rút phía Discord.
+  if (linked?.sourceTarget === LOCAL_TARGET && linked.destinationGuildId) {
+    const guildId = linked.destinationGuildId;
+    await restoreLocalFromVoice(guildId);
+    return {
+      ...playerState(target),
+      restoredTo: LOCAL_TARGET,
+      relatedState: playerState(target === LOCAL_TARGET ? guildId : LOCAL_TARGET),
+    };
+  }
   const relatedTarget =
     linked?.sourceTarget === target
       ? linked.destinationGuildId
@@ -939,6 +982,37 @@ async function unlinkVoice(target) {
     relatedState: relatedTarget ? playerState(relatedTarget) : null,
   };
 }
+
+
+/** Bot bị kick / mất kênh thoại: dọn dây nối để UI không còn hiện "đang nối" và app không bị im lặng. */
+async function handleVoiceLost(guildId, link) {
+  console.warn(`[voice] mất kết nối voice guild=${guildId}, tự rút dây`);
+  const message = `Đã mất kết nối tới #${link.channelName || "Voice"}, dây nối được tự động rút`;
+  if (link.sourceTarget === LOCAL_TARGET) {
+    await restoreLocalFromVoice(guildId, { leave: false });
+  } else {
+    const destination = manager.get(guildId);
+    if (destination?.playbackMode === "forward") destination.unsubscribeForward();
+    if (destination?.userdata) destination.userdata.linkedVoice = null;
+    const source = manager.get(link.sourceTarget);
+    if (source?.userdata) source.userdata.linkedVoice = null;
+    publishState(guildId);
+    publishState(link.sourceTarget);
+  }
+  for (const target of new Set([guildId, link.sourceTarget]))
+    sendEvent(target, "voice-unlinked", { message, guildId });
+}
+
+manager.on("connectionChange", (player) => {
+  const id = playerId(player);
+  const link = player?.userdata?.linkedVoice;
+  if (!link || link.destinationGuildId !== id) return;
+  const status = player.connection?.state?.status;
+  if (player.connection && status !== "destroyed") return;
+  handleVoiceLost(id, link).catch((error) =>
+    console.warn("[voice] lỗi khi dọn dây:", error.message),
+  );
+});
 
 /* ------------------------------------------------------------------ lyrics */
 
@@ -1054,6 +1128,63 @@ async function fetchLyricsForTrack(track) {
 
 /* ------------------------------------------------------------- video stream */
 
+const VIDEO_CACHE_DIR = path.join(DATA_DIR, "video-cache");
+const VIDEO_CACHE_MAX_AGE_MS = 24 * 3600 * 1000;
+const videoJobs = new Map(); // cacheKey -> { done:Promise, mime, live:boolean }
+fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
+for (const name of fs.readdirSync(VIDEO_CACHE_DIR)) {
+  const file = path.join(VIDEO_CACHE_DIR, name);
+  try {
+    const stale = Date.now() - fs.statSync(file).mtimeMs > VIDEO_CACHE_MAX_AGE_MS;
+    if (stale || name.endsWith(".part")) fs.rmSync(file, { force: true });
+  } catch {}
+}
+
+const videoCacheFile = (cacheKey) =>
+  path.join(
+    VIDEO_CACHE_DIR,
+    `${crypto.createHash("sha1").update(cacheKey).digest("hex")}.vid`,
+  );
+
+/** Phục vụ file video đã cache, có hỗ trợ Range để WebView seek chính xác theo nhạc. */
+function serveVideoFile(req, res, file, mime) {
+  const { size } = fs.statSync(file);
+  const headers = {
+    "content-type": mime || "video/mp4",
+    "accept-ranges": "bytes",
+    "cache-control": "no-cache",
+    ...corsHeaders(req),
+  };
+  const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
+  if (!match) {
+    res.writeHead(200, { ...headers, "content-length": size });
+    return fs.createReadStream(file).pipe(res);
+  }
+  let startByte = match[1] === "" ? size - Number(match[2]) : Number(match[1]);
+  let endByte = match[1] !== "" && match[2] !== "" ? Number(match[2]) : size - 1;
+  if (!(startByte >= 0) || startByte >= size || endByte < startByte) {
+    res.writeHead(416, { ...headers, "content-range": `bytes */${size}` });
+    return res.end();
+  }
+  endByte = Math.min(endByte, size - 1);
+  res.writeHead(206, {
+    ...headers,
+    "content-range": `bytes ${startByte}-${endByte}/${size}`,
+    "content-length": endByte - startByte + 1,
+  });
+  fs.createReadStream(file, { start: startByte, end: endByte }).pipe(res);
+}
+
+function videoCacheKeyOf(url, track) {
+  return url.searchParams.get("key") || `${track.source}|${track.id ?? ""}|${track.url ?? ""}`;
+}
+
+async function handleVideoStatus(req, res, url) {
+  const cacheKey = url.searchParams.get("key") || "";
+  const ready = Boolean(cacheKey) && fs.existsSync(videoCacheFile(cacheKey));
+  return sendJson(req, res, 200, { ready, downloading: videoJobs.has(cacheKey) });
+}
+
 async function handleVideoStream(req, res, url) {
   const target = url.searchParams.get("target") || LOCAL_TARGET;
   const key = url.searchParams.get("key");
@@ -1065,50 +1196,69 @@ async function handleVideoStream(req, res, url) {
   if (!track)
     return sendJson(req, res, 404, { error: "Không có bài hát để lấy video" });
 
+  const cacheKey = videoCacheKeyOf(url, track);
+  const file = videoCacheFile(cacheKey);
+
   try {
-    console.log(
-      `[video] Đang lấy video stream cho "${track.title}" qua player.saveVideo...`,
-    );
-    const videoStream = await withTimeout(
-      player.saveVideo(track),
-      25_000,
-      "Lấy video stream",
-    );
-    if (!videoStream || typeof videoStream.pipe !== "function") {
-      return sendJson(req, res, 404, {
-        error: "Không hỗ trợ video cho bài hát này",
-      });
+    // 1) Đã có file đầy đủ: phát từ file (seek được).
+    if (fs.existsSync(file)) {
+      return serveVideoFile(req, res, file, videoJobs.get(cacheKey)?.mime);
     }
 
+    // 2) Đang tải bởi request khác: chờ xong rồi phát từ file.
+    const running = videoJobs.get(cacheKey);
+    if (running) {
+      await withTimeout(running.done, 120_000, "Chờ tải video");
+      if (fs.existsSync(file)) return serveVideoFile(req, res, file, running.mime);
+      return sendJson(req, res, 502, { error: "Không tải được video" });
+    }
+
+    // 3) Request đầu tiên: vừa phát trực tiếp cho WebView, vừa ghi cache.
+    console.log(`[video] Đang lấy video stream cho "${track.title}" qua player.saveVideo...`);
+    const videoStream = await withTimeout(player.saveVideo(track), 25_000, "Lấy video stream");
+    if (!videoStream || typeof videoStream.pipe !== "function") {
+      return sendJson(req, res, 404, { error: "Không hỗ trợ video cho bài hát này" });
+    }
     const mime = videoStream.metadata?.mime || "video/mp4";
+    const partFile = `${file}.part`;
+    const out = fs.createWriteStream(partFile);
+    const job = { mime, live: true, done: null };
+    job.done = new Promise((resolve) => {
+      const finish = (ok) => {
+        videoJobs.delete(cacheKey);
+        if (ok) {
+          try { fs.renameSync(partFile, file); } catch {}
+        } else {
+          fs.rmSync(partFile, { force: true });
+        }
+        resolve(ok);
+      };
+      videoStream.once("end", () => out.end(() => finish(true)));
+      videoStream.once("error", (e) => {
+        console.warn(`[video] Lỗi stream video "${track.title}":`, e.message);
+        out.destroy();
+        finish(false);
+      });
+    });
+    videoJobs.set(cacheKey, job);
+    videoStream.pipe(out);
+
     res.writeHead(200, {
       "content-type": mime,
       "transfer-encoding": "chunked",
       "cache-control": "no-cache",
       ...corsHeaders(req),
     });
-
-    videoStream.pipe(res);
-    videoStream.on("error", (e) => {
-      console.warn(`[video] Lỗi stream video "${track.title}":`, e.message);
-      if (!res.headersSent) {
-        sendJson(req, res, 502, { error: e.message });
-      } else {
-        try {
-          res.end();
-        } catch {}
-      }
+    // Client rời đi giữa chừng không được làm hỏng bản cache đang tải.
+    let clientGone = false;
+    req.on("close", () => { clientGone = true; });
+    videoStream.on("data", (chunk) => {
+      if (!clientGone && !res.writableEnded) res.write(chunk);
     });
-    req.on("close", () => {
-      try {
-        videoStream.destroy?.();
-      } catch {}
-    });
+    videoStream.once("end", () => { if (!res.writableEnded) res.end(); });
+    videoStream.once("error", () => { try { res.end(); } catch {} });
   } catch (err) {
-    console.warn(
-      `[video] Không tải được video cho "${track.title}":`,
-      err.message,
-    );
+    console.warn(`[video] Không tải được video cho "${track.title}":`, err.message);
     if (!res.headersSent) {
       const isNoVideo =
         /no save stream/i.test(err.message) ||
@@ -1266,9 +1416,24 @@ const routes = {
   },
 
   "POST /discord/leave": async (_req, _url, body) => {
-    const player = manager.get(String(body.guildId));
-    if (player?.connection) await player.disconnect();
-    publishState(String(body.guildId));
+    const guildId = String(body.guildId);
+    const player = manager.get(guildId);
+    const link = player?.userdata?.linkedVoice;
+    if (link?.sourceTarget === LOCAL_TARGET) {
+      await restoreLocalFromVoice(guildId);
+    } else {
+      // Guild này đang là nguồn của một voice khác: rút dây phía đích trước.
+      if (link?.sourceTarget === guildId) await unlinkVoice(guildId);
+      else if (player?.playbackMode === "forward") player.unsubscribeForward();
+      if (link?.sourceTarget && link.sourceTarget !== guildId) {
+        const source = manager.get(link.sourceTarget);
+        if (source?.userdata) source.userdata.linkedVoice = null;
+        publishState(link.sourceTarget);
+      }
+      if (player?.userdata) player.userdata.linkedVoice = null;
+      if (player?.connection) await player.disconnect();
+    }
+    publishState(guildId);
     return playerState(String(body.guildId));
   },
 
@@ -1345,6 +1510,9 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/video/stream") {
     return handleVideoStream(req, res, url);
+  }
+  if (req.method === "GET" && url.pathname === "/video/status") {
+    return handleVideoStatus(req, res, url);
   }
 
   const handler = routes[`${req.method} ${url.pathname}`];
