@@ -52,6 +52,33 @@ Chạy frontend trong trình duyệt để debug: `npm run sidecar` (in `ZIMUSIX
 | Nối đầu ra | Nút dây ở thanh phát: chọn nguồn, kéo từ cổng nguồn tới **Ứng dụng này** hoặc một kênh Discord. Nối Ứng dụng → Voice thì app và Discord **cùng phát** một nguồn (không bị im). Có thể mirror từ voice của server này sang server khác; cùng một bot không thể phát đồng thời hai kênh trong cùng server |
 | Ngắt kết nối | Bấm/kéo lại vào cổng đang nối, hoặc nút **Rút dây khỏi #kênh / Ứng dụng**. Rút khỏi Voice thì nhạc quay về app và tiếp tục phát; rút khỏi Ứng dụng thì chỉ ngừng nghe trên máy, bot vẫn phát. Bot bị kick/mất voice thì dây tự rút kèm thông báo |
 | Điều khiển | Phát/tạm dừng (phím Space), bài trước/sau, seek, âm lượng, lặp (tắt → hàng đợi → một bài), tự phát bài liên quan, trộn, sắp xếp/xoá trong hàng đợi |
+| Ẩn nội dung để xem nền | Nút con mắt ở thanh trên cùng hoặc phím **H**: ẩn nội dung tab (tìm kiếm, file, hàng đợi…) để lộ ảnh/video nền; thanh công cụ vẫn còn để bật lại. Lựa chọn được nhớ cho lần mở sau |
+| Toàn màn hình | Nút toàn màn hình hoặc phím **F11** (cần quyền `core:window:allow-set-fullscreen` trong `src-tauri/capabilities/default.json`) |
+
+## Cấu trúc frontend (`src/`)
+
+```
+src/
+├─ main.js            khởi động app (boot), màn hình lỗi/FFmpeg
+├─ events.js          phím tắt & listener toàn cục (Space, H, F11, click ngoài panel)
+├─ state.js           `app` (state chung), `root`, `refs`
+├─ api.js             gọi sidecar (HTTP/SSE)
+├─ lib/               tiện ích: dom.js (h, fmtTime…), icons.js, constants.js, toast.js, storage.js
+├─ features/          logic, không dựng DOM chính
+│   ├─ audio.js       nghe trong app (WebAudioClient)
+│   ├─ playback.js    setState / watch / setTarget / control / playTrack
+│   ├─ background.js  nền video + ảnh bìa
+│   ├─ lyrics.js  voice.js  related.js  files.js  search.js  discord.js
+│   ├─ layout.js      đổi view, ẩn thanh bên, ẩn nội dung
+│   └─ window.js      toàn màn hình
+├─ ui/                dựng giao diện
+│   ├─ main-view.js   khung chính + thanh công cụ trên
+│   ├─ sidebar.js  player.js  wiring.js  visualizer.js  bg-panel.js  shared.js
+│   ├─ mascot.js      trạng thái mascot (ảnh trong public/mascot/): loading, trống, lỗi, không có kết quả…
+│   └─ views/         search, library, queue, related, lyrics, discord
+└─ styles/            index.css import base, layout, search, library, player,
+                      toast, background, wiring, lyrics, related, effects
+```
 
 ## Bảo mật
 

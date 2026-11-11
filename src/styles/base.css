@@ -1,0 +1,103 @@
+:root {
+  --bg: #0e0e14;
+  --panel: #15151e;
+  --panel-2: #1c1c28;
+  --line: #262636;
+  --text: #ececf4;
+  --muted: #8b8ba3;
+  --accent: #7c5cff;
+  --accent-2: #a78bfa;
+  --ok: #3ecf8e;
+  --danger: #ff5c7a;
+  --radius: 12px;
+  color-scheme: dark;
+  font-family:
+    Inter,
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    Roboto,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.05s;
+}
+button:hover:not(:disabled) {
+  background: #24243a;
+  border-color: #34344e;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+button.primary:hover:not(:disabled) {
+  background: #8d70ff;
+}
+button.danger {
+  color: var(--danger);
+}
+button.small {
+  padding: 4px 10px;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+input[type="search"],
+input[type="password"],
+input[type="text"] {
+  user-select: text;
+  -webkit-user-select: text;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+}
+input:focus {
+  border-color: var(--accent);
+}

@@ -1,0 +1,13 @@
+/* Thứ tự import giữ nguyên thứ tự cascade của file CSS gốc. */
+@import "./base.css";
+@import "./layout.css";
+@import "./search.css";
+@import "./library.css";
+@import "./player.css";
+@import "./toast.css";
+@import "./background.css";
+@import "./wiring.css";
+@import "./lyrics.css";
+@import "./related.css";
+@import "./mascot.css";
+@import "./effects.css";

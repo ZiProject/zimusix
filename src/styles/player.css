@@ -1,0 +1,125 @@
+/* ------------------------------------------------------------------ player */
+
+.player {
+  grid-area: player;
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(320px, 1.4fr) minmax(
+      220px,
+      1fr
+    );
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.np {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.np-text {
+  min-width: 0;
+}
+.np-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.np-sub {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.transport {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.play-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--text);
+  border-color: var(--text);
+  color: #111;
+}
+.play-btn:hover:not(:disabled) {
+  background: #fff;
+  border-color: #fff;
+  transform: scale(1.06);
+}
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.time {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 38px;
+  text-align: center;
+}
+.extras {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--muted);
+}
+.viz {
+  width: 90px;
+  height: 28px;
+  margin-right: 6px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+  outline: none;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--text);
+}
+input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.volume {
+  flex: none !important;
+  width: 90px;
+}

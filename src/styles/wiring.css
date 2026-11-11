@@ -1,0 +1,281 @@
+/* --------------------------------------------------------- voice patch panel */
+
+.player {
+  position: relative;
+}
+
+.wire-toggle {
+  color: var(--accent-2);
+}
+
+.wiring-popover[hidden] {
+  display: none;
+}
+
+.wiring-popover {
+  position: absolute;
+  z-index: 20;
+  right: 16px;
+  bottom: calc(100% + 10px);
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(62vh, 480px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(21, 21, 30, 0.98);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(18px);
+}
+
+.wiring-panel {
+  padding: 16px;
+}
+
+.wiring-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.wiring-head > div,
+.wire-source-column,
+.wire-destinations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiring-head small,
+.wire-destination-text small {
+  color: var(--muted);
+}
+
+.wiring-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(250px, 1fr);
+  gap: 40px;
+  min-height: 110px;
+}
+
+.wire-cables {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wire-cable {
+  fill: none;
+  stroke: #8be34f;
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(139, 227, 79, 0.4));
+}
+
+.wire-cable.dragging {
+  stroke: var(--accent-2);
+  stroke-dasharray: 6 6;
+}
+
+.wire-source-column,
+.wire-destinations {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.wire-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wire-source,
+.wire-destination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  text-align: left;
+}
+
+.wire-source {
+  position: relative;
+  cursor: pointer;
+  border-color: var(--accent);
+}
+
+.wire-source.selected {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 1px var(--accent-2);
+}
+
+.wire-source-status {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 8px rgba(62, 207, 142, 0.6);
+}
+
+.wire-source-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.wire-source-text b,
+.wire-source-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wire-source-text small {
+  color: var(--muted);
+}
+
+.wire-source.dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+.wire-source-port,
+.wire-destination-port {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--accent-2);
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.wire-source-port {
+  position: relative;
+  z-index: 2;
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.wire-destination-port-wrap {
+  order: -1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-left: -22px;
+}
+
+.wire-destination-port {
+  width: 18px;
+  height: 18px;
+  border-color: #8be34f;
+}
+
+.wire-destination {
+  border-color: #36412f;
+}
+
+.wire-destination.linked,
+.wire-destination.drop-target {
+  border-color: #8be34f;
+  background: rgba(139, 227, 79, 0.1);
+  box-shadow: 0 0 0 1px rgba(139, 227, 79, 0.35);
+}
+
+.wire-destination:hover:not(:disabled),
+.wire-destination:focus-visible {
+  border-color: var(--accent-2);
+  background: var(--panel-2);
+}
+
+.wire-destination:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.wire-source-linked {
+  color: #8be34f;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wire-destination-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--accent-2);
+}
+
+.wire-destination-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.wire-destination-text b,
+.wire-destination-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wire-current {
+  margin: 12px 0 0;
+  color: var(--ok);
+  font-size: 12px;
+}
+
+.wire-unlink-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.wire-unlink {
+  margin: 12px 0 0;
+}
+
+.wire-hint {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .wiring-board {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}

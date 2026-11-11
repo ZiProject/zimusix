@@ -1,0 +1,75 @@
+/* ----------------------------------------------------------- toast / fatal */
+
+.toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 108px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+}
+.toast {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  padding: 10px 14px;
+  border-radius: 8px;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: pre-wrap;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.toast.ok {
+  border-left-color: var(--ok);
+}
+.toast.error {
+  border-left-color: var(--danger);
+}
+.fatal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+.fatal p {
+  white-space: pre-wrap;
+  max-width: 620px;
+  color: var(--muted);
+  user-select: text;
+}
+
+@media (max-width: 900px) {
+  #app {
+    grid-template-columns: 70px 1fr;
+  }
+  .sidebar .brand-text {
+    display: none;
+  }
+  .nav-item,
+  .target-text,
+  .section-title,
+  .discord-pill {
+    font-size: 0;
+  }
+  .nav-item svg {
+    font-size: initial;
+  }
+  .player {
+    grid-template-columns: 1fr 1.4fr;
+  }
+  .extras {
+    display: flex;
+  }
+  .extras > :not(.wire-toggle) {
+    display: none;
+  }
+}

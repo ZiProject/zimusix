@@ -1,0 +1,13 @@
+/* --------------------------------------------------------- reactive effects */
+
+.cover-slot {
+  transition:
+    transform 0.08s ease-out,
+    filter 0.08s ease-out;
+}
+
+.icon-btn.pulse {
+  border-color: var(--ok);
+  color: var(--ok);
+  box-shadow: 0 0 calc(4px + var(--music-bass, 0) * 12px) var(--ok);
+}

@@ -1,0 +1,82 @@
+/* ------------------------------------------------------- library / discord */
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 8px 0 16px;
+}
+.segmented button {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.segmented button.active {
+  background: var(--accent);
+  color: #fff;
+}
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+}
+.button-row {
+  display: flex;
+  gap: 8px;
+}
+.form-row {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+}
+.help {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.help code {
+  background: var(--panel-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  user-select: text;
+}
+.guild {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.guild-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.guild-head img,
+.guild-ph {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.channel.active {
+  border-color: var(--ok);
+  background: rgba(62, 207, 142, 0.12);
+}
+.channel small {
+  color: var(--muted);
+}

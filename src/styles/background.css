@@ -1,0 +1,51 @@
+/* -------------------------------------------------------- video background */
+
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg);
+}
+.bg-art,
+.bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  /* --bg-blur / --bg-opacity do slider điều khiển, --music-punch do bass (mỗi frame) */
+  transform: scale(calc(var(--bg-scale, 1.08) + var(--music-punch, 0) * 0.035));
+  filter: blur(calc(var(--bg-blur, 8) * 1px))
+    brightness(calc(0.9 + var(--music-punch, 0) * 0.3)) saturate(1.15);
+  transition: opacity 1s ease;
+  will-change: transform, filter, opacity;
+}
+/* ảnh bìa độ phân giải thấp nên blur thêm để không bị vỡ hạt */
+.bg-art {
+  filter: blur(calc(var(--bg-blur, 8) * 1px + 18px))
+    brightness(calc(0.9 + var(--music-punch, 0) * 0.3)) saturate(1.3);
+}
+.bg-art.on.loaded {
+  opacity: var(--bg-opacity, 0.6);
+}
+.bg-layer.has-video .bg-art {
+  opacity: 0;
+}
+.bg-video.ready {
+  opacity: var(--bg-opacity, 0.6);
+}
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(14, 14, 20, 0.85), transparent 45%),
+    rgba(14, 14, 20, var(--bg-dim, 0.45));
+}
+
+#app {
+  position: relative;
+  z-index: 2;
+}
