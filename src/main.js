@@ -5,8 +5,10 @@ import { syncAudio } from "./features/audio.js";
 import { updateVideoBg } from "./features/background.js";
 import { loadDiscord } from "./features/discord.js";
 import { setupDragDrop } from "./features/files.js";
+import { initMediaSession } from "./features/media-session.js";
 import { watch } from "./features/playback.js";
 import { h } from "./lib/dom.js";
+import { setupTray } from "./features/window.js";
 import { toast } from "./lib/toast.js";
 import { app, refs, root } from "./state.js";
 import { renderMain } from "./ui/main-view.js";
@@ -80,6 +82,8 @@ async function boot() {
   root.classList.toggle("sidebar-hidden", app.sidebarHidden);
   root.classList.toggle("content-hidden", app.contentHidden);
 
+  initMediaSession();
+  setupTray();
   buildPlayer();
   renderSidebar();
   renderMain();

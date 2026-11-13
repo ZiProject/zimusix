@@ -22,9 +22,11 @@ export function renderMain() {
   };
   // giữ focus & vị trí con trỏ của ô tìm kiếm khi re-render
   const hadFocus = document.activeElement?.matches?.('input[type="search"]');
+  // Không truyền null vào replaceChildren: DOM sẽ biến nó thành chữ "null" trên màn hình.
   refs.main.replaceChildren(
-    renderToolbar(),
-    app.contentHidden ? null : views[app.view](),
+    ...[renderToolbar(), app.contentHidden ? null : views[app.view]()].filter(
+      Boolean,
+    ),
   );
   if (hadFocus) refs.main.querySelector('input[type="search"]')?.focus();
 }

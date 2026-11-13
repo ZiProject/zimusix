@@ -8,7 +8,11 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, RunEvent, State};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, RunEvent, State, WindowEvent,
+};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -55,6 +59,58 @@ fn backend_info(state: State<'_, Backend>) -> Result<BackendInfo, String> {
         }
     }
     Ok(info)
+}
+
+/// Hiện lại cửa sổ chính (đang ẩn xuống khay hoặc thu nhỏ).
+fn show_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+/// Icon ở khay hệ thống: bấm trái để mở lại app, bấm phải ra menu.
+fn build_tray(app: &AppHandle) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, "show", "Mở Zimusix", true, None::<&str>)?;
+    let toggle = MenuItem::with_id(app, "toggle", "Phát / Tạm dừng", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Thoát", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &toggle, &quit])?;
+
+    let mut builder = TrayIconBuilder::with_id("main")
+        .tooltip("Zimusix")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => show_main(app),
+            "toggle" => {
+                let _ = app.emit("tray-play-pause", ());
+            }
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main(tray.app_handle());
+            }
+        });
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+    builder.build(app)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn set_tray_tooltip(app: AppHandle, text: String) {
+    if let Some(tray) = app.tray_by_id("main") {
+        let _ = tray.set_tooltip(Some(text));
+    }
 }
 
 /// Thư mục chứa `server.js`: mã nguồn khi dev, bản đã đóng gói (resources/sidecar) khi release.
@@ -189,7 +245,16 @@ fn spawn_backend(app: &AppHandle, log_path: &Path) -> Result<(BackendInfo, Child
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![backend_info])
+        .invoke_handler(tauri::generate_handler![backend_info, set_tray_tooltip])
+        // Bấm X: ẩn xuống khay/taskbar, nhạc vẫn phát. Thoát hẳn bằng menu khay → "Thoát".
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .setup(|app| {
             let log_path = app
                 .path()
@@ -213,6 +278,7 @@ pub fn run() {
                 child: Mutex::new(child),
                 log_path,
             });
+            build_tray(app.handle())?;
             Ok(())
         })
         .build(tauri::generate_context!())

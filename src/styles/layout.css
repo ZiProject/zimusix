@@ -284,3 +284,42 @@ nav {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* Ẩn nội dung: thanh player thu gọn, chỉ còn timeline. Rê chuột vào (hoặc mở bảng nối voice) thì hiện đủ. */
+#app.content-hidden {
+  grid-template-rows: 1fr 34px;
+}
+#app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) {
+  grid-template-columns: 1fr;
+  padding: 0 20px;
+  background: rgba(14, 14, 20, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top-color: transparent;
+}
+#app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) > .np,
+#app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) > .extras,
+#app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) .buttons {
+  display: none;
+}
+/* Timeline ngắn lại, nằm giữa. */
+#app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) .transport {
+  width: min(420px, 100%);
+  justify-self: center;
+}
+/* Mở rộng: nổi lên trên cùng, không đẩy layout (hàng lưới vẫn 34px). */
+#app.content-hidden .player:is(:hover, :has(:focus-visible), .pinned) {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 92px;
+  z-index: 30;
+  animation: player-reveal 0.15s ease-out;
+}
+@keyframes player-reveal {
+  from {
+    transform: translateY(12px);
+    opacity: 0.6;
+  }
+}

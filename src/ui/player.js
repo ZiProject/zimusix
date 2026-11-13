@@ -2,6 +2,7 @@ import { ensureAudio, syncAudio } from "../features/audio.js";
 import { seekVideoIfBuffered, toggleVideoBg } from "../features/background.js";
 import { switchView } from "../features/layout.js";
 import { updateLyricsSync } from "../features/lyrics.js";
+import { syncMediaSession } from "../features/media-session.js";
 import { control } from "../features/playback.js";
 import { disconnectApp } from "../features/voice.js";
 import { fmtTime, h } from "../lib/dom.js";
@@ -244,7 +245,9 @@ export function renderPlayer() {
   if (s && document.activeElement !== refs.volume)
     refs.volume.value = Math.min(100, s.volume ?? 80);
   refs.seek.disabled = !track || track.isLive || !s.duration;
+  refs.player.classList.toggle("pinned", app.wiringOpen);
   updateProgress();
+  syncMediaSession();
 }
 
 export function currentPosition() {
