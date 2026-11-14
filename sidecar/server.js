@@ -158,7 +158,7 @@ const manager = new PlayerManager({
   ],
   autoCleanup: false,
   enableSearchCache: true,
-  debugLevel: process.env.ZIMUSIX_DEBUG_LEVEL || "time",
+  debugLevel: process.env.ZIMUSIX_DEBUG_LEVEL || "verbose",
   extractorTimeout: Number(process.env.EXTRACTOR_TIMEOUT_MS || 30_000),
 });
 manager.on("debug", (...args) => console.log("[ziplayer]", ...args));
@@ -736,7 +736,8 @@ async function discordJoin(guildId, channelId) {
   try {
     await player.connect(channel, { selfDeaf: true });
   } catch (error) {
-    if (error?.name !== "AbortError" && error?.code !== "ABORT_ERR") throw error;
+    if (error?.name !== "AbortError" && error?.code !== "ABORT_ERR")
+      throw error;
     const connectionState = player.connection?.state?.status ?? "disconnected";
     console.warn(
       `[discord voice] Kết nối chưa sẵn sàng: guild=${guildId} channel=${channelId} state=${connectionState}`,
@@ -845,7 +846,8 @@ async function linkVoice(target, guildId, channelId) {
       };
     }
     // Đang nối sang voice khác: kéo bài về app trước rồi nối lại sang đích mới.
-    if (prev?.destinationGuildId) await restoreLocalFromVoice(prev.destinationGuildId);
+    if (prev?.destinationGuildId)
+      await restoreLocalFromVoice(prev.destinationGuildId);
   }
 
   const sourcePlayer = await ensurePlayer(target);
@@ -857,7 +859,10 @@ async function linkVoice(target, guildId, channelId) {
     !sourcePlayer.currentTrack &&
     sourcePlayer.upcomingTracks.length === 0
   ) {
-    throw httpError(409, "Nguồn phát chưa có bài đang phát hoặc trong hàng đợi");
+    throw httpError(
+      409,
+      "Nguồn phát chưa có bài đang phát hoặc trong hàng đợi",
+    );
   }
   await discordJoin(guildId, channelId);
   const discordPlayer = await ensurePlayer(guildId);
@@ -871,7 +876,8 @@ async function linkVoice(target, guildId, channelId) {
       const previousDestination = manager.get(previousLink.destinationGuildId);
       if (previousDestination?.playbackMode === "forward")
         previousDestination.unsubscribeForward();
-      if (previousDestination?.connection) await previousDestination.disconnect();
+      if (previousDestination?.connection)
+        await previousDestination.disconnect();
       if (previousDestination?.userdata)
         previousDestination.userdata.linkedVoice = null;
     }
@@ -942,7 +948,9 @@ async function unlinkVoice(target) {
     return {
       ...playerState(target),
       restoredTo: LOCAL_TARGET,
-      relatedState: playerState(target === LOCAL_TARGET ? guildId : LOCAL_TARGET),
+      relatedState: playerState(
+        target === LOCAL_TARGET ? guildId : LOCAL_TARGET,
+      ),
     };
   }
   const relatedTarget =
@@ -983,7 +991,6 @@ async function unlinkVoice(target) {
   };
 }
 
-
 /** Bot bị kick / mất kênh thoại: dọn dây nối để UI không còn hiện "đang nối" và app không bị im lặng. */
 async function handleVoiceLost(guildId, link) {
   console.warn(`[voice] mất kết nối voice guild=${guildId}, tự rút dây`);
@@ -992,7 +999,8 @@ async function handleVoiceLost(guildId, link) {
     await restoreLocalFromVoice(guildId, { leave: false });
   } else {
     const destination = manager.get(guildId);
-    if (destination?.playbackMode === "forward") destination.unsubscribeForward();
+    if (destination?.playbackMode === "forward")
+      destination.unsubscribeForward();
     if (destination?.userdata) destination.userdata.linkedVoice = null;
     const source = manager.get(link.sourceTarget);
     if (source?.userdata) source.userdata.linkedVoice = null;
@@ -1135,7 +1143,8 @@ fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
 for (const name of fs.readdirSync(VIDEO_CACHE_DIR)) {
   const file = path.join(VIDEO_CACHE_DIR, name);
   try {
-    const stale = Date.now() - fs.statSync(file).mtimeMs > VIDEO_CACHE_MAX_AGE_MS;
+    const stale =
+      Date.now() - fs.statSync(file).mtimeMs > VIDEO_CACHE_MAX_AGE_MS;
     if (stale || name.endsWith(".part")) fs.rmSync(file, { force: true });
   } catch {}
 }
@@ -1161,7 +1170,8 @@ function serveVideoFile(req, res, file, mime) {
     return fs.createReadStream(file).pipe(res);
   }
   let startByte = match[1] === "" ? size - Number(match[2]) : Number(match[1]);
-  let endByte = match[1] !== "" && match[2] !== "" ? Number(match[2]) : size - 1;
+  let endByte =
+    match[1] !== "" && match[2] !== "" ? Number(match[2]) : size - 1;
   if (!(startByte >= 0) || startByte >= size || endByte < startByte) {
     res.writeHead(416, { ...headers, "content-range": `bytes */${size}` });
     return res.end();
@@ -1176,13 +1186,19 @@ function serveVideoFile(req, res, file, mime) {
 }
 
 function videoCacheKeyOf(url, track) {
-  return url.searchParams.get("key") || `${track.source}|${track.id ?? ""}|${track.url ?? ""}`;
+  return (
+    url.searchParams.get("key") ||
+    `${track.source}|${track.id ?? ""}|${track.url ?? ""}`
+  );
 }
 
 async function handleVideoStatus(req, res, url) {
   const cacheKey = url.searchParams.get("key") || "";
   const ready = Boolean(cacheKey) && fs.existsSync(videoCacheFile(cacheKey));
-  return sendJson(req, res, 200, { ready, downloading: videoJobs.has(cacheKey) });
+  return sendJson(req, res, 200, {
+    ready,
+    downloading: videoJobs.has(cacheKey),
+  });
 }
 
 async function handleVideoStream(req, res, url) {
@@ -1209,15 +1225,24 @@ async function handleVideoStream(req, res, url) {
     const running = videoJobs.get(cacheKey);
     if (running) {
       await withTimeout(running.done, 120_000, "Chờ tải video");
-      if (fs.existsSync(file)) return serveVideoFile(req, res, file, running.mime);
+      if (fs.existsSync(file))
+        return serveVideoFile(req, res, file, running.mime);
       return sendJson(req, res, 502, { error: "Không tải được video" });
     }
 
     // 3) Request đầu tiên: vừa phát trực tiếp cho WebView, vừa ghi cache.
-    console.log(`[video] Đang lấy video stream cho "${track.title}" qua player.saveVideo...`);
-    const videoStream = await withTimeout(player.saveVideo(track), 25_000, "Lấy video stream");
+    console.log(
+      `[video] Đang lấy video stream cho "${track.title}" qua player.saveVideo...`,
+    );
+    const videoStream = await withTimeout(
+      player.saveVideo(track),
+      25_000,
+      "Lấy video stream",
+    );
     if (!videoStream || typeof videoStream.pipe !== "function") {
-      return sendJson(req, res, 404, { error: "Không hỗ trợ video cho bài hát này" });
+      return sendJson(req, res, 404, {
+        error: "Không hỗ trợ video cho bài hát này",
+      });
     }
     const mime = videoStream.metadata?.mime || "video/mp4";
     const partFile = `${file}.part`;
@@ -1227,7 +1252,9 @@ async function handleVideoStream(req, res, url) {
       const finish = (ok) => {
         videoJobs.delete(cacheKey);
         if (ok) {
-          try { fs.renameSync(partFile, file); } catch {}
+          try {
+            fs.renameSync(partFile, file);
+          } catch {}
         } else {
           fs.rmSync(partFile, { force: true });
         }
@@ -1251,14 +1278,25 @@ async function handleVideoStream(req, res, url) {
     });
     // Client rời đi giữa chừng không được làm hỏng bản cache đang tải.
     let clientGone = false;
-    req.on("close", () => { clientGone = true; });
+    req.on("close", () => {
+      clientGone = true;
+    });
     videoStream.on("data", (chunk) => {
       if (!clientGone && !res.writableEnded) res.write(chunk);
     });
-    videoStream.once("end", () => { if (!res.writableEnded) res.end(); });
-    videoStream.once("error", () => { try { res.end(); } catch {} });
+    videoStream.once("end", () => {
+      if (!res.writableEnded) res.end();
+    });
+    videoStream.once("error", () => {
+      try {
+        res.end();
+      } catch {}
+    });
   } catch (err) {
-    console.warn(`[video] Không tải được video cho "${track.title}":`, err.message);
+    console.warn(
+      `[video] Không tải được video cho "${track.title}":`,
+      err.message,
+    );
     if (!res.headersSent) {
       const isNoVideo =
         /no save stream/i.test(err.message) ||

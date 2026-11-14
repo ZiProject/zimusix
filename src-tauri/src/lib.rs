@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::ErrorKind,
+    io::{BufRead, BufReader, ErrorKind, Read, Write},
     net::TcpListener,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -37,6 +37,31 @@ fn clean_path(path: PathBuf) -> PathBuf {
         Some(rest) => PathBuf::from(rest),
         None => path,
     }
+}
+
+/// Dev: đọc từng dòng từ pipe của sidecar rồi in ra terminal đang chạy `tauri dev`.
+/// Dùng pipe thay vì kế thừa handle vì `CREATE_NO_WINDOW` (Windows) làm mất handle console kế thừa.
+fn forward_output<R: Read + Send + 'static>(reader: R, is_stderr: bool) {
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(reader);
+        let mut buf = Vec::new();
+        loop {
+            buf.clear();
+            match reader.read_until(b'\n', &mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    let line = String::from_utf8_lossy(&buf);
+                    let line = line.trim_end_matches(['\r', '\n']);
+                    // Bỏ qua lỗi ghi (terminal đã đóng) thay vì panic như println!.
+                    if is_stderr {
+                        let _ = writeln!(std::io::stderr(), "[sidecar] {line}");
+                    } else {
+                        let _ = writeln!(std::io::stdout(), "[sidecar] {line}");
+                    }
+                }
+            }
+        }
+    });
 }
 
 fn log_tail(path: &Option<PathBuf>) -> String {
@@ -220,8 +245,10 @@ fn spawn_backend(app: &AppHandle, log_path: &Path) -> Result<(BackendInfo, Child
         .stdin(Stdio::piped());
 
     // Bản release không có console: ghi stdout/stderr của sidecar ra file log để còn chẩn đoán.
-    // Khi dev giữ nguyên terminal.
-    if !cfg!(debug_assertions) {
+    // Khi dev: lấy qua pipe và in lại ra terminal (xem `forward_output` bên dưới).
+    if cfg!(debug_assertions) {
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    } else {
         let log = File::create(log_path).map_err(|e| format!("Không tạo được file log: {e}"))?;
         let log_err = log.try_clone().map_err(|e| e.to_string())?;
         command.stdout(Stdio::from(log)).stderr(Stdio::from(log_err));
@@ -230,13 +257,22 @@ fn spawn_backend(app: &AppHandle, log_path: &Path) -> Result<(BackendInfo, Child
     #[cfg(windows)]
     command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
 
-    let child = command.spawn().map_err(|e| match e.kind() {
+    let mut child = command.spawn().map_err(|e| match e.kind() {
         ErrorKind::NotFound => format!(
             "Không tìm thấy Node.js (cần >= 20.3), đã thử: {}.\nHãy cài Node.js hoặc đặt biến môi trường ZIMUSIX_NODE.",
             node.display()
         ),
         _ => format!("Không chạy được backend ({}): {e}", node.display()),
     })?;
+
+    if cfg!(debug_assertions) {
+        if let Some(out) = child.stdout.take() {
+            forward_output(out, false);
+        }
+        if let Some(err) = child.stderr.take() {
+            forward_output(err, true);
+        }
+    }
 
     Ok((BackendInfo { port, token }, child))
 }
