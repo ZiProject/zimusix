@@ -232,10 +232,13 @@ export function renderPlayer() {
   refs.btnVideo.title = app.videoBg
     ? "Đang bật Video Background (player.saveVideo)"
     : "Video Background tắt";
-  refs.btnVoiceLink.className = `icon-btn wire-toggle ${app.wiringOpen || s?.linkedVoice ? "on" : ""}`;
-  refs.btnVoiceLink.title = s?.linkedVoice
-    ? `Đang nối tới #${s.linkedVoice.channelName || "thoại"}`
-    : "Nối đầu ra Voice";
+  const outputs = s?.linkedVoices ?? [];
+  refs.btnVoiceLink.className = `icon-btn wire-toggle ${app.wiringOpen || outputs.length || s?.feedingFrom ? "on" : ""}`;
+  refs.btnVoiceLink.title = outputs.length
+    ? `Đang nối tới ${outputs.map((l) => `#${l.channelName || "thoại"}`).join(", ")}`
+    : s?.feedingFrom
+      ? "Đang nhận âm thanh từ nguồn khác"
+      : "Nối đầu ra Voice";
   refs.wiringPanel.hidden = !app.wiringOpen;
   refs.wiringPanel.replaceChildren(
     ...(app.wiringOpen ? [renderWiringPanel()] : []),

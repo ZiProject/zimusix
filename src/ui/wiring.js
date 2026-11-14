@@ -9,6 +9,18 @@ import { renderPlayer } from "./player.js";
 
 let activeWireDrag = null;
 
+const linksOf = (id) => app.stateByTarget[id]?.linkedVoices ?? [];
+
+/** Guild đang chỉ là đầu ra (forward) của một nguồn khác: không phải nguồn độc lập. */
+function isFedGuild(id) {
+  return (
+    Boolean(app.stateByTarget[id]?.feedingFrom) ||
+    Object.values(app.stateByTarget).some((state) =>
+      state?.linkedVoices?.some((link) => link.guildId === id),
+    )
+  );
+}
+
 function wireSources() {
   return [
     {
@@ -16,7 +28,9 @@ function wireSources() {
       label: "Ứng dụng",
       detail: app.stateByTarget.local?.currentTrack?.title ?? "Player trong app",
     },
-    ...joinedTargets().map((target) => ({
+    ...joinedTargets()
+      .filter((target) => !isFedGuild(target.id))
+      .map((target) => ({
       id: target.id,
       label: target.name,
       detail: `#${target.channel}`,
@@ -37,13 +51,14 @@ function routeWire(sourceTarget, destination) {
     toast("Chọn một server voice khác với đầu ra nguồn", "error");
     return;
   }
-  const link = app.stateByTarget[sourceTarget]?.linkedVoice;
-  if (
-    link?.guildId === destination.guildId &&
-    link?.channelId === destination.channelId
-  ) {
-    // Bấm/kéo lại vào cổng đang nối = rút dây.
-    void unlinkVoiceAction(sourceTarget);
+  const linked = linksOf(sourceTarget).some(
+    (link) =>
+      link.guildId === destination.guildId &&
+      link.channelId === destination.channelId,
+  );
+  if (linked) {
+    // Bấm/kéo lại vào cổng đang nối = rút dây của đúng kênh đó.
+    void unlinkVoiceAction(sourceTarget, destination.guildId);
     return;
   }
   linkVoiceAction(sourceTarget, destination.guildId, destination.channelId);
@@ -86,24 +101,19 @@ export function drawWires() {
   };
 
   for (const source of wireSources()) {
-    const link = app.stateByTarget[source.id]?.linkedVoice;
-    if (
-      !link?.guildId ||
-      !link.channelId ||
-      (link.sourceTarget && link.sourceTarget !== source.id)
-    )
-      continue;
-    const destinationPort = board.querySelector(
-      `[data-wire-destination="voice:${CSS.escape(link.guildId)}:${CSS.escape(link.channelId)}"] .wire-destination-port`,
-    );
-    if (!destinationPort) continue;
-    const rect = destinationPort.getBoundingClientRect();
-    addCable(
-      source.id,
-      rect.left + rect.width / 2 - bounds.left,
-      rect.top + rect.height / 2 - bounds.top,
-      "wire-cable connected",
-    );
+    for (const link of linksOf(source.id)) {
+      const destinationPort = board.querySelector(
+        `[data-wire-destination="voice:${CSS.escape(link.guildId)}:${CSS.escape(link.channelId)}"] .wire-destination-port`,
+      );
+      if (!destinationPort) continue;
+      const rect = destinationPort.getBoundingClientRect();
+      addCable(
+        source.id,
+        rect.left + rect.width / 2 - bounds.left,
+        rect.top + rect.height / 2 - bounds.top,
+        "wire-cable connected",
+      );
+    }
   }
 
   if (app.listen && app.webAudioSourceTarget) {
@@ -177,8 +187,7 @@ export function renderWiringPanel() {
   if (!sources.some((source) => source.id === app.wireSourceTarget)) {
     app.wireSourceTarget = sources[0]?.id ?? "local";
   }
-  const sourceLinkedVoice =
-    app.stateByTarget[app.wireSourceTarget]?.linkedVoice;
+  const sourceLinks = linksOf(app.wireSourceTarget);
 
   const destination = (
     name,
@@ -258,7 +267,7 @@ export function renderWiringPanel() {
         { class: "wire-source-column" },
         h("span", { class: "wire-label" }, "Đầu ra · kéo từ trái sang phải"),
         sources.map((source) => {
-          const linked = app.stateByTarget[source.id]?.linkedVoice;
+          const linked = linksOf(source.id).length;
           return h(
             "button",
             {
@@ -278,7 +287,11 @@ export function renderWiringPanel() {
               h("small", null, source.detail),
             ),
             linked
-              ? h("span", { class: "wire-source-linked" }, "Đang nối")
+              ? h(
+                  "span",
+                  { class: "wire-source-linked" },
+                  linked > 1 ? `Đang nối ×${linked}` : "Đang nối",
+                )
               : null,
             h("span", { class: "wire-source-port" }),
           );
@@ -321,14 +334,12 @@ export function renderWiringPanel() {
                     guildId: guild.id,
                     channelId: channel.id,
                   },
-                  sources.some(
-                    (source) =>
-                      app.stateByTarget[source.id]?.linkedVoice?.sourceTarget ===
-                        source.id &&
-                      app.stateByTarget[source.id]?.linkedVoice?.guildId ===
-                        guild.id &&
-                      app.stateByTarget[source.id]?.linkedVoice?.channelId ===
-                        channel.id,
+                  sources.some((source) =>
+                    linksOf(source.id).some(
+                      (link) =>
+                        link.guildId === guild.id &&
+                        link.channelId === channel.id,
+                    ),
                   ),
                   app.wireSourceTarget === guild.id,
                 ),
@@ -342,22 +353,23 @@ export function renderWiringPanel() {
       h(
         "p",
         { class: "wire-hint" },
-        "Nối Ứng dụng → Voice: app và Discord cùng phát một nguồn. Bấm lại cổng đang nối (hoặc nút Rút dây) để ngắt; rút khỏi Voice thì nhạc quay về app.",
+        "Một nguồn nối được tới Ứng dụng và nhiều kênh Voice (mỗi server một kênh), tất cả cùng phát. Bấm lại cổng đang nối (hoặc nút Rút dây) để ngắt; nguồn vẫn phát bình thường.",
       ),
     ),
     h(
       "div",
       { class: "wire-unlink-row" },
-      sourceLinkedVoice
-        ? h(
-            "button",
-            {
-              class: "danger small wire-unlink",
-              onclick: () => unlinkVoiceAction(app.wireSourceTarget),
-            },
-            `Rút dây khỏi #${sourceLinkedVoice.channelName || "Voice"}`,
-          )
-        : null,
+      ...sourceLinks.map((link) =>
+        h(
+          "button",
+          {
+            class: "danger small wire-unlink",
+            onclick: () =>
+              unlinkVoiceAction(app.wireSourceTarget, link.guildId),
+          },
+          `Rút dây khỏi #${link.channelName || "Voice"}`,
+        ),
+      ),
       app.listen
         ? h(
             "button",

@@ -318,17 +318,29 @@ function voiceInfo(player) {
   };
 }
 
-function activeLinkedVoice(player) {
-  const linked = player.userdata?.linkedVoice;
-  if (!linked?.destinationGuildId) return null;
-  const destination = manager.get(linked.destinationGuildId);
-  if (destination?.connection?.state?.status !== "ready") return null;
+/** Các đầu ra Voice (guild đích) đang nhận âm thanh từ player này và đã sẵn sàng. */
+function activeOutputs(player) {
+  const outputs = player.userdata?.outputs;
+  if (!outputs?.size) return [];
+  return [...outputs.values()].filter((link) => {
+    const destination = manager.get(link.destinationGuildId);
+    return (
+      destination?.connection?.state?.status === "ready" &&
+      destination.playbackMode === "forward"
+    );
+  });
+}
+
+/** Player guild đang là đầu ra của nguồn nào (null nếu nó phát độc lập). */
+function feedingSource(player) {
+  const link = player.userdata?.linkedVoice;
+  if (!link || link.destinationGuildId !== playerId(player)) return null;
   if (
-    linked.sourceTarget !== LOCAL_TARGET &&
-    destination.playbackMode !== "forward"
+    player.playbackMode !== "forward" ||
+    player.connection?.state?.status !== "ready"
   )
     return null;
-  return linked;
+  return link.sourceTarget;
 }
 
 function playerState(target) {
@@ -337,6 +349,7 @@ function playerState(target) {
   const time = player.getTime();
   const connectionState = player.connection?.state?.status ?? "disconnected";
   const voice = voiceInfo(player);
+  const outputs = activeOutputs(player);
   return {
     target,
     exists: true,
@@ -352,7 +365,9 @@ function playerState(target) {
     duration: time.total,
     voice,
     connectionState,
-    linkedVoice: activeLinkedVoice(player),
+    linkedVoices: outputs,
+    linkedVoice: outputs[0] ?? null, // giữ để tương thích: đầu ra đầu tiên
+    feedingFrom: feedingSource(player),
     isVoiceLinked: connectionState === "ready",
     ts: Date.now(),
   };
@@ -665,6 +680,7 @@ async function discordLogin(token) {
 }
 
 async function discordLogout() {
+  manager.get(LOCAL_TARGET)?.userdata?.outputs?.clear();
   for (const player of manager.getAll()) {
     const target = playerId(player);
     if (target === LOCAL_TARGET) continue;
@@ -757,55 +773,36 @@ async function discordJoin(guildId, channelId) {
 
 /* ------------------------------------------------------------- voice link */
 
-/** Chuyển bài đang phát + hàng đợi + vị trí từ player `from` sang player `to`, rồi dừng `from`. */
-async function movePlayback(from, to) {
-  const srcTrack = from.currentTrack;
-  const srcQueue = [...from.upcomingTracks];
-  const srcPos = from.getTime().current;
-  const wasPlaying = from.isPlaying && !from.isPaused;
-
-  to.setVolume(from.volume);
-  to.loop(from.loop());
-  to.autoPlay(from.autoPlay());
-
-  if (srcTrack) {
-    if (!to.isIdle) await to.stop();
-    const playResult = await to.play(srcTrack, { requestedBy: REQUESTER });
-    if (playResult === false)
-      throw httpError(409, "Không thể chuyển bài phát sang đầu ra mới");
-    if (srcPos > 1000) await to.seek(Math.floor(srcPos)).catch(() => {});
-    to.queue.clear();
-    if (srcQueue.length > 0) to.queue.addMultiple(srcQueue);
-    if (!wasPlaying) to.pause();
-    await from.stop().catch(() => {});
-  } else if (srcQueue.length > 0) {
-    if (!to.isIdle) await to.stop();
-    await enqueue(to, srcQueue, "end");
-    await from.stop().catch(() => {});
-  }
-}
-
 /**
- * Nguồn "Ứng dụng" đang nối vào voice: bài thực sự chạy trên player của guild
- * (output trong app vẫn gắn ở đó nên app + Discord cùng nghe một AudioPlayer).
- * Rút dây => trả bài về player local để app tiếp tục phát, rồi mới rời voice.
+ * Mô hình nối dây: một nguồn (player "local" hoặc player voice phát độc lập) cứ phát bình thường;
+ * mỗi đầu ra Voice là player của guild đích "forward" lại đúng âm thanh của nguồn (subscribeTo).
+ * Nối thêm / rút bớt đầu ra không dừng, đổi bài hay seek nguồn, nên app và mọi kênh Discord
+ * luôn phát cùng một thứ. Một nguồn có nhiều đầu ra (mỗi server một kênh) cùng đầu ra "Ứng dụng".
  */
-async function restoreLocalFromVoice(guildId, { leave = true } = {}) {
+const outputsOf = (player) => (player.userdata.outputs ??= new Map());
+
+/** Gỡ một guild đích khỏi nguồn của nó. Nguồn không bị đụng tới. */
+async function detachDestination(guildId, { leave = true } = {}) {
   const destination = manager.get(guildId);
-  const local = manager.get(LOCAL_TARGET);
+  const link = destination?.userdata?.linkedVoice ?? null;
   // Xoá link trước khi disconnect để handler "mất voice" không chạy lần hai.
   if (destination?.userdata) destination.userdata.linkedVoice = null;
-  if (local?.userdata) local.userdata.linkedVoice = null;
-  if (destination && local) {
-    try {
-      await movePlayback(destination, local);
-    } catch (error) {
-      console.warn("[voice] không trả được bài về app:", error.message);
-    }
-  }
+  if (link?.sourceTarget)
+    manager.get(link.sourceTarget)?.userdata?.outputs?.delete(guildId);
+  if (destination?.playbackMode === "forward") destination.unsubscribeForward();
   if (leave && destination?.connection) await destination.disconnect();
   publishState(guildId);
-  publishState(LOCAL_TARGET);
+  if (link?.sourceTarget) publishState(link.sourceTarget);
+  return link;
+}
+
+/** Gỡ mọi đầu ra Voice của một nguồn. */
+async function detachAllOutputs(sourceTarget, options) {
+  const outputs = manager.get(sourceTarget)?.userdata?.outputs;
+  if (!outputs?.size) return [];
+  const guildIds = [...outputs.keys()];
+  for (const guildId of guildIds) await detachDestination(guildId, options);
+  return guildIds;
 }
 
 async function linkVoice(target, guildId, channelId) {
@@ -836,21 +833,13 @@ async function linkVoice(target, guildId, channelId) {
     return { ...playerState(guildId), activeTarget: guildId };
   }
 
-  if (target === LOCAL_TARGET) {
-    const prev = manager.get(LOCAL_TARGET)?.userdata?.linkedVoice;
-    if (prev?.destinationGuildId === guildId && prev.channelId === channelId) {
-      return {
-        ...playerState(guildId),
-        activeTarget: guildId,
-        sourceState: playerState(LOCAL_TARGET),
-      };
-    }
-    // Đang nối sang voice khác: kéo bài về app trước rồi nối lại sang đích mới.
-    if (prev?.destinationGuildId)
-      await restoreLocalFromVoice(prev.destinationGuildId);
-  }
-
   const sourcePlayer = await ensurePlayer(target);
+  if (sourcePlayer.playbackMode === "forward") {
+    throw httpError(
+      409,
+      "Nguồn này đang nhận âm thanh từ nguồn khác; hãy nối từ nguồn gốc",
+    );
+  }
   if (target !== LOCAL_TARGET && !sourcePlayer.connection) {
     throw httpError(409, "Nguồn phát chưa kết nối kênh thoại Discord");
   }
@@ -864,51 +853,27 @@ async function linkVoice(target, guildId, channelId) {
       "Nguồn phát chưa có bài đang phát hoặc trong hàng đợi",
     );
   }
-  await discordJoin(guildId, channelId);
-  const discordPlayer = await ensurePlayer(guildId);
-
-  if (target !== LOCAL_TARGET) {
-    const previousLink = sourcePlayer.userdata?.linkedVoice;
-    if (
-      previousLink?.destinationGuildId &&
-      previousLink.destinationGuildId !== guildId
-    ) {
-      const previousDestination = manager.get(previousLink.destinationGuildId);
-      if (previousDestination?.playbackMode === "forward")
-        previousDestination.unsubscribeForward();
-      if (previousDestination?.connection)
-        await previousDestination.disconnect();
-      if (previousDestination?.userdata)
-        previousDestination.userdata.linkedVoice = null;
-    }
-
-    if (!discordPlayer.subscribeTo(sourcePlayer)) {
-      throw httpError(409, "Không thể nối voice đích với player nguồn");
-    }
-
-    const voiceMeta = {
-      guildId,
-      guildName: channel.guild?.name ?? guildId,
-      channelId,
-      channelName: channel.name,
-      sourceTarget: target,
-      destinationGuildId: guildId,
-      isLinked: true,
-    };
-    sourcePlayer.userdata ??= { target };
-    sourcePlayer.userdata.linkedVoice = voiceMeta;
-    discordPlayer.userdata ??= { target: guildId };
-    discordPlayer.userdata.linkedVoice = voiceMeta;
-    publishState(target);
-    publishState(guildId);
-    return {
-      ...playerState(target),
-      activeTarget: target,
-      destinationState: playerState(guildId),
-    };
+  if (manager.get(guildId)?.userdata?.outputs?.size) {
+    throw httpError(
+      409,
+      "Server đích đang là nguồn của kênh khác; hãy rút dây của nó trước",
+    );
   }
 
-  await movePlayback(sourcePlayer, discordPlayer);
+  await discordJoin(guildId, channelId);
+  const destination = await ensurePlayer(guildId);
+
+  // Đang nhận từ nguồn/kênh cũ: gỡ đăng ký cũ rồi đăng ký lại (không rời voice).
+  const previous = destination.userdata.linkedVoice;
+  if (previous?.sourceTarget && previous.sourceTarget !== target)
+    manager.get(previous.sourceTarget)?.userdata?.outputs?.delete(guildId);
+  if (destination.playbackMode === "forward") destination.unsubscribeForward();
+  // Player đích chỉ còn việc forward, không tự phát bài riêng.
+  if (!destination.isIdle) await destination.stop().catch(() => {});
+
+  if (!destination.subscribeTo(sourcePlayer)) {
+    throw httpError(409, "Không thể nối voice đích với player nguồn");
+  }
 
   const voiceMeta = {
     guildId,
@@ -919,94 +884,49 @@ async function linkVoice(target, guildId, channelId) {
     destinationGuildId: guildId,
     isLinked: true,
   };
-
-  discordPlayer.userdata ??= { target: guildId };
-  discordPlayer.userdata.linkedVoice = voiceMeta;
-
-  if (sourcePlayer && target !== guildId) {
-    sourcePlayer.userdata ??= { target };
-    sourcePlayer.userdata.linkedVoice = voiceMeta;
-  }
-
-  publishState(guildId);
+  destination.userdata.linkedVoice = voiceMeta;
+  outputsOf(sourcePlayer).set(guildId, voiceMeta);
+  console.log(
+    `[voice] nối ${target} → ${guildId}/#${channel.name} (mode=${destination.playbackMode}, outputs=${outputsOf(sourcePlayer).size})`,
+  );
   publishState(target);
+  publishState(guildId);
   return {
-    ...playerState(guildId),
-    activeTarget: guildId,
-    sourceState: playerState(target),
+    ...playerState(target),
+    activeTarget: target,
+    destinationState: playerState(guildId),
   };
 }
 
-async function unlinkVoice(target) {
+/**
+ * Rút dây. `guildId` chỉ rõ đầu ra cần rút; bỏ trống thì rút mọi đầu ra của `target`
+ * (hoặc, nếu `target` là guild đang nhận âm thanh, rút chính nó khỏi nguồn).
+ */
+async function unlinkVoice(target, guildId) {
   const player = manager.get(target);
-  const linked = player?.userdata?.linkedVoice;
-
-  // Nguồn là "Ứng dụng": trả bài về app, app vẫn nghe tiếp, chỉ rút phía Discord.
-  if (linked?.sourceTarget === LOCAL_TARGET && linked.destinationGuildId) {
-    const guildId = linked.destinationGuildId;
-    await restoreLocalFromVoice(guildId);
-    return {
-      ...playerState(target),
-      restoredTo: LOCAL_TARGET,
-      relatedState: playerState(
-        target === LOCAL_TARGET ? guildId : LOCAL_TARGET,
-      ),
-    };
+  const guildIds = new Set();
+  if (guildId) guildIds.add(guildId);
+  else {
+    for (const id of player?.userdata?.outputs?.keys() ?? []) guildIds.add(id);
+    const own = player?.userdata?.linkedVoice;
+    if (own?.destinationGuildId === target && own.sourceTarget !== target)
+      guildIds.add(target);
   }
-  const relatedTarget =
-    linked?.sourceTarget === target
-      ? linked.destinationGuildId
-      : linked?.sourceTarget;
-
-  if (linked?.sourceTarget === target && linked.destinationGuildId) {
-    const destination = manager.get(linked.destinationGuildId);
-    if (destination?.playbackMode === "forward")
-      destination.unsubscribeForward();
-    if (destination?.connection) await destination.disconnect();
-    if (destination?.userdata) destination.userdata.linkedVoice = null;
-    if (player?.userdata) player.userdata.linkedVoice = null;
-    publishState(linked.destinationGuildId);
-  } else {
-    if (player?.playbackMode === "forward") player.unsubscribeForward();
-    if (player?.connection) await player.disconnect();
-    if (linked?.sourceTarget) {
-      const source = manager.get(linked.sourceTarget);
-      if (source?.userdata) source.userdata.linkedVoice = null;
-      publishState(linked.sourceTarget);
-    }
-    if (linked?.destinationGuildId && linked.destinationGuildId !== target) {
-      const destination = manager.get(linked.destinationGuildId);
-      if (destination?.playbackMode === "forward")
-        destination.unsubscribeForward();
-      if (destination?.connection) await destination.disconnect();
-      if (destination?.userdata) destination.userdata.linkedVoice = null;
-      publishState(linked.destinationGuildId);
-    }
-    if (player?.userdata) player.userdata.linkedVoice = null;
-  }
+  for (const id of guildIds) await detachDestination(id);
   publishState(target);
   return {
     ...playerState(target),
-    relatedState: relatedTarget ? playerState(relatedTarget) : null,
+    relatedStates: [...guildIds]
+      .filter((id) => id !== target)
+      .map((id) => playerState(id)),
   };
 }
 
-/** Bot bị kick / mất kênh thoại: dọn dây nối để UI không còn hiện "đang nối" và app không bị im lặng. */
+/** Bot bị kick / mất kênh thoại: dọn dây nối để UI không còn hiện "đang nối". Nguồn vẫn phát bình thường. */
 async function handleVoiceLost(guildId, link) {
   console.warn(`[voice] mất kết nối voice guild=${guildId}, tự rút dây`);
   const message = `Đã mất kết nối tới #${link.channelName || "Voice"}, dây nối được tự động rút`;
-  if (link.sourceTarget === LOCAL_TARGET) {
-    await restoreLocalFromVoice(guildId, { leave: false });
-  } else {
-    const destination = manager.get(guildId);
-    if (destination?.playbackMode === "forward")
-      destination.unsubscribeForward();
-    if (destination?.userdata) destination.userdata.linkedVoice = null;
-    const source = manager.get(link.sourceTarget);
-    if (source?.userdata) source.userdata.linkedVoice = null;
-    publishState(guildId);
-    publishState(link.sourceTarget);
-  }
+  await detachDestination(guildId, { leave: false });
   for (const target of new Set([guildId, link.sourceTarget]))
     sendEvent(target, "voice-unlinked", { message, guildId });
 }
@@ -1456,23 +1376,14 @@ const routes = {
   "POST /discord/leave": async (_req, _url, body) => {
     const guildId = String(body.guildId);
     const player = manager.get(guildId);
-    const link = player?.userdata?.linkedVoice;
-    if (link?.sourceTarget === LOCAL_TARGET) {
-      await restoreLocalFromVoice(guildId);
-    } else {
-      // Guild này đang là nguồn của một voice khác: rút dây phía đích trước.
-      if (link?.sourceTarget === guildId) await unlinkVoice(guildId);
-      else if (player?.playbackMode === "forward") player.unsubscribeForward();
-      if (link?.sourceTarget && link.sourceTarget !== guildId) {
-        const source = manager.get(link.sourceTarget);
-        if (source?.userdata) source.userdata.linkedVoice = null;
-        publishState(link.sourceTarget);
-      }
-      if (player?.userdata) player.userdata.linkedVoice = null;
-      if (player?.connection) await player.disconnect();
+    if (player) {
+      // Guild này đang là nguồn của voice khác: rút các đầu ra của nó trước.
+      await detachAllOutputs(guildId);
+      if (player.userdata?.linkedVoice) await detachDestination(guildId);
+      else if (player.connection) await player.disconnect();
     }
     publishState(guildId);
-    return playerState(String(body.guildId));
+    return playerState(guildId);
   },
 
   "POST /voice/link": async (_req, _url, body) => {
@@ -1484,7 +1395,7 @@ const routes = {
 
   "POST /voice/unlink": async (_req, _url, body) => {
     const target = body.target || LOCAL_TARGET;
-    return unlinkVoice(target);
+    return unlinkVoice(target, body.guildId ? String(body.guildId) : undefined);
   },
 
   "GET /related": async (_req, url) => {

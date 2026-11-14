@@ -220,6 +220,8 @@ test("state chứa thông tin related và linkedVoice", async () => {
   assert.equal(s.json.connectionState, "disconnected");
   assert.equal(s.json.voice, null);
   assert.equal(s.json.linkedVoice, null);
+  assert.deepEqual(s.json.linkedVoices, []);
+  assert.equal(s.json.feedingFrom, null);
 
   const rel = await api("GET", "/related");
   assert.equal(rel.status, 200);

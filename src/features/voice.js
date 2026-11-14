@@ -6,6 +6,14 @@ import { app } from "../state.js";
 import { renderPlayer } from "../ui/player.js";
 import { renderSidebar } from "../ui/sidebar.js";
 
+function rememberState(state) {
+  if (!state?.target) return;
+  app.stateByTarget[state.target] = state;
+  if (state.target !== "local")
+    app.voiceByGuild[state.target] = state.voice ?? undefined;
+  if (state.target === app.target) setState(state);
+}
+
 export async function linkVoiceAction(sourceTarget, guildId, channelId) {
   if (!sourceTarget || !guildId || !channelId)
     return toast("Vui lòng chọn nguồn phát và kênh thoại đích", "error");
@@ -20,63 +28,39 @@ export async function linkVoiceAction(sourceTarget, guildId, channelId) {
   );
   if (!state) {
     const [sourceState, destinationState] = await Promise.all([
-      act(() => api.get(`/state?target=${encodeURIComponent(sourceTarget)}`)),
-      act(() => api.get(`/state?target=${encodeURIComponent(guildId)}`)),
+      api.get(`/state?target=${encodeURIComponent(sourceTarget)}`).catch(() => null),
+      api.get(`/state?target=${encodeURIComponent(guildId)}`).catch(() => null),
     ]);
-    if (sourceState) {
-      app.stateByTarget[sourceTarget] = sourceState;
-      if (sourceTarget === app.target) setState(sourceState);
-    }
-    if (destinationState) {
-      app.stateByTarget[guildId] = destinationState;
-      app.voiceByGuild[guildId] = destinationState.voice ?? undefined;
-    }
+    rememberState(sourceState);
+    rememberState(destinationState);
     renderSidebar();
     renderPlayer();
     return;
   }
-  const activeTarget = state.activeTarget || sourceTarget;
-  // Bài được chuyển sang player của guild: nếu app đang nghe nguồn cũ thì dời dây
-  // sang player mới để app + Discord cùng phát, không bị im lặng.
-  if (app.listen && app.webAudioSourceTarget === sourceTarget)
-    app.webAudioSourceTarget = activeTarget;
-  if (activeTarget !== app.target) await setTarget(activeTarget);
-  await syncAudio();
-  if (state.sourceState)
-    app.stateByTarget[state.sourceState.target] = state.sourceState;
-  app.voiceByGuild[guildId] = {
+  // Nguồn vẫn là player đang phát: không đổi target, không dời dây của app.
+  // Discord chỉ là thêm một đầu ra nữa của cùng nguồn đó.
+  rememberState(state);
+  rememberState(state.destinationState);
+  app.voiceByGuild[guildId] = state.destinationState?.voice ?? {
     channelId,
-    channelName: state.linkedVoice?.channelName,
+    channelName: state.linkedVoices?.find((l) => l.guildId === guildId)
+      ?.channelName,
   };
-  if (state.target === app.target) setState(state);
-  else app.stateByTarget[state.target] = state;
-  if (state.destinationState)
-    app.stateByTarget[state.destinationState.target] = state.destinationState;
   renderSidebar();
   renderPlayer();
 }
 
-export async function unlinkVoiceAction(target = app.target) {
+/** Rút một đầu ra Voice (guildId) khỏi nguồn; bỏ guildId = rút mọi đầu ra của nguồn. */
+export async function unlinkVoiceAction(target = app.target, guildId) {
   const state = await act(
-    () => api.post("/voice/unlink", { target }),
+    () => api.post("/voice/unlink", { target, guildId }),
     "Đã rút dây kết nối Voice",
   );
   if (!state) return;
-  app.stateByTarget[target] = state;
-  if (state.relatedState)
-    app.stateByTarget[state.relatedState.target] = state.relatedState;
-  if (state.restoredTo) await followRestoredPlayback(state.restoredTo);
-  if (state.target === app.target) setState(state);
+  rememberState(state);
+  for (const related of state.relatedStates ?? []) rememberState(related);
   renderSidebar();
   renderPlayer();
-}
-
-/** Bài đã được trả về player local (rút dây voice): app tiếp tục nghe, không bị im. */
-async function followRestoredPlayback(restoredTo) {
-  if (app.listen && app.webAudioSourceTarget !== restoredTo)
-    app.webAudioSourceTarget = restoredTo;
-  if (app.target !== restoredTo) await setTarget(restoredTo);
-  await syncAudio();
 }
 
 /** Rút dây phía Ứng dụng: ngừng nghe trong app, nhạc ở Discord vẫn chạy. */
@@ -87,19 +71,20 @@ export async function disconnectApp() {
   toast("Đã rút dây khỏi ứng dụng", "ok");
 }
 
-/** Server báo bot mất voice / dây bị rút tự động. */
+/** Server báo bot mất voice / dây bị rút tự động. Nguồn vẫn phát bình thường. */
 export async function onVoiceUnlinked({ message, guildId }) {
   toast(message || "Dây nối Voice đã được rút", "info", 6000);
   delete app.voiceByGuild[guildId];
-  const refreshed = await act(() => api.get("/state?target=local"));
-  if (refreshed) {
-    app.stateByTarget.local = refreshed;
-    if (app.webAudioSourceTarget === guildId) {
-      app.webAudioSourceTarget = "local";
-      if (app.target === guildId) await setTarget("local");
-      await syncAudio();
-    }
-    if (app.target === "local") setState(refreshed);
+  const [local, guild] = await Promise.all([
+    api.get("/state?target=local").catch(() => null),
+    api.get(`/state?target=${encodeURIComponent(guildId)}`).catch(() => null),
+  ]);
+  rememberState(local);
+  rememberState(guild);
+  if (app.webAudioSourceTarget === guildId) {
+    app.webAudioSourceTarget = "local";
+    if (app.target === guildId) await setTarget("local");
+    await syncAudio();
   }
   renderSidebar();
   renderPlayer();
