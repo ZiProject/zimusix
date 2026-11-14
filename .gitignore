@@ -6,3 +6,4 @@ src-tauri/target
 src-tauri/gen
 src-tauri/resources/*
 !src-tauri/resources/README.txt
+sidecar/package-lock.json

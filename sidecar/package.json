@@ -15,7 +15,7 @@
 		"music-metadata": "^11.16.1",
 		"opusscript": "^0.1.1",
 		"ws": "^8.19.0",
-		"ziplayer": "dev"
+		"ziplayer": "^1.0.5-dev.7"
 	},
 	"allowScripts": {
 		"ffmpeg-static": true
