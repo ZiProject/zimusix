@@ -1,17 +1,17 @@
 import { h } from "./dom.js";
 
 /**
- * Chữ chạy (marquee) cho tiêu đề dài.
+ * Marquee text scroll for long titles.
  *
- * - Chỉ chạy khi chữ thật sự dài hơn khung; ngắn thì đứng yên.
- * - Chạy vòng liền mạch (hai bản chữ nối nhau), dừng một nhịp ở đầu mỗi vòng.
- * - Đo lại khi khung đổi kích thước (kéo cửa sổ, đổi bố cục, đổi cỡ chữ) nhờ ResizeObserver.
- * - Rê chuột vào để dừng, để người dùng đọc nốt.
+ * - Only runs when text is strictly longer than container; static when shorter.
+ * - Smooth infinite loop (two duplicate text nodes), pausing at the beginning of each cycle.
+ * - Re-measures when container resizes (window resize, layout shift, font size change) via ResizeObserver.
+ * - Hover mouse to pause, allowing users to finish reading.
  */
 
-const GAP = 56; // khoảng trống giữa hai lần lặp (px)
-const HOLD = 0.14; // phần đầu mỗi vòng đứng yên (tỉ lệ)
-const MIN_OVERFLOW = 2; // dư dưới ngưỡng này thì coi như vừa khung
+const GAP = 56; // gap between loops (px)
+const HOLD = 0.14; // initial pause ratio per loop
+const MIN_OVERFLOW = 2; // overflow below threshold is considered fitting
 
 const observer =
   typeof ResizeObserver === "undefined"
@@ -27,15 +27,15 @@ function item(text, hidden = false) {
   return h("span", { class: "marquee-item", "aria-hidden": hidden ? "true" : null }, text);
 }
 
-/** Dựng lại ruột phần tử theo việc chữ có tràn hay không. */
+/** Rebuild container contents based on whether text overflows. */
 function measure(el) {
   const track = el.firstElementChild;
   const first = track?.firstElementChild;
   if (!first) return;
   const box = el.clientWidth;
-  if (!box) return; // đang ẩn: ResizeObserver sẽ gọi lại khi hiện
+  if (!box) return; // hidden: ResizeObserver will re-trigger on display
 
-  // đo chiều rộng chữ thật (không tính khoảng trống đã thêm khi đang chạy)
+  // Measure true text width (ignoring gap added while running)
   const textWidth = first.getBoundingClientRect().width - (el.classList.contains("marquee") ? GAP : 0);
   const overflow = textWidth - box;
 
@@ -48,9 +48,9 @@ function measure(el) {
   }
 
   const distance = textWidth + GAP;
-  // chữ lớn thì chạy nhanh hơn một chút để không thấy lờ đờ
+  // Larger font scrolls slightly faster
   const fontPx = parseFloat(getComputedStyle(el).fontSize) || 14;
-  const speed = Math.max(36, fontPx * 2.4); // px/giây
+  const speed = Math.max(36, fontPx * 2.4); // px/sec
   const seconds = Math.max(7, distance / speed / (1 - HOLD));
 
   el.style.setProperty("--marquee-shift", `-${distance}px`);
@@ -62,15 +62,15 @@ function measure(el) {
 }
 
 /**
- * Đặt chữ cho tiêu đề. `enabled` = false thì chỉ cắt bằng dấu "…".
- * Gọi lặp lại với cùng chữ là rẻ: chỉ dựng lại khi chữ/chế độ đổi.
+ * Set marquee text for title. `enabled` = false falls back to ellipsis.
+ * Calling repeatedly with same text is cheap: only re-renders when text/mode changes.
  */
 export function setMarqueeText(el, text, enabled) {
   const mode = String(Boolean(enabled));
   if (el.dataset.text !== text || el.dataset.marquee !== mode) {
     el.dataset.text = text;
     el.dataset.marquee = mode;
-    el.title = text; // xem đủ chữ khi rê chuột, kể cả khi bị cắt
+    el.title = text; // view full title on hover, even when clipped
     el.classList.remove("marquee");
     el.replaceChildren(h("span", { class: "marquee-track" }, item(text)));
     if (!enabled) {
@@ -80,6 +80,6 @@ export function setMarqueeText(el, text, enabled) {
     observer?.observe(el);
     requestAnimationFrame(() => el.isConnected && measure(el));
   } else if (enabled) {
-    observer?.observe(el); // observe lặp lại là vô hại
+    observer?.observe(el); // observing repeatedly is idempotent
   }
 }

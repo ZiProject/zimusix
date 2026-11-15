@@ -1,4 +1,4 @@
-/** Đọc/ghi cờ bật-tắt đơn giản trong localStorage (không ném lỗi khi bị chặn). */
+/** Read/write simple toggle flags in localStorage (failsafe when blocked). */
 export function readFlag(key, fallback = false) {
   try {
     const value = localStorage.getItem(key);

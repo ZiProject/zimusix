@@ -4,7 +4,7 @@
   "name": "Vinyl Night",
   "version": "1.1.2",
   "author": "Zimusix",
-  "description": "Không khí analog ấm áp với đĩa than chuyển động, aurora nhiều lớp và lời bài hát kiểu karaoke.",
+  "description": "Warm analog atmosphere with rotating vinyl, multi-layer aurora, and karaoke-style lyrics.",
   "tags": [
     "vinyl",
     "aurora",
@@ -99,7 +99,7 @@
   "settings": [
     {
       "key": "spinSpeed",
-      "label": "Tốc độ quay đĩa",
+      "label": "Vinyl spin speed",
       "type": "range",
       "bind": "artwork.spinSpeed",
       "min": 6,
@@ -108,13 +108,13 @@
     },
     {
       "key": "accent",
-      "label": "Màu nhấn",
+      "label": "Accent color",
       "type": "color",
       "bind": "theme.colors.accent"
     },
     {
       "key": "aurora",
-      "label": "Cường độ aurora",
+      "label": "Aurora intensity",
       "type": "range",
       "bind": "background.intensity",
       "min": 0.1,
@@ -123,7 +123,7 @@
     },
     {
       "key": "lyricsSize",
-      "label": "Cỡ chữ lời bài hát",
+      "label": "Lyrics font size",
       "type": "range",
       "bind": "lyrics.size",
       "min": 16,
@@ -132,21 +132,21 @@
     },
     {
       "key": "panels",
-      "label": "Kiểu nền panel",
+      "label": "Panel background style",
       "type": "select",
       "bind": "controls.panels",
       "options": [
         {
           "value": "solid",
-          "label": "Đặc"
+          "label": "Solid"
         },
         {
           "value": "glass",
-          "label": "Kính mờ"
+          "label": "Frosted glass"
         },
         {
           "value": "flat",
-          "label": "Phẳng"
+          "label": "Flat"
         }
       ]
     }

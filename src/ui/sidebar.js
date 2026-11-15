@@ -7,17 +7,17 @@ import { app, refs } from "../state.js";
 
 export function renderSidebar() {
   const nav = [
-    ["nowplaying", "disc", "Đang phát"],
-    ["search", "search", "Tìm kiếm"],
-    ["library", "folder", "File local"],
-    ["queue", "queue", "Hàng đợi"],
-    ["related", "sparkles", "Gợi ý"],
-    ["lyrics", "mic", "Lời bài hát"],
-    ["presets", "palette", "Giao diện"],
+    ["nowplaying", "disc", "Now Playing"],
+    ["search", "search", "Search"],
+    ["library", "folder", "Local Files"],
+    ["queue", "queue", "Queue"],
+    ["related", "sparkles", "Related"],
+    ["lyrics", "mic", "Lyrics"],
+    ["presets", "palette", "Themes"],
     ["discord", "discord", "Discord"],
   ];
   const targets = [
-    { id: "local", name: "Máy này", channel: "Phát trong app" },
+    { id: "local", name: "This device", channel: "In-app playback" },
     ...joinedTargets(),
   ];
 
@@ -55,7 +55,7 @@ export function renderSidebar() {
         ),
       ),
     ),
-    h("div", { class: "section-title" }, "Phát tới"),
+    h("div", { class: "section-title" }, "Play to"),
     h(
       "div",
       { class: "targets" },
@@ -74,7 +74,7 @@ export function renderSidebar() {
             h(
               "small",
               null,
-              t.id === "local" ? t.channel : `# ${t.channel ?? "kênh thoại"}`,
+              t.id === "local" ? t.channel : `# ${t.channel ?? "voice channel"}`,
             ),
           ),
         ),
@@ -85,10 +85,10 @@ export function renderSidebar() {
       { class: "discord-pill" },
       h("span", { class: `dot ${app.discord.status}` }),
       app.discord.status === "ready"
-        ? `Bot: ${app.discord.user?.tag ?? "đã đăng nhập"}`
+        ? `Bot: ${app.discord.user?.tag ?? "logged in"}`
         : app.discord.status === "connecting"
-          ? "Bot đang đăng nhập…"
-          : "Bot chưa đăng nhập",
+          ? "Bot logging in…"
+          : "Bot not logged in",
     ),
   );
 }

@@ -1,4 +1,4 @@
-/** Hiệu ứng nền dạng canvas: hạt (particles) bay chậm, nhanh dần theo năng lượng nhạc. */
+/** Canvas background effects: particles floating slowly, accelerating with music energy. */
 import { reactive } from "./reactive.js";
 
 let canvas = null;

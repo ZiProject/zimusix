@@ -4,7 +4,7 @@
   "name": "Lyrics Focus",
   "version": "1.1.2",
   "author": "Zimusix",
-  "description": "Không gian tập trung vào từng câu hát với typography lớn, karaoke mượt và nền màu dịu mắt.",
+  "description": "An immersive space focused on lyrics with large typography, smooth karaoke, and eye-soothing background tones.",
   "tags": [
     "lyrics",
     "focus",
@@ -97,7 +97,7 @@
   "settings": [
     {
       "key": "lyricsSize",
-      "label": "Cỡ chữ lời bài hát",
+      "label": "Lyrics font size",
       "type": "range",
       "bind": "lyrics.size",
       "min": 18,
@@ -106,7 +106,7 @@
     },
     {
       "key": "mode",
-      "label": "Kiểu hiển thị lời",
+      "label": "Lyrics display mode",
       "type": "select",
       "bind": "lyrics.mode",
       "options": [
@@ -116,27 +116,27 @@
         },
         {
           "value": "focus",
-          "label": "Tập trung"
+          "label": "Focus"
         },
         {
           "value": "list",
-          "label": "Toàn bài"
+          "label": "Full list"
         },
         {
           "value": "compact",
-          "label": "Thu gọn"
+          "label": "Compact"
         }
       ]
     },
     {
       "key": "glow",
-      "label": "Phát sáng câu hiện tại",
+      "label": "Active line glow",
       "type": "toggle",
       "bind": "lyrics.glow"
     },
     {
       "key": "accent",
-      "label": "Màu nhấn",
+      "label": "Accent color",
       "type": "color",
       "bind": "theme.colors.accent"
     }

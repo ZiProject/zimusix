@@ -1,6 +1,6 @@
 "use strict";
-// Test tích hợp: chạy sidecar thật, phát file local, nhận frame Opus qua WS, điều khiển player.
-// Cần ffmpeg (hệ thống hoặc ffmpeg-static) để sinh file âm thanh thử.
+// Integration test: runs real sidecar, plays local file, receives Opus frames over WS, controls player.
+// Requires ffmpeg (system or ffmpeg-static) to generate test audio files.
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { spawn, spawnSync } = require("node:child_process");
@@ -28,7 +28,7 @@ function makeTone(file, freq, seconds) {
     "libmp3lame",
     file,
   ]);
-  assert.equal(r.status, 0, "ffmpeg phải sinh được file thử");
+  assert.equal(r.status, 0, "ffmpeg must generate test file successfully");
 }
 
 const api = async (method, route, body, token = TOKEN) => {
@@ -60,7 +60,7 @@ before(async () => {
   makeTone(fileA, 440, 20);
   makeTone(fileB, 660, 20);
 
-  // Có thể trỏ tới bản đã đóng gói: ZIMUSIX_TEST_NODE / ZIMUSIX_TEST_SERVER / ZIMUSIX_TEST_PATH (PATH rỗng để chứng minh không dựa vào hệ thống)
+  // Can point to packaged build: ZIMUSIX_TEST_NODE / ZIMUSIX_TEST_SERVER / ZIMUSIX_TEST_PATH (empty PATH to prove no system dependency)
   const serverFile =
     process.env.ZIMUSIX_TEST_SERVER || path.join(__dirname, "server.js");
   child = spawn(
@@ -82,7 +82,7 @@ before(async () => {
   );
   const port = await new Promise((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error("sidecar không khởi động")),
+      () => reject(new Error("sidecar failed to start")),
       30000,
     );
     child.stdout.on("data", (chunk) => {
@@ -90,7 +90,7 @@ before(async () => {
       if (m) (clearTimeout(timer), resolve(JSON.parse(m[1]).port));
     });
     child.on("exit", (code) =>
-      reject(new Error(`sidecar thoát sớm (${code})`)),
+      reject(new Error(`sidecar exited early (${code})`)),
     );
   });
   base = `http://127.0.0.1:${port}`;
@@ -101,12 +101,12 @@ after(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test("từ chối request không có token", async () => {
-  const r = await api("GET", "/health", null, "sai");
+test("reject request without token", async () => {
+  const r = await api("GET", "/health", null, "wrong");
   assert.equal(r.status, 401);
 });
 
-test("thumbnail proxy chỉ nhận URL ảnh từ Bilibili", async () => {
+test("thumbnail proxy only accepts image URLs from Bilibili", async () => {
   const url = new URL(base + "/thumbnail");
   url.searchParams.set("url", "https://example.com/bfs/archive/image.jpg");
   url.searchParams.set("token", TOKEN);
@@ -122,22 +122,22 @@ test("thumbnail proxy chỉ nhận URL ảnh từ Bilibili", async () => {
   assert.equal(unauthorized.status, 401);
 });
 
-test("health liệt kê đủ plugin", async () => {
+test("health reports all plugins", async () => {
   const r = await api("GET", "/health");
   assert.equal(r.status, 200);
   for (const name of ["youtube", "soundcloud", "spotify", "attachments"])
     assert.ok(
       r.json.plugins.includes(name),
-      `thiếu plugin ${name}: ${r.json.plugins}`,
+      `missing plugin ${name}: ${r.json.plugins}`,
     );
   assert.equal(
     r.json.ffmpeg.ok,
     true,
-    `FFmpeg phải khả dụng: ${JSON.stringify(r.json.ffmpeg)}`,
+    `FFmpeg must be available: ${JSON.stringify(r.json.ffmpeg)}`,
   );
 });
 
-test("phát file local + nhận Opus qua WebSocket", async () => {
+test("play local file + receive Opus over WebSocket", async () => {
   const frames = [];
   let config = null;
   const ws = new WebSocket(
@@ -165,7 +165,7 @@ test("phát file local + nhận Opus qua WebSocket", async () => {
   ws.close();
 });
 
-test("hàng đợi: thêm cuối, phát ngay, điều khiển", async () => {
+test("queue: add to end, play now, controls", async () => {
   let r = await api("POST", "/play", { paths: [fileB], mode: "end" });
   assert.equal(r.json.queue.length, 1);
   assert.match(r.json.queue[0].title, /Tone B/);
@@ -184,7 +184,7 @@ test("hàng đợi: thêm cuối, phát ngay, điều khiển", async () => {
   r = await api("POST", "/control", { action: "seek", positionMs: 5000 });
   assert.ok(r.status === 200, JSON.stringify(r.json));
 
-  // "phát ngay" bài A lần nữa → bài hiện tại đổi
+  // "play now" track A again → current track changes
   r = await api("POST", "/play", { paths: [fileA], mode: "now" });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   await waitFor(async () =>
@@ -197,14 +197,14 @@ test("hàng đợi: thêm cuối, phát ngay, điều khiển", async () => {
   assert.ok(r.status === 200 || r.status === 409);
 });
 
-test("tìm bằng đường dẫn file trả về thời lượng và tag", async () => {
+test("search by file path returns duration and tags", async () => {
   const r = await api("POST", "/search", { query: fileB });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(r.json.tracks[0].source, "attachments");
   assert.equal(r.json.tracks[0].duration, 20000);
 });
 
-test("Discord: chưa đăng nhập thì báo lỗi rõ ràng", async () => {
+test("Discord: clear error when not logged in", async () => {
   const s = await api("GET", "/discord/status");
   assert.equal(s.json.status, "logged-out");
   const invalidLink = await api("POST", "/voice/link", {
@@ -228,7 +228,7 @@ test("Discord: chưa đăng nhập thì báo lỗi rõ ràng", async () => {
   assert.equal(link.status, 409);
 });
 
-test("state chứa thông tin related và linkedVoice", async () => {
+test("state contains related and linkedVoice info", async () => {
   const s = await api("GET", "/state");
   assert.equal(s.status, 200);
   assert.ok(Array.isArray(s.json.related));
@@ -244,24 +244,24 @@ test("state chứa thông tin related và linkedVoice", async () => {
   assert.ok(Array.isArray(rel.json.tracks));
 });
 
-test("lyrics endpoint trả kết quả hoặc báo lỗi hợp lệ", async () => {
+test("lyrics endpoint returns results or valid error", async () => {
   const r = await api("GET", "/lyrics");
   assert.equal(r.status, 200);
   assert.equal(typeof r.json.ok, "boolean");
 });
 
-test("video stream endpoint xử lý đúng", async () => {
+test("video stream endpoint handles request correctly", async () => {
   const r = await fetch(base + "/video/stream?target=local&token=" + TOKEN);
-  // Khi chưa phát bài có video thì trả 404
+  // Returns 404 when track has no video
   assert.ok(r.status === 404 || r.status === 200);
 });
 
-test("search online (bỏ qua nếu sandbox không có mạng)", async (t) => {
+test("search online (skipped if sandbox has no network)", async (t) => {
   const r = await api("POST", "/search", {
     query: "lofi hip hop",
     source: "soundcloud",
   });
   if (r.status !== 200)
-    return t.skip(`không có mạng/plugin lỗi: ${r.json.error}`);
+    return t.skip(`no network/plugin error: ${r.json.error}`);
   assert.ok(Array.isArray(r.json.tracks));
 });

@@ -36,7 +36,7 @@ async function loadGuilds() {
 export async function discordLogin(token) {
   const status = await act(
     () => api.post("/discord/login", { token, remember: true }),
-    "Bot Discord đã đăng nhập",
+    "Discord bot logged in",
   );
   if (status) app.discord.error = null;
   await loadDiscord();
@@ -45,7 +45,7 @@ export async function discordLogin(token) {
 export async function discordLogout() {
   await act(
     () => api.post("/discord/logout", { forget: true }),
-    "Đã đăng xuất bot",
+    "Bot logged out",
   );
   app.guilds = [];
   app.voiceByGuild = {};
@@ -56,7 +56,7 @@ export async function discordLogout() {
 export async function discordJoin(guildId, channelId) {
   const state = await act(
     () => api.post("/discord/join", { guildId, channelId }),
-    "Bot đã vào kênh thoại",
+    "Bot joined voice channel",
   );
   if (!state) return;
   app.voiceByGuild[guildId] = state.voice ?? undefined;
@@ -67,7 +67,7 @@ export async function discordJoin(guildId, channelId) {
 export async function discordLeave(guildId) {
   await act(
     () => api.post("/discord/leave", { guildId }),
-    "Bot đã rời kênh thoại",
+    "Bot left voice channel",
   );
   app.voiceByGuild[guildId] = undefined;
   if (app.target === guildId) await setTarget("local");

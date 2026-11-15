@@ -8,10 +8,10 @@ let lastLyricsKey = null;
 
 let lastActiveLyricIdx = -1;
 
-/** Container lyric đã được tô sáng lần gần nhất (DOM mới sau khi render lại thì phải tô lại). */
+/** Last highlighted lyrics container (new DOM after re-render must be re-highlighted). */
 let lastContainer = null;
 
-/** Lời bài hát có đang nằm trên màn hình không (tab Lời bài hát, hoặc nhúng trong khu Đang phát). */
+/** Whether lyrics are currently on screen (Lyrics tab or embedded in Now Playing). */
 export function lyricsOnScreen() {
   return (
     app.view === "lyrics" ||
@@ -42,7 +42,7 @@ export async function loadLyrics(force = false) {
     if (res.ok) {
       app.lyrics = res;
     } else {
-      app.lyrics = { error: res.error || "Không tìm thấy lời bài hát" };
+      app.lyrics = { error: res.error || "No lyrics found" };
     }
   } catch (err) {
     app.lyrics = { error: err.message };
@@ -52,7 +52,7 @@ export async function loadLyrics(force = false) {
   }
 }
 
-/** Cuộn dòng đang hát vào giữa khung lyric (chỉ cuộn trong khung, không kéo cả trang). */
+/** Scroll active line to vertical center of lyrics container (only scrolls container). */
 function centerLine(container, el, smooth) {
   const top = el.offsetTop - container.clientHeight / 2 + el.offsetHeight / 2;
   container.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
@@ -80,8 +80,8 @@ export function updateLyricsSync() {
   lineEls.forEach((el, idx) => {
     el.classList.toggle("active", idx === activeIdx);
     el.classList.toggle("past", idx < activeIdx);
-    // khoảng cách tới dòng đang hát (0..4): các chế độ karaoke/focus dùng để làm mờ dần
-    // chưa tới dòng đầu: coi hai dòng đầu là "sắp hát" để chế độ focus vẫn có chữ
+    // Distance to active line (0..4) used by karaoke/focus modes for progressive fading
+    // Before first line: treat first two lines as upcoming so focus mode shows text
     el.dataset.d =
       activeIdx < 0
         ? idx < 2
@@ -94,7 +94,7 @@ export function updateLyricsSync() {
   else if (freshContainer) container.scrollTo({ top: 0 });
 }
 
-/** Đặt lại mốc dòng lyric đang sáng (khi đổi bài / đổi đích phát). */
+/** Reset active lyrics line position (on track change / target change). */
 export function resetLyricsSync() {
   lastActiveLyricIdx = -1;
   lastContainer = null;

@@ -1,12 +1,12 @@
 /* ------------------------------------------------------------------------------------------
-   Preset · LAYOUT — bố cục giao diện web.
-   Bám vào: html[data-shell] [data-sidebar] [data-player-pos] [data-density]
-   Mặc định (không có rule) = bố cục gốc: thanh bên trái, thanh phát dưới.
-   Lưu ý: #app.sidebar-hidden / #app.content-hidden là trạng thái do người dùng bật,
-   nên các rule dưới đây luôn tôn trọng chúng (:not(...)).
+   Preset · LAYOUT — application layout and shell styling.
+   Driven by: html[data-shell] [data-sidebar] [data-player-pos] [data-density]
+   Default (no rules) = original layout: left sidebar, bottom player bar.
+   Note: #app.sidebar-hidden / #app.content-hidden are user toggles;
+   the rules below always respect them (:not(...)).
    ------------------------------------------------------------------------------------------ */
 
-/* ---- Sidebar: phải ------------------------------------------------------------------------ */
+/* ---- Sidebar: right ----------------------------------------------------------------------- */
 html[data-sidebar="right"] #app:not(.sidebar-hidden) {
   grid-template-columns: 1fr var(--side-w, 230px);
   grid-template-areas: "main side" "player player";
@@ -16,7 +16,7 @@ html[data-sidebar="right"] .sidebar {
   border-left: 1px solid var(--line);
 }
 
-/* ---- Sidebar: thu gọn (chỉ icon) ------------------------------------------------------------ */
+/* ---- Sidebar: rail (icons only) ----------------------------------------------------------- */
 html[data-sidebar="rail"] #app:not(.sidebar-hidden) {
   --side-w: 68px;
 }
@@ -50,10 +50,10 @@ html[data-sidebar="rail"] .target {
 }
 html[data-sidebar="rail"] .discord-pill {
   justify-content: center;
-  font-size: 0; /* ẩn chữ, giữ chấm trạng thái */
+  font-size: 0; /* hides text while keeping status dot */
 }
 
-/* ---- Player: trên ------------------------------------------------------------------------- */
+/* ---- Player: top ------------------------------------------------------------------------ */
 html[data-player-pos="top"] #app:not(.content-hidden) {
   grid-template-rows: var(--player-h, 92px) 1fr;
   grid-template-areas: "player player" "side main";
@@ -77,7 +77,7 @@ html[data-player-pos="top"] .toasts {
   bottom: 16px;
 }
 
-/* ---- Player: nổi (viên thuốc, kính mờ) ------------------------------------------------------ */
+/* ---- Player: floating (pill, frosted glass) ---------------------------------------------- */
 html[data-player-pos="floating"] #app:not(.content-hidden) {
   grid-template-rows: 1fr;
   grid-template-areas: "side main";
@@ -109,7 +109,7 @@ html[data-player-pos="floating"] #app:not(.content-hidden) .main {
   padding-bottom: 116px;
 }
 
-/* ---- Player: tối giản (thấp, ít nút) ------------------------------------------------------- */
+/* ---- Player: minimal (compact height, fewer buttons) -------------------------------------- */
 html[data-player-pos="minimal"] #app:not(.content-hidden) {
   --player-h: 64px;
 }
@@ -135,7 +135,7 @@ html[data-player-pos="minimal"] #app:not(.content-hidden) .play-btn {
   height: 38px;
 }
 
-/* ---- Mật độ gọn ------------------------------------------------------------------------- */
+/* ---- Density: compact -------------------------------------------------------------------- */
 html[data-density="compact"] .main {
   padding: 14px 16px;
 }
@@ -160,7 +160,7 @@ html[data-density="compact"] .view h2 {
   font-size: 19px;
 }
 
-/* ---- Shell: sắp xếp khu "Đang phát" (.np-stage) ---------------------------------------------- */
+/* ---- Shell: "Now Playing" stage layout (.np-stage) --------------------------------------- */
 .np-stage {
   display: flex;
   gap: 28px;
@@ -183,7 +183,7 @@ html[data-density="compact"] .view h2 {
   height: min(62vh, 560px);
 }
 
-/* classic: xếp dọc, canh trái như các tab khác */
+/* classic: vertical stack, left-aligned like standard tabs */
 html:is([data-shell="classic"], :not([data-shell])) .np-stage {
   flex-direction: column;
   align-items: stretch;
@@ -197,7 +197,7 @@ html:is([data-shell="classic"], :not([data-shell])) .stage-lyrics {
   height: min(50vh, 420px);
 }
 
-/* stage: ảnh lớn ở giữa, lyrics (nếu nhúng) nằm dưới */
+/* stage: large artwork in center, lyrics (if embedded) below */
 html[data-shell="stage"] .np-stage {
   flex-direction: column;
   gap: 18px;
@@ -207,7 +207,7 @@ html[data-shell="stage"] .stage-lyrics {
   height: min(34vh, 320px);
 }
 
-/* focus: lyrics là nhân vật chính, ảnh + thông tin thu nhỏ thành một hàng phía trên */
+/* focus: lyrics take center stage, artwork + metadata condensed into top row */
 html[data-shell="focus"] .np-stage {
   flex-direction: column;
   gap: 8px;
@@ -235,7 +235,7 @@ html[data-shell="focus"] .stage-lyrics {
   height: min(60vh, 560px);
 }
 
-/* split: chia đôi — trái là sân khấu, phải là lyrics */
+/* split: side-by-side — left is visual stage, right is lyrics */
 html[data-shell="split"] .np-stage {
   flex-direction: row;
   align-items: center;

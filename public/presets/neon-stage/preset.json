@@ -4,7 +4,7 @@
   "name": "Neon Stage",
   "version": "1.1.2",
   "author": "Zimusix",
-  "description": "Sân khấu âm nhạc đậm chất neon với artwork trung tâm, visualizer vòng tròn và ánh sáng chuyển động.",
+  "description": "A neon-soaked music stage with centered artwork, circular visualizer, and dynamic lighting.",
   "tags": [
     "neon",
     "stage",
@@ -99,7 +99,7 @@
   "settings": [
     {
       "key": "particles",
-      "label": "Mật độ hạt sáng",
+      "label": "Particle density",
       "type": "range",
       "bind": "background.count",
       "min": 10,
@@ -108,7 +108,7 @@
     },
     {
       "key": "vizHeight",
-      "label": "Chiều cao visualizer",
+      "label": "Visualizer height",
       "type": "range",
       "bind": "visualizer.height",
       "min": 100,
@@ -117,41 +117,41 @@
     },
     {
       "key": "vizType",
-      "label": "Kiểu visualizer",
+      "label": "Visualizer style",
       "type": "select",
       "bind": "visualizer.type",
       "options": [
         {
           "value": "circle",
-          "label": "Vòng tròn"
+          "label": "Circle"
         },
         {
           "value": "bars",
-          "label": "Cột"
+          "label": "Bars"
         },
         {
           "value": "mirror",
-          "label": "Đối xứng"
+          "label": "Mirror"
         },
         {
           "value": "dots",
-          "label": "Chấm"
+          "label": "Dots"
         },
         {
           "value": "wave",
-          "label": "Sóng"
+          "label": "Wave"
         }
       ]
     },
     {
       "key": "spin",
-      "label": "Xoay artwork",
+      "label": "Spin artwork",
       "type": "toggle",
       "bind": "artwork.spin"
     },
     {
       "key": "accent",
-      "label": "Màu neon chính",
+      "label": "Primary neon color",
       "type": "color",
       "bind": "theme.colors.accent"
     }

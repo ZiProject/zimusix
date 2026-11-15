@@ -9,11 +9,11 @@ export function viewLibrary() {
   return h(
     "section",
     { class: "view" },
-    h("h2", null, "File local"),
+    h("h2", null, "Local Files"),
     h(
       "p",
       { class: "muted" },
-      "Chọn file hoặc thư mục nhạc trên máy (mp3, flac, wav, ogg, m4a, aac, opus…). Có thể kéo thả trực tiếp vào cửa sổ.",
+      "Select local music files or folders (mp3, flac, wav, ogg, m4a, aac, opus…). You can also drag and drop directly into the window.",
     ),
     h(
       "div",
@@ -24,7 +24,7 @@ export function viewLibrary() {
           class: app.addMode === "end" ? "active" : "",
           onclick: () => ((app.addMode = "end"), renderMain()),
         },
-        "Thêm vào hàng đợi",
+        "Add to queue",
       ),
       h(
         "button",
@@ -32,21 +32,21 @@ export function viewLibrary() {
           class: app.addMode === "now" ? "active" : "",
           onclick: () => ((app.addMode = "now"), renderMain()),
         },
-        "Phát ngay",
+        "Play now",
       ),
     ),
     h(
       "div",
       { class: "drop-zone" },
       icon("folder", 36),
-      h("div", null, "Kéo thả file / thư mục vào đây"),
+      h("div", null, "Drag & drop files / folders here"),
       h(
         "div",
         { class: "button-row" },
-        h("button", { class: "primary", onclick: pickFiles }, "Chọn file…"),
-        h("button", { onclick: pickFolder }, "Chọn thư mục…"),
+        h("button", { class: "primary", onclick: pickFiles }, "Choose files…"),
+        h("button", { onclick: pickFolder }, "Choose folder…"),
       ),
     ),
-    h("p", { class: "muted small" }, `Đang phát tới: ${targetLabel()}`),
+    h("p", { class: "muted small" }, `Playing to: ${targetLabel()}`),
   );
 }

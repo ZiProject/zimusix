@@ -5,13 +5,13 @@ import { renderMain } from "./ui/main-view.js";
 import { onPlayPause } from "./ui/player.js";
 
 document.addEventListener("keydown", (event) => {
-  // F11: bật/tắt toàn màn hình (webview không tự xử lý phím này)
+  // F11: toggle fullscreen (webview does not handle automatically)
   if (event.key === "F11") {
     event.preventDefault();
     toggleFullscreen();
     return;
   }
-  // H: ẩn/hiện nội dung các tab để xem nền (không khi đang gõ chữ)
+  // H: toggle tab content to view background (unless typing in inputs)
   if (
     event.key.toLowerCase() === "h" &&
     !event.ctrlKey &&

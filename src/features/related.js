@@ -6,7 +6,7 @@ import { renderMain } from "../ui/main-view.js";
 export async function refreshRelated() {
   const res = await act(
     () => api.post("/related/refresh", { target: app.target }),
-    "Đã làm mới danh sách gợi ý",
+    "Refreshed recommendations",
   );
   if (res?.tracks) {
     if (app.state) app.state.related = res.tracks;
@@ -23,6 +23,6 @@ export async function enqueueRelatedAll(tracks) {
       mode: "end",
     });
   }
-  toast(`Đã thêm ${tracks.length} bài gợi ý vào hàng đợi`, "ok");
+  toast(`Added ${tracks.length} recommended tracks to queue`, "ok");
   renderMain();
 }

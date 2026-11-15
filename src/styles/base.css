@@ -10,7 +10,7 @@
   --ok: #3ecf8e;
   --danger: #ff5c7a;
   --radius: 12px;
-  /* Bản "r g b" của --bg / --panel để viết rgb(var(--bg-rgb) / alpha); preset đổi màu sẽ cập nhật. */
+  /* "r g b" channels of --bg / --panel for rgb(var(--bg-rgb) / alpha); updated when presets change colors. */
   --bg-rgb: 14 14 20;
   --panel-rgb: 21 21 30;
   --content-width: 880px;
@@ -106,7 +106,7 @@ input:focus {
   border-color: var(--accent);
 }
 
-/* ---- Thanh cuộn mảnh, mờ, đổi màu theo giao diện (thay thanh cuộn mặc định to và trắng) ---- */
+/* ---- Slim translucent scrollbar styled to match theme (replaces default bulky white scrollbar) ---- */
 * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent;

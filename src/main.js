@@ -30,21 +30,21 @@ function showFatal(message) {
       h(
         "button",
         { class: "primary", onclick: () => location.reload() },
-        "Thử lại",
+        "Retry",
       ),
     ),
   );
 }
 
-/** FFmpeg thiếu thì phần lớn nguồn (file local, seek, filter) sẽ không phát được: báo rõ ngay từ đầu. */
+/** If FFmpeg is missing, most sources (local files, seek, filters) cannot play: report clearly up front. */
 async function checkFfmpeg(health) {
   if (health?.ffmpeg?.ok !== false) return;
-  // sidecar có thể đang tự tải binary: kiểm tra lại sau một lúc rồi mới báo
+  // Sidecar might be auto-downloading binary: re-check after delay before notifying
   await new Promise((resolve) => setTimeout(resolve, 20_000));
   const now = await api.get("/health").catch(() => null);
   if (now?.ffmpeg?.ok === false) {
     toast(
-      `${now.ffmpeg.error}\nHãy cài FFmpeg vào PATH, hoặc đặt biến môi trường FFMPEG_PATH, rồi mở lại app.`,
+      `${now.ffmpeg.error}\nPlease install FFmpeg to PATH, or set the FFMPEG_PATH environment variable, then restart the app.`,
       "error",
       30_000,
       "error",
@@ -60,7 +60,7 @@ async function boot() {
       { class: "fatal" },
       mascotImg("loading", "fatal-mascot"),
       h("h1", { class: "brand-name" }, "Zimusix"),
-      h("p", { id: "boot-msg" }, "Đang khởi động bộ phát nhạc…"),
+      h("p", { id: "boot-msg" }, "Starting music player…"),
     ),
   );
   try {
@@ -69,7 +69,7 @@ async function boot() {
         document
           .getElementById("boot-msg")
           ?.replaceChildren(
-            "Đang chờ backend ZiPlayer… (lần đầu có thể lâu hơn)",
+            "Waiting for ZiPlayer backend… (first run may take longer)",
           );
     });
   } catch (error) {
@@ -77,12 +77,12 @@ async function boot() {
     return;
   }
 
-  // Preset (bố cục, ảnh bìa, nền, visualizer, lyrics…) phải sẵn sàng trước khi dựng UI.
-  // Lỗi preset không được chặn app: runtime tự rơi về cấu hình mặc định (classic).
+  // Presets (layout, cover, background, visualizer, lyrics...) must be ready before rendering UI.
+  // Preset errors must not block the app: runtime falls back to default preset (classic).
   try {
     await initPresets();
   } catch (error) {
-    console.warn("[presets] khởi tạo thất bại, dùng mặc định:", error);
+    console.warn("[presets] initialization failed, using default:", error);
   }
 
   refs.sidebar = h("aside", { class: "sidebar" });
@@ -103,7 +103,7 @@ async function boot() {
     applyBackgroundEffect();
     renderPlayer();
     renderSidebar();
-    // kéo thanh tuỳ chỉnh thì giữ nguyên trang (không dựng lại giữa lúc đang kéo)
+    // Keep page intact while dragging sliders
     if (reason !== "setting") renderMain();
     if (lyricsOnScreen()) loadLyrics();
   });
@@ -114,7 +114,7 @@ async function boot() {
 
   checkFfmpeg(health);
   await loadDiscord();
-  // Bot tự đăng nhập bằng token đã lưu: poll đến khi xong.
+  // Bot auto-login using saved token: poll until done.
   for (let i = 0; i < 20 && app.discord.status === "connecting"; i++) {
     await new Promise((resolve) => setTimeout(resolve, 1500));
     await loadDiscord();

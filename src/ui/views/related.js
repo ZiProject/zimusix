@@ -20,13 +20,13 @@ export function viewRelated() {
       h(
         "div",
         null,
-        h("h2", null, "Gợi ý liên quan (Related Tracks)"),
+        h("h2", null, "Recommended (Related Tracks)"),
         h(
           "p",
           { class: "muted" },
           current
-            ? `Gợi ý tự động cho bài: ${current.title}`
-            : "Tự động gợi ý các bài hát tương tự",
+            ? `Auto recommendations for: ${current.title}`
+            : "Automatically suggests similar tracks",
         ),
       ),
       h(
@@ -34,15 +34,15 @@ export function viewRelated() {
         { class: "button-row" },
         h(
           "button",
-          { onclick: refreshRelated, title: "Làm mới gợi ý bài liên quan" },
+          { onclick: refreshRelated, title: "Refresh related recommendations" },
           icon("refresh", 16),
-          " Làm mới",
+          " Refresh",
         ),
         related.length
           ? h(
               "button",
               { class: "primary", onclick: () => enqueueRelatedAll(related) },
-              "Phát tất cả",
+              "Play all",
             )
           : null,
       ),
@@ -56,14 +56,14 @@ export function viewRelated() {
               actions: [
                 iconButton(
                   "play",
-                  "Phát ngay",
+                  "Play now",
                   () => playTrack(track, "now"),
                   "accent",
                 ),
-                iconButton("next", "Phát tiếp theo", () =>
+                iconButton("next", "Play next", () =>
                   playTrack(track, "next"),
                 ),
-                iconButton("plus", "Thêm vào hàng đợi", () =>
+                iconButton("plus", "Add to queue", () =>
                   playTrack(track, "end"),
                 ),
               ],
@@ -73,11 +73,11 @@ export function viewRelated() {
       : current
         ? mascotState(
             "loading",
-            "Đang tải bài hát liên quan... Bấm 'Làm mới' nếu cần tìm thêm.",
+            "Loading related tracks... Click 'Refresh' to find more.",
           )
         : mascotState(
             "idle",
-            "Chưa có bài nào đang phát. Hãy phát một bài nhạc để nhận gợi ý.",
+            "No track currently playing. Play a track to receive suggestions.",
           ),
   );
 }

@@ -1,5 +1,5 @@
-// Kết nối tới sidecar ZiPlayer (Node.js) do Tauri khởi chạy.
-// Khi chạy thuần trình duyệt (npm run web) có thể truyền ?port=...&token=... trên URL.
+// Connect to ZiPlayer sidecar (Node.js) spawned by Tauri.
+// When running pure web browser mode (npm run web), pass ?port=...&token=... in URL.
 
 let info = null;
 
@@ -10,15 +10,15 @@ export const isTauri = () => typeof window !== "undefined" && "__TAURI_INTERNALS
 async function fetchInfo() {
 	const query = new URLSearchParams(location.search);
 	if (query.get("port") && query.get("token")) return { port: Number(query.get("port")), token: query.get("token") };
-	if (!isTauri()) throw new Error("Không tìm thấy backend. Hãy chạy qua Tauri (npm run dev) hoặc mở với ?port=…&token=…");
+	if (!isTauri()) throw new Error("Backend not found. Please run via Tauri (npm run dev) or open with ?port=...&token=...");
 	const { invoke } = await import("@tauri-apps/api/core");
-	// Rust ném lỗi (kèm đoạn cuối log) nếu sidecar không chạy được hoặc đã thoát.
+	// Rust throws error (with log tail) if sidecar failed to start or already exited.
 	return invoke("backend_info");
 }
 
 export async function initBackend(onWait) {
 	for (let attempt = 0; attempt < 80; attempt++) {
-		info = await fetchInfo(); // gọi lại mỗi lần để phát hiện sidecar đã crash và báo ngay thay vì chờ hết giờ
+		info = await fetchInfo(); // re-fetch each time to detect sidecar crash immediately
 		try {
 			return await call("GET", "/health");
 		} catch {
@@ -26,7 +26,7 @@ export async function initBackend(onWait) {
 			await sleep(500);
 		}
 	}
-	throw new Error("Backend không phản hồi. Kiểm tra Node.js đã được cài và xem log của app.");
+	throw new Error("Backend not responding. Verify Node.js is installed and check app logs.");
 }
 
 export const httpBase = () => `http://127.0.0.1:${info.port}`;
@@ -40,14 +40,14 @@ export async function call(method, path, body) {
 		body: body ? JSON.stringify(body) : undefined,
 	});
 	const json = await response.json().catch(() => ({}));
-	if (!response.ok) throw new Error(json.error || `Lỗi ${response.status}`);
+	if (!response.ok) throw new Error(json.error || `Error ${response.status}`);
 	return json;
 }
 
 export const get = (path) => call("GET", path);
 export const post = (path, body = {}) => call("POST", path, body);
 
-/** Theo dõi trạng thái player qua Server-Sent Events. Trả về hàm đóng kết nối. */
+/** Track player state via Server-Sent Events. Returns close function. */
 export function watchState(target, onState, onPlaybackError, onVoiceUnlinked) {
 	const source = new EventSource(`${httpBase()}/events?target=${encodeURIComponent(target)}&token=${encodeURIComponent(info.token)}`);
 	source.addEventListener("state", (event) => {

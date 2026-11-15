@@ -11,14 +11,14 @@ export function viewSearch() {
   const input = h("input", {
     type: "search",
     placeholder:
-      "Tìm bài hát, dán link YouTube / SoundCloud / Spotify hoặc đường dẫn file…",
+      "Search songs, paste YouTube / SoundCloud / Spotify link or local file path…",
     value: app.query,
     autofocus: true,
     oninput: (e) => (app.query = e.target.value),
     onkeydown: (e) => e.key === "Enter" && doSearch(),
   });
   const sources = [
-    ["all", "Tất cả"],
+    ["all", "All"],
     ["youtube", "YouTube"],
     ["soundcloud", "SoundCloud"],
     ["spotify", "Spotify"],
@@ -34,7 +34,7 @@ export function viewSearch() {
       h(
         "button",
         { class: "primary", onclick: doSearch, disabled: app.searching },
-        app.searching ? "Đang tìm…" : "Tìm",
+        app.searching ? "Searching…" : "Search",
       ),
     ),
     h(
@@ -60,14 +60,14 @@ export function viewSearch() {
               actions: [
                 iconButton(
                   "play",
-                  "Phát ngay",
+                  "Play now",
                   () => playTrack(track, "now"),
                   "accent",
                 ),
-                iconButton("next", "Phát tiếp theo", () =>
+                iconButton("next", "Play next", () =>
                   playTrack(track, "next"),
                 ),
-                iconButton("plus", "Thêm vào hàng đợi", () =>
+                iconButton("plus", "Add to queue", () =>
                   playTrack(track, "end"),
                 ),
               ],
@@ -78,23 +78,23 @@ export function viewSearch() {
   );
 }
 
-/** Trạng thái trống của tab tìm kiếm: đang tìm / lỗi / không có kết quả / chờ nhập. */
+/** Empty state for search tab: searching / error / no results / waiting for input. */
 function searchEmptyState() {
-  const retry = h("button", { onclick: () => doSearch() }, "Thử lại");
-  if (app.searching) return mascotState("loading", "Đang tìm kiếm…");
+  const retry = h("button", { onclick: () => doSearch() }, "Retry");
+  if (app.searching) return mascotState("loading", "Searching…");
   if (app.searchError)
     return mascotState("error", app.searchError, {
-      title: "Có lỗi khi tìm nhạc",
+      title: "Error searching music",
       action: retry,
     });
   if (app.searchDone)
     return mascotState(
       "noResult",
-      `Không có kết quả cho “${app.searchedQuery}”. Hãy thử từ khoá khác.`,
-      { title: "Không tìm thấy", action: retry },
+      `No results found for “${app.searchedQuery}”. Try a different keyword.`,
+      { title: "Not found", action: retry },
     );
   return mascotState(
     "idle",
-    "Nhập từ khoá để tìm nhạc từ các plugin, hoặc dán link / đường dẫn file.",
+    "Enter keywords to search songs across plugins, or paste a link / file path.",
   );
 }

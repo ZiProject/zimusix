@@ -4,14 +4,14 @@ import { reactive } from "../presets/reactive.js";
 import { cfg, onPresetChange } from "../presets/runtime.js";
 import { app, refs } from "../state.js";
 
-const REACT_BANDS = 32; // số dải dùng để tính bass/energy (độc lập với số cột hiển thị)
+const REACT_BANDS = 32; // bands used to compute bass/energy (independent of display bars)
 const reactBuffer = new Float32Array(REACT_BANDS);
 let drawBuffer = new Float32Array(REACT_BANDS);
 let smoothBuffer = new Float32Array(REACT_BANDS);
 
 const rootStyle = document.documentElement.style;
 
-// Chỉ ghi CSS variable khi giá trị đổi đáng kể (mỗi lần ghi buộc trình duyệt tính lại style toàn trang).
+// Only write CSS variables when values change significantly (each write forces reflow/restyle).
 const lastVars = new Map();
 function setVar(name, value, epsilon = 0) {
   const prev = lastVars.get(name);
@@ -20,7 +20,7 @@ function setVar(name, value, epsilon = 0) {
   rootStyle.setProperty(name, String(value));
 }
 
-// getComputedStyle mỗi khung hình rất tốn: màu chỉ đọc lại khi preset/tuỳ chỉnh đổi.
+// getComputedStyle per frame is expensive: color is only re-read when preset/settings change.
 let colors = null;
 onPresetChange(() => (colors = null));
 function accentColors() {
@@ -36,7 +36,7 @@ function accentColors() {
 
 let drewLastFrame = false;
 
-/** Canvas có kích thước theo CSS (khu Đang phát, nền): đồng bộ độ phân giải với devicePixelRatio. */
+/** CSS-sized canvas (Now Playing stage, background): sync resolution with devicePixelRatio. */
 function fitCanvas(canvas) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.round(canvas.clientWidth * dpr);
@@ -49,7 +49,7 @@ function fitCanvas(canvas) {
   return { dpr, w: canvas.clientWidth, h: canvas.clientHeight };
 }
 
-/** Các canvas cần vẽ theo `visualizer.placement`. */
+/** Target canvases based on `visualizer.placement`. */
 function targets(placement) {
   const out = [];
   if (placement.includes("player") && refs.viz)
@@ -66,7 +66,7 @@ function targets(placement) {
 }
 
 function clearAll() {
-  if (!drewLastFrame) return; // không vẽ gì ở khung trước thì không cần xoá
+  if (!drewLastFrame) return; // nothing drawn last frame, no clear needed
   drewLastFrame = false;
   const canvases = [
     refs.viz,
@@ -97,7 +97,7 @@ export function drawViz() {
 
   const viz = cfg().visualizer;
 
-  // Dải cố định để tính bass/energy — chạy cả khi visualizer tắt, vì ảnh bìa/nền/lyrics vẫn phản ứng theo nhạc
+  // Fixed bands to calculate bass/energy - runs even when visualizer is off so cover/bg/lyrics still react
   const reactBands = audio.getFrequencyBands?.({
     bands: REACT_BANDS,
     minHz: 30,
@@ -119,7 +119,7 @@ export function drawViz() {
   setVar("--music-bass", bass.toFixed(3), 0.004);
   setVar("--music-energy", energy.toFixed(3), 0.004);
 
-  // Dòng lyric đang hát phát sáng theo nhạc (preset có thể tắt)
+  // Active lyric line glows with music (preset can disable)
   const activeLyric = document.querySelector(".lyric-line.active");
   if (activeLyric) {
     if (cfg().lyrics.glow) {
@@ -134,7 +134,7 @@ export function drawViz() {
   const list = targets(viz.placement);
   if (!list.length) return;
 
-  // Số cột do preset quyết định
+  // Bar count defined by preset
   let bands = reactBands;
   if (viz.bars !== REACT_BANDS) {
     if (drawBuffer.length !== viz.bars) drawBuffer = new Float32Array(viz.bars);
@@ -168,7 +168,7 @@ export function drawViz() {
   for (const { canvas, fixed } of list) {
     const ctx = canvas.getContext("2d");
     if (fixed) {
-      // canvas trên thanh phát có kích thước cố định (thuộc tính width/height)
+      // player bar canvas has fixed dimensions (width/height attributes)
       drawVisualizer(ctx, viz.type, shown, canvas.width, canvas.height, style);
       continue;
     }

@@ -10,7 +10,7 @@ async function addLocal(paths) {
   await ensureAudio();
   const state = await act(
     () => api.post("/play", { target: app.target, paths, mode: app.addMode }),
-    (result) => `Đã thêm ${result?.added ?? ""} bài`.replace("  ", " "),
+    (result) => `Added ${result?.added ?? ""} track(s)`.replace("  ", " "),
   );
   if (state) setState(state);
 }
@@ -18,20 +18,20 @@ async function addLocal(paths) {
 export async function pickFiles() {
   if (!api.isTauri())
     return toast(
-      "Chọn file chỉ khả dụng trong app Tauri. Có thể dán đường dẫn vào ô tìm kiếm.",
+      "File selection is only available in the Tauri app. You can paste the path into the search bar.",
       "error",
     );
   const { open } = await import("@tauri-apps/plugin-dialog");
   const picked = await open({
     multiple: true,
-    filters: [{ name: "Âm thanh", extensions: AUDIO_EXTENSIONS }],
+    filters: [{ name: "Audio", extensions: AUDIO_EXTENSIONS }],
   });
   if (picked) await addLocal(Array.isArray(picked) ? picked : [picked]);
 }
 
 export async function pickFolder() {
   if (!api.isTauri())
-    return toast("Chọn thư mục chỉ khả dụng trong app Tauri.", "error");
+    return toast("Folder selection is only available in the Tauri app.", "error");
   const { open } = await import("@tauri-apps/plugin-dialog");
   const picked = await open({ directory: true, multiple: false });
   if (picked) await addLocal([picked]);

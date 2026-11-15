@@ -56,8 +56,8 @@ export function trackRow(track, { actions }) {
 }
 
 /**
- * Dòng phụ của thông tin bài hát theo `info.show` của preset (artist · source · duration).
- * Trả mảng node để nhét vào .np-sub / .stage-sub.
+ * Subtitle parts for track info based on preset `info.show` (artist · source · duration).
+ * Returns array of DOM nodes to insert into .np-sub / .stage-sub.
  */
 export function trackSubParts(track) {
   const show = cfg().info.show;
@@ -82,7 +82,7 @@ export const iconButton = (name, title, onclick, extra = "") =>
   );
 
 export function targetLabel() {
-  if (app.target === "local") return "Máy này (trong app)";
+  if (app.target === "local") return "This device (in-app)";
   const guild = app.guilds.find((g) => g.id === app.target);
   return `Discord · ${guild?.name ?? app.target}`;
 }

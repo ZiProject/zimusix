@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-// Cấu hình theo khuyến nghị của Tauri v2.
+// Configuration recommended by Tauri v2.
 export default defineConfig({
 	clearScreen: false,
 	server: { port: 1420, strictPort: true, host: "127.0.0.1" },

@@ -1,14 +1,14 @@
 "use strict";
 /**
- * Quản lý thư mục Preset của người dùng.
+ * User preset store manager.
  *
- *   <DATA_DIR>/presets/<id>/preset.json   ← mỗi preset đã cài là một thư mục
+ *   <DATA_DIR>/presets/<id>/preset.json   ← each installed preset is a directory
  *
- * Người dùng "thêm thư mục" → sidecar kiểm tra rồi SAO CHÉP vào <DATA_DIR>/presets
- * (preset vẫn chạy nếu thư mục gốc bị xoá/di chuyển). Preset là dữ liệu khai báo:
- * chỉ cho phép JSON, CSS, ảnh, font, video và tài liệu — KHÔNG có JS/HTML.
+ * When user "adds folder" → sidecar validates then COPIES it into <DATA_DIR>/presets
+ * (preset continues working if original folder is deleted/moved). Presets are declarative data:
+ * only JSON, CSS, images, fonts, video, and documents are allowed — NO JS/HTML.
  *
- * Quy ước chi tiết: docs/PRESETS.md
+ * Detailed specification: docs/PRESETS.md
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -25,7 +25,7 @@ const LIMITS = {
   presetsPerImport: 50,
 };
 
-/** Đuôi file được phép + MIME khi phục vụ. */
+/** Allowed file extensions + MIME when serving. */
 const MIME = {
   ".json": "application/json; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -46,7 +46,7 @@ const MIME = {
   ".txt": "text/plain; charset=utf-8",
 };
 
-/** File hệ điều hành hay sinh ra: bỏ qua im lặng. */
+/** OS generated files: silently ignore. */
 const IGNORED = new Set(["thumbs.db", "desktop.ini", ".ds_store"]);
 
 class PresetError extends Error {
@@ -61,7 +61,7 @@ const isInside = (parent, child) => {
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 };
 
-/** Chuẩn hoá đường dẫn tương đối kiểu posix; trả null nếu không an toàn. */
+/** Normalize posix relative path; return null if unsafe. */
 function safeRelPath(input) {
   if (typeof input !== "string" || !input || input.length > 200) return null;
   if (input.includes("\0") || input.includes("\\") || input.includes(":"))
@@ -79,52 +79,52 @@ function readManifest(dir) {
   try {
     stat = fs.statSync(file);
   } catch {
-    throw new PresetError(`Thiếu ${MANIFEST_FILE} trong "${dir}"`, 422);
+    throw new PresetError(`Missing ${MANIFEST_FILE} in "${dir}"`, 422);
   }
   if (!stat.isFile() || stat.size > LIMITS.manifestBytes)
     throw new PresetError(
-      `${MANIFEST_FILE} không hợp lệ hoặc quá lớn (> ${LIMITS.manifestBytes / 1024} KB)`,
+      `${MANIFEST_FILE} is invalid or too large (> ${LIMITS.manifestBytes / 1024} KB)`,
       422,
     );
   let manifest;
   try {
     manifest = JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
   } catch (error) {
-    throw new PresetError(`${MANIFEST_FILE} sai cú pháp JSON: ${error.message}`, 422);
+    throw new PresetError(`${MANIFEST_FILE} has invalid JSON syntax: ${error.message}`, 422);
   }
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest))
-    throw new PresetError(`${MANIFEST_FILE} phải là một object JSON`, 422);
+    throw new PresetError(`${MANIFEST_FILE} must be a JSON object`, 422);
   if (typeof manifest.id !== "string" || !ID_RE.test(manifest.id))
     throw new PresetError(
-      'Trường "id" phải gồm chữ thường, số, "-" hoặc "_" (2–48 ký tự, bắt đầu bằng chữ/số)',
+      'Field "id" must consist of lowercase letters, numbers, "-" or "_" (2–48 characters, starting with alphanumeric)',
       422,
     );
   if (typeof manifest.name !== "string" || !manifest.name.trim())
-    throw new PresetError('Thiếu trường "name"', 422);
+    throw new PresetError('Missing "name" field', 422);
   if (
     manifest.schema !== undefined &&
     (!Number.isInteger(manifest.schema) || manifest.schema > SCHEMA_VERSION)
   )
     throw new PresetError(
-      `Preset dùng schema ${manifest.schema}, app này chỉ hỗ trợ tới ${SCHEMA_VERSION}`,
+      `Preset uses schema ${manifest.schema}, but this app only supports up to ${SCHEMA_VERSION}`,
       422,
     );
   return manifest;
 }
 
-/** Duyệt thư mục, kiểm tra giới hạn và đuôi file. Trả về danh sách file cần sao chép. */
+/** Traverse directory, check limits and file extensions. Returns list of files to copy. */
 function collectFiles(root) {
   const files = [];
   let bytes = 0;
   const walk = (dir, depth) => {
     if (depth > LIMITS.depth)
-      throw new PresetError(`Thư mục lồng quá ${LIMITS.depth} cấp`, 422);
+      throw new PresetError(`Folder nested deeper than ${LIMITS.depth} levels`, 422);
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       const lower = entry.name.toLowerCase();
       if (IGNORED.has(lower)) continue;
       if (entry.isSymbolicLink())
-        throw new PresetError(`Không chấp nhận liên kết (symlink): ${entry.name}`, 422);
+        throw new PresetError(`Symbolic links (symlinks) are not allowed: ${entry.name}`, 422);
       if (entry.isDirectory()) {
         if (entry.name.startsWith(".")) continue;
         walk(full, depth + 1);
@@ -134,8 +134,8 @@ function collectFiles(root) {
       const ext = path.extname(lower);
       if (!MIME[ext])
         throw new PresetError(
-          `File "${path.relative(root, full)}" có đuôi không được phép (${ext || "không có"}). ` +
-            "Preset chỉ gồm: " +
+          `File "${path.relative(root, full)}" has a disallowed extension (${ext || "none"}). ` +
+            "Preset only allows: " +
             Object.keys(MIME).join(", "),
           422,
         );
@@ -143,10 +143,10 @@ function collectFiles(root) {
       bytes += size;
       files.push({ full, rel: path.relative(root, full), size });
       if (files.length > LIMITS.files)
-        throw new PresetError(`Preset có quá ${LIMITS.files} file`, 422);
+        throw new PresetError(`Preset has more than ${LIMITS.files} files`, 422);
       if (bytes > LIMITS.bytes)
         throw new PresetError(
-          `Preset nặng quá ${Math.round(LIMITS.bytes / 1024 / 1024)} MB`,
+          `Preset size exceeds ${Math.round(LIMITS.bytes / 1024 / 1024)} MB`,
           422,
         );
     }
@@ -161,7 +161,7 @@ function createPresetStore(dataDir) {
 
   const dirOf = (id) => path.join(root, id);
 
-  /** Danh sách preset đã cài. Preset hỏng vẫn được liệt kê kèm `error` để UI cho xoá. */
+  /** List installed presets. Broken presets are still listed with `error` so UI allows deleting. */
   function list() {
     const items = [];
     for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
@@ -198,25 +198,25 @@ function createPresetStore(dataDir) {
   }
 
   /**
-   * Thêm preset từ một thư mục. `src` có thể là:
-   *   - một thư mục preset (chứa preset.json), hoặc
-   *   - một thư mục chứa nhiều thư mục preset con (mỗi con có preset.json).
+   * Add preset from a folder. `src` can be:
+   *   - a preset folder (containing preset.json), or
+   *   - a folder containing multiple preset subfolders (each with preset.json).
    */
   function importFrom(src) {
     if (typeof src !== "string" || !path.isAbsolute(src))
-      throw new PresetError("Cần đường dẫn tuyệt đối tới thư mục preset");
+      throw new PresetError("Absolute path to preset folder is required");
     let resolved;
     try {
       resolved = fs.realpathSync(src);
     } catch {
-      throw new PresetError("Không tìm thấy thư mục đã chọn", 404);
+      throw new PresetError("Selected folder not found", 404);
     }
     if (!fs.statSync(resolved).isDirectory())
-      throw new PresetError("Đường dẫn phải là một thư mục");
+      throw new PresetError("Path must be a directory");
     const realRoot = fs.realpathSync(root);
     if (resolved === realRoot || isInside(realRoot, resolved))
       throw new PresetError(
-        "Thư mục này đã nằm trong kho preset của app. Hãy chọn thư mục preset gốc.",
+        "This folder is already inside the app's preset store. Please select the original preset folder.",
       );
 
     let candidates = [];
@@ -232,7 +232,7 @@ function createPresetStore(dataDir) {
     }
     if (!candidates.length)
       throw new PresetError(
-        `Không thấy ${MANIFEST_FILE} trong thư mục này hoặc trong các thư mục con của nó`,
+        `Could not find ${MANIFEST_FILE} in this folder or its subfolders`,
         422,
       );
 
@@ -252,37 +252,37 @@ function createPresetStore(dataDir) {
 
   function remove(id) {
     if (typeof id !== "string" || !ID_RE.test(id))
-      throw new PresetError("id preset không hợp lệ");
+      throw new PresetError("Invalid preset id");
     const dir = dirOf(id);
-    if (!fs.existsSync(dir)) throw new PresetError("Preset không tồn tại", 404);
+    if (!fs.existsSync(dir)) throw new PresetError("Preset not found", 404);
     fs.rmSync(dir, { recursive: true, force: true });
     return { removed: id };
   }
 
-  /** Tìm file trong preset; từ chối mọi đường dẫn thoát khỏi thư mục preset. */
+  /** Find file inside preset; reject any path escaping the preset directory. */
   function resolveFile(id, rel) {
     if (typeof id !== "string" || !ID_RE.test(id))
-      throw new PresetError("id preset không hợp lệ");
+      throw new PresetError("Invalid preset id");
     const safe = safeRelPath(rel);
-    if (!safe) throw new PresetError("Đường dẫn file không hợp lệ");
+    if (!safe) throw new PresetError("Invalid file path");
     const ext = path.extname(safe).toLowerCase();
     const mime = MIME[ext];
-    if (!mime) throw new PresetError("Loại file không được phép", 403);
+    if (!mime) throw new PresetError("File type not allowed", 403);
     let base;
     let file;
     try {
       base = fs.realpathSync(dirOf(id));
       file = fs.realpathSync(path.join(base, ...safe.split("/")));
     } catch {
-      throw new PresetError("Không tìm thấy file", 404);
+      throw new PresetError("File not found", 404);
     }
-    if (!isInside(base, file)) throw new PresetError("Đường dẫn file không hợp lệ", 403);
+    if (!isInside(base, file)) throw new PresetError("Invalid file path", 403);
     const stat = fs.statSync(file);
-    if (!stat.isFile()) throw new PresetError("Không tìm thấy file", 404);
+    if (!stat.isFile()) throw new PresetError("File not found", 404);
     return { file, mime, size: stat.size };
   }
 
-  /** Gửi file (hỗ trợ Range cho video nền). `headers` là CORS header do server.js cung cấp. */
+  /** Serve file (supports Range for video backgrounds). `headers` are CORS headers provided by server.js. */
   function serveFile(req, res, info, headers = {}) {
     const base = {
       "content-type": info.mime,

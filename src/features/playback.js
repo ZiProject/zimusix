@@ -83,8 +83,8 @@ export async function playTrack(track, mode) {
     mode === "now"
       ? null
       : mode === "next"
-        ? "Sẽ phát tiếp theo"
-        : "Đã thêm vào hàng đợi";
+        ? "Playing next"
+        : "Added to queue";
   const state = await act(
     () => api.post("/play", { target: app.target, trackKey: track.key, mode }),
     okMessage,

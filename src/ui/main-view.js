@@ -24,9 +24,9 @@ export function renderMain() {
     presets: viewPresets,
     discord: viewDiscord,
   };
-  // giữ focus & vị trí con trỏ của ô tìm kiếm khi re-render
+  // preserve search input focus & cursor position across re-renders
   const hadFocus = document.activeElement?.matches?.('input[type="search"]');
-  // Không truyền null vào replaceChildren: DOM sẽ biến nó thành chữ "null" trên màn hình.
+  // Never pass null to replaceChildren: DOM will convert it to string "null".
   refs.main.replaceChildren(
     ...[renderToolbar(), app.contentHidden ? null : views[app.view]()].filter(
       Boolean,
@@ -35,7 +35,7 @@ export function renderMain() {
   if (hadFocus) refs.main.querySelector('input[type="search"]')?.focus();
 }
 
-/** Thanh công cụ phía trên: thanh bên | tuỳ chỉnh nền, toàn màn hình, ẩn/hiện nội dung. */
+/** Top toolbar: sidebar toggle | background settings, fullscreen, toggle content. */
 function renderToolbar() {
   return h(
     "div",
@@ -44,8 +44,8 @@ function renderToolbar() {
       "button",
       {
         class: "icon-btn",
-        title: app.sidebarHidden ? "Hiện thanh bên" : "Ẩn thanh bên",
-        "aria-label": app.sidebarHidden ? "Hiện thanh bên" : "Ẩn thanh bên",
+        title: app.sidebarHidden ? "Show sidebar" : "Hide sidebar",
+        "aria-label": app.sidebarHidden ? "Show sidebar" : "Hide sidebar",
         onclick: () => toggleSidebar(),
       },
       icon("sidebar", 18),
@@ -60,8 +60,8 @@ function renderToolbar() {
         "button",
         {
           class: `icon-btn ${app.bgPanelOpen ? "on" : ""}`,
-          title: "Tuỳ chỉnh hình nền (độ mờ, độ đậm…)",
-          "aria-label": "Tuỳ chỉnh hình nền",
+          title: "Background settings (blur, opacity…)",
+          "aria-label": "Background settings",
           onclick: () => {
             app.bgPanelOpen = !app.bgPanelOpen;
             renderMain();
@@ -75,8 +75,8 @@ function renderToolbar() {
       "button",
       {
         class: "icon-btn",
-        title: "Bật / tắt toàn màn hình (F11)",
-        "aria-label": "Bật / tắt toàn màn hình",
+        title: "Toggle fullscreen (F11)",
+        "aria-label": "Toggle fullscreen",
         onclick: () => toggleFullscreen(),
       },
       icon("fullscreen", 18),
@@ -85,8 +85,8 @@ function renderToolbar() {
       "button",
       {
         class: `icon-btn ${app.contentHidden ? "on" : ""}`,
-        title: app.contentHidden ? "Hiện nội dung (H)" : "Ẩn nội dung để xem nền (H)",
-        "aria-label": app.contentHidden ? "Hiện nội dung" : "Ẩn nội dung",
+        title: app.contentHidden ? "Show content (H)" : "Hide content to view background (H)",
+        "aria-label": app.contentHidden ? "Show content" : "Hide content",
         onclick: () => toggleContent(),
       },
       icon(app.contentHidden ? "eyeOff" : "eye", 18),

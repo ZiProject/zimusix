@@ -4,9 +4,9 @@ Cyberpunk night-drive preset with acid yellow, toxic magenta, electric cyan, dar
 
 ## Install
 1. Extract this ZIP.
-2. In Zimusix, open **Giao diện → Thêm thư mục preset**.
+2. In Zimusix, open **Themes → Add preset folder**.
 3. Select the extracted `neon-afterlife` folder.
-4. Choose **NEON AFTERLIFE** → **Dùng preset này**.
+4. Choose **NEON AFTERLIFE** → **Use this preset**.
 
 ## Spectrum tuning
 - Built-in visualizer: `bars`

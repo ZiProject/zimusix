@@ -11,7 +11,7 @@ let activeWireDrag = null;
 
 const linksOf = (id) => app.stateByTarget[id]?.linkedVoices ?? [];
 
-/** Guild đang chỉ là đầu ra (forward) của một nguồn khác: không phải nguồn độc lập. */
+/** Guild is only an audio output (forward) of another source: not an independent source. */
 function isFedGuild(id) {
   return (
     Boolean(app.stateByTarget[id]?.feedingFrom) ||
@@ -25,8 +25,8 @@ function wireSources() {
   return [
     {
       id: "local",
-      label: "Ứng dụng",
-      detail: app.stateByTarget.local?.currentTrack?.title ?? "Player trong app",
+      label: "Application",
+      detail: app.stateByTarget.local?.currentTrack?.title ?? "In-app player",
     },
     ...joinedTargets()
       .filter((target) => !isFedGuild(target.id))
@@ -48,7 +48,7 @@ function routeWire(sourceTarget, destination) {
     return;
   }
   if (sourceTarget === destination.guildId) {
-    toast("Chọn một server voice khác với đầu ra nguồn", "error");
+    toast("Select a voice server different from the source output", "error");
     return;
   }
   const linked = linksOf(sourceTarget).some(
@@ -57,7 +57,7 @@ function routeWire(sourceTarget, destination) {
       link.channelId === destination.channelId,
   );
   if (linked) {
-    // Bấm/kéo lại vào cổng đang nối = rút dây của đúng kênh đó.
+    // Clicking/dragging again to connected port = disconnect that channel.
     void unlinkVoiceAction(sourceTarget, destination.guildId);
     return;
   }
@@ -234,18 +234,18 @@ export function renderWiringPanel() {
 
   return h(
     "section",
-    { class: "wiring-panel", "aria-label": "Bảng nối đầu ra âm thanh" },
+    { class: "wiring-panel", "aria-label": "Audio output routing panel" },
     h(
       "header",
       { class: "wiring-head" },
       h(
         "div",
         null,
-        h("b", null, "Nối đầu ra"),
+        h("b", null, "Audio Routing"),
         h(
           "small",
           { class: "muted" },
-          "Chọn một đầu ra bên trái, rồi kéo dây tới đầu vào bên phải",
+          "Select an output on the left, then drag cable to an input on the right",
         ),
       ),
     ),
@@ -265,7 +265,7 @@ export function renderWiringPanel() {
       h(
         "div",
         { class: "wire-source-column" },
-        h("span", { class: "wire-label" }, "Đầu ra · kéo từ trái sang phải"),
+        h("span", { class: "wire-label" }, "Outputs · drag from left to right"),
         sources.map((source) => {
           const linked = linksOf(source.id).length;
           return h(
@@ -290,7 +290,7 @@ export function renderWiringPanel() {
               ? h(
                   "span",
                   { class: "wire-source-linked" },
-                  linked > 1 ? `Đang nối ×${linked}` : "Đang nối",
+                  linked > 1 ? `Connected ×${linked}` : "Connected",
                 )
               : null,
             h("span", { class: "wire-source-port" }),
@@ -300,12 +300,12 @@ export function renderWiringPanel() {
       h(
         "div",
         { class: "wire-destinations" },
-        h("span", { class: "wire-label" }, "Đầu vào · thả dây tại đây"),
+        h("span", { class: "wire-label" }, "Inputs · drop cable here"),
         destination(
-          "Ứng dụng",
+          "Application",
           app.listen
-            ? `Đang nghe · nguồn: ${wireSourceLabel(app.webAudioSourceTarget)} (bấm để rút dây)`
-            : "Kéo dây tới đây để nghe trên máy",
+            ? `Listening · source: ${wireSourceLabel(app.webAudioSourceTarget)} (click to disconnect)`
+            : "Drag cable here to listen on this device",
           { type: "app" },
           app.webAudioSourceTarget === app.wireSourceTarget && app.listen,
         ),
@@ -321,7 +321,7 @@ export function renderWiringPanel() {
                 "span",
                 { class: "wire-destination-text" },
                 h("b", null, "Discord Voice"),
-                h("small", null, "Đăng nhập bot để kết nối"),
+                h("small", null, "Log in bot to connect"),
               ),
             )
           : channels.length
@@ -347,13 +347,13 @@ export function renderWiringPanel() {
             : h(
                 "small",
                 { class: "muted" },
-                "Bot chưa có quyền truy cập kênh thoại nào.",
+                "Bot does not have access to any voice channels.",
               ),
       ),
       h(
         "p",
         { class: "wire-hint" },
-        "Một nguồn nối được tới Ứng dụng và nhiều kênh Voice (mỗi server một kênh), tất cả cùng phát. Bấm lại cổng đang nối (hoặc nút Rút dây) để ngắt; nguồn vẫn phát bình thường.",
+        "A single source can route to Application and multiple Voice channels simultaneously. Click connected port (or Disconnect button) to unplug; playback continues uninterrupted.",
       ),
     ),
     h(
@@ -367,7 +367,7 @@ export function renderWiringPanel() {
             onclick: () =>
               unlinkVoiceAction(app.wireSourceTarget, link.guildId),
           },
-          `Rút dây khỏi #${link.channelName || "Voice"}`,
+          `Unlink #${link.channelName || "Voice"}`,
         ),
       ),
       app.listen
@@ -377,7 +377,7 @@ export function renderWiringPanel() {
               class: "danger small wire-unlink",
               onclick: () => disconnectApp(),
             },
-            "Rút dây khỏi Ứng dụng",
+            "Unlink from Application",
           )
         : null,
     ),

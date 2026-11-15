@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Công cụ cho tác giả preset.
+ * Tools for preset authors.
  *
- *   node scripts/presets.mjs index            cập nhật public/presets/index.json (danh sách preset built-in)
- *   node scripts/presets.mjs check [thư mục…] kiểm tra preset (mặc định: public/presets/* và docs/preset-template)
+ *   node scripts/presets.mjs index              update public/presets/index.json (built-in presets list)
+ *   node scripts/presets.mjs check [dirs...]    validate presets (default: public/presets/* and docs/preset-template)
  *
- * `check` dùng đúng bộ kiểm tra của app (src/presets/schema.js) + kiểm tra file thực tế
- * (preview, style.css, đuôi file, dung lượng) giống sidecar khi người dùng thêm thư mục.
+ * `check` uses the app's validator (src/presets/schema.js) + physical file checks
+ * (preview, style.css, file extensions, size limits) matching sidecar behavior when adding folders.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -30,7 +30,7 @@ function writeIndex() {
   const next = JSON.stringify({ presets: ids }, null, 2) + "\n";
   const file = path.join(builtinDir, "index.json");
   if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== next) fs.writeFileSync(file, next);
-  console.log(`index.json: ${ids.length} preset (${ids.join(", ")})`);
+  console.log(`index.json: ${ids.length} presets (${ids.join(", ")})`);
 }
 
 function walk(dir, acc = []) {
@@ -57,22 +57,22 @@ function checkOne(dir) {
   warnings.push(...result.warnings);
   if (!result.ok) return { errors, warnings };
   const m = result.manifest;
-  if (m.id !== path.basename(dir)) warnings.push(`Tên thư mục "${path.basename(dir)}" nên trùng id "${m.id}"`);
+  if (m.id !== path.basename(dir)) warnings.push(`Directory name "${path.basename(dir)}" should match id "${m.id}"`);
 
   const files = walk(dir);
-  if (files.length > MAX_FILES) errors.push(`Quá ${MAX_FILES} file`);
+  if (files.length > MAX_FILES) errors.push(`Exceeds maximum of ${MAX_FILES} files`);
   const total = files.reduce((n, f) => n + fs.statSync(f).size, 0);
-  if (total > MAX_BYTES) errors.push(`Nặng quá ${MAX_BYTES / 1024 / 1024} MB`);
+  if (total > MAX_BYTES) errors.push(`Exceeds ${MAX_BYTES / 1024 / 1024} MB size limit`);
   for (const f of files) {
     const ext = path.extname(f).toLowerCase();
     if (!ALLOWED.has(ext) && !["thumbs.db", "desktop.ini", ".ds_store"].includes(path.basename(f).toLowerCase()))
-      errors.push(`File không được phép: ${path.relative(dir, f)} (${ext || "không đuôi"})`);
+      errors.push(`Disallowed file: ${path.relative(dir, f)} (${ext || "no extension"})`);
   }
   if (!fs.existsSync(path.join(dir, m.preview)))
-    (m.previewDeclared || true) && warnings.push(`Thiếu ảnh preview "${m.preview}" (mặc định ${DEFAULT_PREVIEW}, khuyên dùng 640×360)`);
+    (m.previewDeclared || true) && warnings.push(`Missing preview image "${m.preview}" (default ${DEFAULT_PREVIEW}, recommended 640×360)`);
   if (m.style) {
     const cssFile = path.join(dir, m.style);
-    if (!fs.existsSync(cssFile)) errors.push(`Không thấy file style "${m.style}"`);
+    if (!fs.existsSync(cssFile)) errors.push(`Style file not found "${m.style}"`);
     else {
       const { notes } = sanitizePresetCss(fs.readFileSync(cssFile, "utf8"), (r) => r, path.dirname(m.style) === "." ? "" : path.dirname(m.style));
       for (const n of notes) warnings.push(`${m.style}: ${n}`);
@@ -88,10 +88,10 @@ function check(args) {
   let bad = 0;
   for (const dir of targets) {
     if (!fs.existsSync(path.join(dir, MANIFEST_FILE))) {
-      // thư mục chứa nhiều preset
+      // directory containing multiple presets
       const kids = presetDirs(dir);
       if (!kids.length) {
-        console.log(`✗ ${dir}: không có ${MANIFEST_FILE}`);
+        console.log(`✗ ${dir}: missing ${MANIFEST_FILE}`);
         bad++;
         continue;
       }
@@ -101,8 +101,8 @@ function check(args) {
     const { errors, warnings } = checkOne(dir);
     const label = path.relative(root, dir) || dir;
     console.log(`${errors.length ? "✗" : "✓"} ${label}`);
-    for (const e of errors) console.log(`    lỗi: ${e}`);
-    for (const w of warnings) console.log(`    cảnh báo: ${w}`);
+    for (const e of errors) console.log(`    error: ${e}`);
+    for (const w of warnings) console.log(`    warning: ${w}`);
     if (errors.length) bad++;
   }
   if (bad) process.exitCode = 1;
@@ -111,4 +111,4 @@ function check(args) {
 const [cmd, ...rest] = process.argv.slice(2);
 if (cmd === "index") writeIndex();
 else if (cmd === "check") check(rest);
-else console.log("Dùng: node scripts/presets.mjs index | check [thư mục…]");
+else console.log("Usage: node scripts/presets.mjs index | check [directories...]");

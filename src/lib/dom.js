@@ -1,4 +1,4 @@
-/** Tạo DOM an toàn (không dùng innerHTML với dữ liệu từ bài hát). */
+/** Safe DOM creation (no innerHTML with track data). */
 export function h(tag, props, ...kids) {
   const el = document.createElement(tag);
   for (const [key, value] of Object.entries(props ?? {})) {

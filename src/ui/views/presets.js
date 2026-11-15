@@ -13,7 +13,7 @@ import {
   userValuesOf,
 } from "../../presets/runtime.js";
 
-/** Ảnh preview; thiếu file thì hiện khung màu thay thế (chữ cái đầu của preset). */
+/** Preview image; if missing, displays fallback colored box with preset initial. */
 function previewBox(entry) {
   const box = h("div", { class: "preset-preview" });
   const fallback = h("div", { class: "preset-preview-fallback" }, (entry.manifest?.name ?? entry.id).slice(0, 1).toUpperCase());
@@ -27,12 +27,12 @@ function previewBox(entry) {
   return box;
 }
 
-/** Vài thẻ tóm tắt module nào đang được preset dùng. */
+/** Summary chips of active modules in preset. */
 function moduleChips(manifest) {
   const chips = [
-    `bố cục: ${manifest.layout.shell}`,
-    `ảnh: ${manifest.artwork.style}`,
-    `nền: ${manifest.background.effect}`,
+    `layout: ${manifest.layout.shell}`,
+    `artwork: ${manifest.artwork.style}`,
+    `bg: ${manifest.background.effect}`,
     `viz: ${manifest.visualizer.type}`,
     `lyrics: ${manifest.lyrics.mode}`,
   ];
@@ -50,10 +50,10 @@ function presetCard(entry, active) {
         "div",
         { class: "preset-body" },
         h("h3", null, entry.id),
-        h("p", { class: "error-text small" }, "Preset không dùng được:"),
+        h("p", { class: "error-text small" }, "Preset unusable:"),
         h("ul", { class: "preset-errors" }, entry.errors.map((e) => h("li", null, e))),
         entry.source === "user"
-          ? h("div", { class: "preset-actions" }, h("button", { class: "danger small", onclick: () => removeUserPreset(entry) }, icon("trash", 14), " Xoá"))
+          ? h("div", { class: "preset-actions" }, h("button", { class: "danger small", onclick: () => removeUserPreset(entry) }, icon("trash", 14), " Delete"))
           : null,
       ),
     );
@@ -71,16 +71,16 @@ function presetCard(entry, active) {
         null,
         m.name,
         h("span", { class: "preset-ver" }, ` v${m.version}`),
-        entry.source === "user" ? h("span", { class: "badge attachments" }, "Của bạn") : null,
+        entry.source === "user" ? h("span", { class: "badge attachments" }, "Custom") : null,
       ),
-      m.author ? h("p", { class: "muted small" }, `Tác giả: ${m.author}`) : null,
+      m.author ? h("p", { class: "muted small" }, `Author: ${m.author}`) : null,
       m.description ? h("p", { class: "preset-desc" }, m.description) : null,
       moduleChips(m),
       notes.length
         ? h(
             "details",
             { class: "preset-warnings" },
-            h("summary", null, `${notes.length} cảnh báo`),
+            h("summary", null, `${notes.length} warning(s)`),
             h("ul", null, notes.map((n) => h("li", null, n))),
           )
         : null,
@@ -88,17 +88,17 @@ function presetCard(entry, active) {
         "div",
         { class: "preset-actions" },
         active
-          ? h("button", { class: "primary small", disabled: true }, icon("check", 14), " Đang dùng")
-          : h("button", { class: "primary small", onclick: () => usePreset(entry) }, "Dùng preset này"),
+          ? h("button", { class: "primary small", disabled: true }, icon("check", 14), " Active")
+          : h("button", { class: "primary small", onclick: () => usePreset(entry) }, "Use this preset"),
         entry.source === "user"
-          ? h("button", { class: "danger small", title: "Xoá preset khỏi máy", onclick: () => removeUserPreset(entry) }, icon("trash", 14))
+          ? h("button", { class: "danger small", title: "Delete preset from device", onclick: () => removeUserPreset(entry) }, icon("trash", 14))
           : null,
       ),
     ),
   );
 }
 
-/** Một ô tuỳ chỉnh (do preset khai báo trong `settings`). */
+/** Single setting control (declared by preset in `settings`). */
 function settingControl(setting, value) {
   if (setting.type === "range") {
     const out = h("output", null, `${value}${setting.unit ?? ""}`);
@@ -162,23 +162,23 @@ function settingControl(setting, value) {
 function settingsPanel() {
   const entry = activeEntry();
   const settings = entry?.manifest?.settings ?? [];
-  const head = h("h3", null, `Tuỳ chỉnh: ${entry?.manifest?.name ?? "Classic"}`);
+  const head = h("h3", null, `Customize: ${entry?.manifest?.name ?? "Classic"}`);
   if (!settings.length)
-    return h("section", { class: "preset-settings" }, head, h("p", { class: "muted" }, "Preset này không có thông số nào để tuỳ chỉnh."));
+    return h("section", { class: "preset-settings" }, head, h("p", { class: "muted" }, "This preset has no configurable settings."));
   const values = userValuesOf(entry.key);
   return h(
     "section",
     { class: "preset-settings" },
     head,
-    h("p", { class: "muted small" }, "Chỉ các thông số do tác giả preset cho phép. Thay đổi áp dụng ngay và được nhớ theo từng preset."),
+    h("p", { class: "muted small" }, "Configurable parameters exposed by preset author. Changes apply immediately and are saved per preset."),
     h("div", { class: "preset-settings-grid" }, settings.map((s) => settingControl(s, values[s.key] ?? s.default))),
-    h("button", { class: "small", onclick: () => { resetPresetSettings(); renderMain(); } }, "Đặt lại mặc định của preset"),
+    h("button", { class: "small", onclick: () => { resetPresetSettings(); renderMain(); } }, "Reset preset to defaults"),
   );
 }
 
 export function viewPresets() {
   const dir = presetsDir();
-  const pathInput = h("input", { type: "text", placeholder: "Dán đường dẫn thư mục preset (khi chạy ngoài Tauri)…" });
+  const pathInput = h("input", { type: "text", placeholder: "Paste preset folder path (when running outside Tauri)…" });
   return h(
     "section",
     { class: "view presets-view" },
@@ -188,14 +188,14 @@ export function viewPresets() {
       h(
         "div",
         null,
-        h("h2", null, "Giao diện (Preset)"),
-        h("p", { class: "muted" }, "Preset quyết định bố cục, ảnh bìa, thông tin bài hát, nền, visualizer, lyrics và cách bố trí giao diện."),
+        h("h2", null, "Themes (Presets)"),
+        h("p", { class: "muted" }, "Presets control layout, cover art, track info, background effects, visualizers, lyrics, and controls."),
       ),
       h(
         "div",
         { class: "button-row" },
-        h("button", { class: "primary", onclick: () => pickPresetFolder() }, icon("folder", 16), " Thêm thư mục preset"),
-        h("button", { title: "Quét lại", "aria-label": "Quét lại danh sách preset", onclick: () => refreshPresets() }, icon("refresh", 16)),
+        h("button", { class: "primary", onclick: () => pickPresetFolder() }, icon("folder", 16), " Add preset folder"),
+        h("button", { title: "Refresh presets", "aria-label": "Refresh presets list", onclick: () => refreshPresets() }, icon("refresh", 16)),
       ),
     ),
     api.isTauri()
@@ -204,18 +204,18 @@ export function viewPresets() {
           "div",
           { class: "form-row" },
           pathInput,
-          h("button", { onclick: () => pathInput.value.trim() && importPresetFolder(pathInput.value.trim()) }, "Thêm"),
+          h("button", { onclick: () => pathInput.value.trim() && importPresetFolder(pathInput.value.trim()) }, "Add"),
         ),
     h("div", { class: "preset-grid" }, listEntries().map((entry) => presetCard(entry, entry.key === activeKey()))),
     settingsPanel(),
     h(
       "p",
       { class: "help small" },
-      "Chọn một thư mục có ",
+      "Select a folder containing ",
       h("code", null, "preset.json"),
-      " (hoặc thư mục chứa nhiều thư mục preset). Preset được sao chép vào ",
-      h("code", null, dir || "thư mục dữ liệu của app"),
-      ". Cách tạo preset: xem ",
+      " (or a folder containing multiple preset subfolders). Presets are copied into ",
+      h("code", null, dir || "app data directory"),
+      ". To create presets, see ",
       h("code", null, "docs/PRESETS.md"),
       ".",
     ),

@@ -9,7 +9,7 @@ import { app } from "../state.js";
 import { renderMain } from "../ui/main-view.js";
 import { currentPosition, renderPlayer } from "../ui/player.js";
 
-/** Preset quyết định có phủ ảnh bìa/video lên nền không (mặc định: chỉ khi hiệu ứng là "media"). */
+/** Presets control whether artwork/video is overlaid on background (default: only when effect is "media"). */
 function mediaOn() {
   const { media, effect } = cfg().background;
   return media === "on" || (media === "auto" && effect === "media");
@@ -21,14 +21,14 @@ function saveBgSettings() {
   } catch (_) {}
 }
 
-/** Đẩy cài đặt nền vào CSS variables: blur/độ đậm/độ tối đổi tức thì, không cần render lại. */
+/** Push background settings to CSS variables: blur/opacity/dim update instantly without re-render. */
 function applyBgSettings() {
   const { opacity, blur, dim } = app.bg;
   const style = document.documentElement.style;
   style.setProperty("--bg-opacity", (opacity / 100).toFixed(2));
   style.setProperty("--bg-blur", String(blur));
   style.setProperty("--bg-dim", (dim / 100).toFixed(2));
-  // blur càng lớn càng phải phóng to để mép ảnh không lộ viền trong suốt
+  // higher blur values require slightly increased scale so transparent edges aren't visible
   style.setProperty("--bg-scale", (1.04 + (blur / 30) * 0.1).toFixed(3));
 }
 
@@ -87,13 +87,13 @@ function ensureBgLayer() {
     video.dataset.failed = video.dataset.currentKey || "1";
   });
   video.addEventListener("loadeddata", () => {
-    // tới đây video mới có hình: fade vào, ảnh bìa mờ dần
+    // video frame available: fade in video, fade out artwork
     video.classList.add("ready");
     layer.classList.add("has-video");
     syncBgVideo(true);
   });
   video.addEventListener("loadedmetadata", () => {
-    // đổi từ stream trực tiếp sang file cache: nhảy về đúng vị trí nhạc
+    // switching from live stream to cached file: jump to exact music timestamp
     if (video.dataset.resumeAt) {
       const at = Number(video.dataset.resumeAt);
       delete video.dataset.resumeAt;
@@ -103,7 +103,7 @@ function ensureBgLayer() {
       } catch (_) {}
     }
   });
-  // Hiệu ứng nền do preset chọn (aurora / gradient / solid / particles) + canvas visualizer nền.
+  // Preset background effect (aurora / gradient / solid / particles) + background canvas visualizer.
   const fx = h(
     "div",
     { id: "bg-fx", class: "bg-fx" },
@@ -133,7 +133,7 @@ export function updateVideoBg() {
   const track = app.state?.currentTrack;
   const useMedia = mediaOn();
 
-  // Ảnh bìa: nền nền tảng, hiện ngay cả khi chưa/không có video
+  // Artwork: fallback background, visible even when video is missing or loading
   if (useMedia && app.bg.art && track?.thumbnail) {
     if (bgArt.dataset.src !== track.thumbnail) {
       bgArt.classList.remove("loaded");
@@ -153,7 +153,7 @@ export function updateVideoBg() {
     return;
   }
 
-  // Khác bài hát: nạp video mới (cùng bài thì giữ nguyên stream)
+  // Different track: load new video (same track keeps existing stream)
   if (bgVideo.dataset.currentKey !== track.key) {
     bgVideo.classList.remove("ready");
     layer.classList.remove("has-video");
@@ -169,10 +169,10 @@ export function updateVideoBg() {
 }
 
 /**
- * Giữ video bám theo vị trí nhạc:
- *  - tạm dừng/tiếp tục theo player
- *  - lệch lớn: seek thẳng (file cache hỗ trợ Range) hoặc chuyển từ stream trực tiếp sang file cache
- *  - lệch nhỏ: chỉnh playbackRate nhẹ nhàng để không giật hình
+ * Keeps video synchronized with music playback:
+ *  - pause/resume in sync with player
+ *  - large drift: seek directly (cached file supports Range) or switch from live stream to cached file
+ *  - small drift: adjust playbackRate gently to prevent stuttering
  */
 async function syncBgVideo(force = false) {
   const video = document.getElementById("bg-video");
@@ -192,15 +192,15 @@ async function syncBgVideo(force = false) {
   const targetSec = currentPosition() / 1000;
   const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
   const wanted = duration ? targetSec % duration : targetSec;
-  let drift = video.currentTime - wanted; // >0: video chạy trước nhạc
+  let drift = video.currentTime - wanted; // >0: video is ahead of music
   if (duration && Math.abs(drift) > duration / 2)
-    drift -= Math.sign(drift) * duration; // video đã lặp vòng
+    drift -= Math.sign(drift) * duration; // video has looped
 
   const now = performance.now();
   const absDrift = Math.abs(drift);
 
   if (video.dataset.mode === "live") {
-    // Stream trực tiếp không seek được: kiểm tra bản cache, khi xong thì chuyển sang file.
+    // Live stream is not seekable: check cached file status, switch to file once ready.
     if (
       (absDrift > 1.5 || force) &&
       now - Number(video.dataset.statusCheckedAt || 0) > 2500
@@ -225,7 +225,7 @@ async function syncBgVideo(force = false) {
     return;
   }
 
-  // file cache: seek được
+  // cached file: seekable
   if (absDrift > 1.2 && now - Number(video.dataset.lastSeek || 0) > 1500) {
     video.dataset.lastSeek = String(now);
     try {
@@ -239,7 +239,7 @@ async function syncBgVideo(force = false) {
 }
 setInterval(() => syncBgVideo(), 500);
 
-/* Nhún nền theo bass (độc lập với canvas visualizer) */
+/* Pulse background with bass (independent of canvas visualizer) */
 
 let punchSmooth = 0;
 
@@ -266,7 +266,7 @@ function bgReactLoop() {
 }
 requestAnimationFrame(bgReactLoop);
 
-/** Áp dụng hiệu ứng nền của preset hiện hành (gọi khi đổi preset / tuỳ chỉnh). */
+/** Apply background effect of current preset (called on preset switch or settings change). */
 export function applyBackgroundEffect() {
   const layer = ensureBgLayer();
   const bg = cfg().background;
@@ -274,7 +274,7 @@ export function applyBackgroundEffect() {
   const css = getComputedStyle(document.documentElement);
   const accent = css.getPropertyValue("--accent").trim() || "#7c5cff";
   const accent2 = css.getPropertyValue("--accent-2").trim() || "#a78bfa";
-  // màu hiệu ứng: do preset chỉ định, thiếu thì lấy theo accent
+  // effect palette: specified by preset, falls back to accent colors if omitted
   const fallback = [accent, accent2, "#f0abfc", accent];
   const palette = [0, 1, 2, 3].map((i) => bg.colors[i] ?? bg.colors[i % Math.max(1, bg.colors.length)] ?? fallback[i]);
   palette.forEach((color, i) => layer.style.setProperty(`--fx-${i + 1}`, color));
@@ -296,7 +296,7 @@ export function applyBackgroundEffect() {
 export function toggleVideoBg() {
   app.videoBg = !app.videoBg;
   toast(
-    app.videoBg ? "Đã bật Video Background" : "Đã tắt Video Background",
+    app.videoBg ? "Video Background enabled" : "Video Background disabled",
     "info",
   );
   updateVideoBg();

@@ -1,8 +1,8 @@
 /**
- * Nạp danh sách preset:
- *   - built-in: public/presets/<id>/ (phục vụ tĩnh bởi Vite/Tauri), liệt kê trong public/presets/index.json
- *   - của người dùng: do sidecar giữ trong <DATA_DIR>/presets/<id>/ (GET /presets)
- * Hai nguồn dùng CÙNG quy ước thư mục (docs/PRESETS.md).
+ * Load preset list:
+ *   - built-in: public/presets/<id>/ (served statically by Vite/Tauri), listed in public/presets/index.json
+ *   - user presets: stored by sidecar in <DATA_DIR>/presets/<id>/ (GET /presets)
+ * Both sources share the SAME directory conventions (docs/PRESETS.md).
  */
 import * as api from "../api.js";
 import { sanitizePresetCss } from "./css.js";
@@ -13,13 +13,13 @@ const enc = encodeURIComponent;
 
 /**
  * @typedef {Object} PresetEntry
- * @property {string} key        "classic" (built-in) hoặc "user:<id>"
- * @property {string} id         id trong manifest
+ * @property {string} key        "classic" (built-in) or "user:<id>"
+ * @property {string} id         id in manifest
  * @property {"builtin"|"user"} source
  * @property {boolean} valid
  * @property {string[]} errors
  * @property {string[]} warnings
- * @property {object|null} manifest   manifest đã chuẩn hoá
+ * @property {object|null} manifest   normalized manifest
  * @property {(rel: string) => string} fileUrl
  * @property {string|null} previewUrl
  */
@@ -50,10 +50,10 @@ function makeEntry(source, dirName, raw, loadError) {
       previewUrl: null,
     };
   }
-  // thư mục phải trùng id để file phục vụ đúng chỗ
+  // Directory name must match id for file serving
   const warnings = [...result.warnings];
   if (result.manifest.id !== dirName)
-    warnings.push(`Tên thư mục "${dirName}" khác id "${result.manifest.id}"`);
+    warnings.push(`Directory name "${dirName}" differs from id "${result.manifest.id}"`);
   return {
     key,
     id: result.manifest.id,
@@ -73,7 +73,7 @@ export async function loadBuiltinEntries() {
     const res = await fetch(`${BUILTIN_BASE}/index.json`, { cache: "no-cache" });
     if (res.ok) ids = (await res.json()).presets ?? [];
   } catch (error) {
-    console.warn("[presets] không đọc được index built-in:", error);
+    console.warn("[presets] failed to read built-in index:", error);
   }
   const entries = await Promise.all(
     ids
@@ -84,7 +84,7 @@ export async function loadBuiltinEntries() {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return makeEntry("builtin", id, await res.json());
         } catch (error) {
-          return makeEntry("builtin", id, null, `Không đọc được preset.json: ${error.message}`);
+          return makeEntry("builtin", id, null, `Could not read preset.json: ${error.message}`);
         }
       }),
   );
@@ -101,12 +101,12 @@ export async function loadUserEntries() {
       ),
     };
   } catch (error) {
-    console.warn("[presets] không đọc được preset của người dùng:", error);
+    console.warn("[presets] failed to read user presets:", error);
     return { dir: "", entries: [] };
   }
 }
 
-/** Đọc + làm sạch style.css của preset. Trả chuỗi CSS (rỗng nếu không có/lỗi). */
+/** Read + sanitize preset style.css. Returns CSS string (empty if missing/error). */
 export async function loadPresetCss(entry) {
   const style = entry.manifest?.style;
   if (!style) return { css: "", notes: [] };
@@ -116,7 +116,7 @@ export async function loadPresetCss(entry) {
     const baseDir = style.includes("/") ? style.slice(0, style.lastIndexOf("/")) : "";
     return sanitizePresetCss(await res.text(), entry.fileUrl, baseDir);
   } catch (error) {
-    console.warn(`[presets] ${entry.key}: không nạp được ${style}:`, error);
-    return { css: "", notes: [`Không nạp được ${style}`] };
+    console.warn(`[presets] ${entry.key}: failed to load ${style}:`, error);
+    return { css: "", notes: [`Failed to load ${style}`] };
   }
 }

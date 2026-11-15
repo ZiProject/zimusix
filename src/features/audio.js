@@ -43,7 +43,7 @@ export async function syncAudio() {
     audioTarget = want;
     resumeAudio();
   } catch (error) {
-    console.warn("[audio] không kết nối được:", error);
+    console.warn("[audio] failed to connect:", error);
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(syncAudio, 3000);
   } finally {
@@ -62,7 +62,7 @@ export async function ensureAudio() {
   resumeAudio();
 }
 
-// WebView có thể chặn AudioContext tới khi người dùng chạm vào app.
+// WebView may block AudioContext until user interacts with the app.
 document.addEventListener("pointerdown", () => ensureAudio(), {
   capture: true,
 });

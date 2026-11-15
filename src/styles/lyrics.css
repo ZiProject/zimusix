@@ -32,7 +32,7 @@
 }
 
 .lyrics-list {
-  position: relative; /* offsetTop của dòng lyric tính theo khung này (cuộn dòng đang hát vào giữa) */
+  position: relative; /* offsetTop of lyric line is calculated relative to this box (scrolls active line to center) */
   flex: 1;
   overflow-y: auto;
   padding: 40px 16px 140px;

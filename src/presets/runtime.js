@@ -1,12 +1,12 @@
 /**
- * Preset Runtime — chọn preset, gộp tuỳ chỉnh của người dùng, rồi "áp dụng":
+ * Preset Runtime — select presets, merge user settings, and "apply":
  *
- *   • đặt thuộc tính data-* lên <html> (CSS của từng module bám vào đó)
- *   • đặt CSS variables (kích thước ảnh, cỡ chữ lyrics, màu theme, --preset-*)
- *   • chèn style.css của preset (đã làm sạch)
- *   • báo cho các phần UI render lại (onPresetChange)
+ *   • sets data-* attributes on <html> (styles of each module attach to these)
+ *   • sets CSS variables (cover dimensions, lyrics font size, theme colors, --preset-*)
+ *   • injects sanitized preset style.css
+ *   • notifies UI components to re-render (onPresetChange)
  *
- * Runtime không import UI để tránh vòng phụ thuộc; main.js nối sự kiện.
+ * Runtime does not import UI to avoid circular dependencies; main.js wires events.
  */
 import { app } from "../state.js";
 import { loadBuiltinEntries, loadPresetCss, loadUserEntries } from "./loader.js";
@@ -28,9 +28,9 @@ const listeners = new Set();
 let appliedVars = new Set();
 let applyToken = 0;
 
-/* --------------------------------------------------------------- truy cập */
+/* --------------------------------------------------------------- access */
 
-/** Cấu hình hiện hành (luôn có đủ section nhờ giá trị mặc định). */
+/** Current active configuration (always complete thanks to default values). */
 export const cfg = () => current.config;
 export const activeEntry = () => current.entry;
 export const activeKey = () => current.entry?.key ?? DEFAULT_PRESET_KEY;
@@ -38,7 +38,7 @@ export const listEntries = () => entries;
 export const presetsDir = () => userDir;
 export const userValuesOf = (key) => ({ ...(prefs.values[key] ?? {}) });
 
-/** Gọi `fn(config, {reason})` mỗi khi cấu hình đổi. Trả hàm huỷ đăng ký. */
+/** Call `fn(config, {reason})` whenever configuration changes. Returns unsubscribe function. */
 export function onPresetChange(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);
@@ -48,11 +48,11 @@ const emit = (reason) => {
     try {
       fn(current.config, { reason });
     } catch (error) {
-      console.error("[presets] listener lỗi:", error);
+      console.error("[presets] listener error:", error);
     }
 };
 
-/* ---------------------------------------------------------------- áp dụng */
+/* ---------------------------------------------------------------- apply */
 
 function hexToRgbTriplet(hex) {
   let h = hex.slice(1);
@@ -156,15 +156,15 @@ function reresolve() {
   current.config = resolveConfig(manifest, prefs.values[entry?.key ?? DEFAULT_PRESET_KEY]);
 }
 
-/* ------------------------------------------------------------- hành động */
+/* ------------------------------------------------------------- actions */
 
-/** Chọn preset theo key. Trả `false` nếu preset không dùng được. */
+/** Select preset by key. Returns `false` if preset cannot be used. */
 export async function applyPreset(key, { persist = true } = {}) {
   const entry = entries.find((e) => e.key === key);
   if (!entry?.valid) return false;
   const token = ++applyToken;
   const { css } = await loadPresetCss(entry);
-  if (token !== applyToken) return true; // có lần chọn mới hơn
+  if (token !== applyToken) return true; // newer selection in flight
   current.entry = entry;
   reresolve();
   setPresetStyle(css);
@@ -181,7 +181,7 @@ export async function applyPreset(key, { persist = true } = {}) {
   return true;
 }
 
-/** Đổi một tuỳ chỉnh của preset đang dùng (áp dụng ngay, không nạp lại CSS). */
+/** Change a single setting of current preset (applies immediately, no CSS reload). */
 export function setPresetSetting(settingKey, rawValue) {
   const entry = current.entry;
   const setting = entry?.manifest?.settings.find((s) => s.key === settingKey);
@@ -205,16 +205,16 @@ export function resetPresetSettings() {
   applyConfig("setting", prevSidebar);
 }
 
-/** Tải lại danh sách preset (sau khi thêm/xoá thư mục). */
+/** Reload preset list (after adding/removing folders). */
 export async function reloadEntries() {
   const [builtin, user] = await Promise.all([loadBuiltinEntries(), loadUserEntries()]);
   userDir = user.dir;
   entries = [...builtin, ...user.entries];
-  // preset đang dùng bị xoá / hỏng → về mặc định
+  // Active preset was deleted or corrupted → fall back to default
   if (current.entry && !entries.some((e) => e.key === current.entry.key && e.valid)) {
     await applyPreset(DEFAULT_PRESET_KEY, { persist: true });
   } else if (current.entry) {
-    // manifest có thể đã đổi (import đè): làm mới tham chiếu
+    // Manifest may have changed (overwrite import): refresh reference
     const fresh = entries.find((e) => e.key === current.entry.key);
     if (fresh) {
       current.entry = fresh;
@@ -226,7 +226,7 @@ export async function reloadEntries() {
   }
 }
 
-/** Khởi động: nạp danh sách + áp dụng preset đã lưu (rơi về `classic`, rồi về mặc định cứng). */
+/** Startup: load entries + apply saved preset (falls back to `classic`, then hard default). */
 export async function initPresets() {
   prefs = loadPrefs();
   const [builtin, user] = await Promise.all([loadBuiltinEntries(), loadUserEntries()]);
@@ -234,7 +234,7 @@ export async function initPresets() {
   entries = [...builtin, ...user.entries];
   const order = [prefs.active, DEFAULT_PRESET_KEY];
   for (const key of order) if (await applyPreset(key, { persist: false })) return;
-  // không có preset nào dùng được: dùng cấu hình mặc định cứng (tương đương classic)
+  // No usable presets: use hardcoded default config (equivalent to classic)
   current = { entry: null, config: resolveConfig(defaultManifest()) };
   applyConfig("init");
 }

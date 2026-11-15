@@ -1,2 +1,2 @@
-Thư mục này được `npm run bundle` điền (sidecar + node_modules production + bản Node.js) trước khi `tauri build`.
-Nội dung được .gitignore bỏ qua; file này chỉ để đường dẫn tài nguyên luôn tồn tại khi dev.
+This directory is populated by `npm run bundle` (sidecar + production node_modules + Node.js binary) before `tauri build`.
+Its contents are ignored by .gitignore; this placeholder file ensures the resource directory always exists during development.

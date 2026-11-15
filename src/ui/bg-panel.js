@@ -37,16 +37,16 @@ export function renderBgPanel() {
   return h(
     "div",
     { class: "bg-panel", onclick: (event) => event.stopPropagation() },
-    h("b", null, "Hình nền"),
-    slider("Độ mờ", "blur", 0, 30, "px"),
-    slider("Độ đậm", "opacity", 0, 100, "%"),
-    slider("Độ tối lớp phủ", "dim", 0, 90, "%"),
-    toggle("Nhún theo bass", "react"),
-    toggle("Ảnh bìa làm nền khi chưa có video", "art"),
+    h("b", null, "Background"),
+    slider("Blur", "blur", 0, 30, "px"),
+    slider("Opacity", "opacity", 0, 100, "%"),
+    slider("Overlay Dimming", "dim", 0, 90, "%"),
+    toggle("Bass bounce / reactive", "react"),
+    toggle("Cover art fallback when no video", "art"),
     h(
       "button",
       { class: "small", onclick: () => resetBgSettings() },
-      "Đặt lại mặc định",
+      "Reset to defaults",
     ),
   );
 }

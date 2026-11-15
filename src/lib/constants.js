@@ -18,9 +18,9 @@ export const AUDIO_EXTENSIONS = [
 ];
 
 export const BG_DEFAULTS = {
-  opacity: 60, // độ đậm của nền (%)
-  blur: 8, // độ mờ (px)
-  dim: 45, // lớp phủ tối (%)
-  react: true, // nhún / sáng theo bass
-  art: true, // dùng ảnh bìa làm nền khi chưa có video
+  opacity: 60, // background opacity (%)
+  blur: 8, // blur (px)
+  dim: 45, // dark overlay (%)
+  react: true, // pulse/glow with bass
+  art: true, // use cover art as background when no video
 };

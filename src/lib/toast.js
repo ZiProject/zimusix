@@ -3,7 +3,7 @@ import { h } from "./dom.js";
 
 const TOAST_MOOD = { ok: "success", error: "confused", info: "curious" };
 
-/** `mood` (tuỳ chọn) ghi đè mascot mặc định theo loại thông báo. */
+/** `mood` (optional) overrides default mascot for notification type. */
 export function toast(message, kind = "info", duration, mood) {
   let box = document.querySelector(".toasts");
   if (!box) box = document.body.appendChild(h("div", { class: "toasts" }));

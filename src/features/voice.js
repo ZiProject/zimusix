@@ -16,7 +16,7 @@ function rememberState(state) {
 
 export async function linkVoiceAction(sourceTarget, guildId, channelId) {
   if (!sourceTarget || !guildId || !channelId)
-    return toast("Vui lòng chọn nguồn phát và kênh thoại đích", "error");
+    return toast("Please select an audio source and a target voice channel", "error");
   const state = await act(
     () =>
       api.post("/voice/link", {
@@ -24,7 +24,7 @@ export async function linkVoiceAction(sourceTarget, guildId, channelId) {
         guildId,
         channelId,
       }),
-    "Đã nối nguồn phát tới Discord Voice",
+    "Connected audio source to Discord Voice",
   );
   if (!state) {
     const [sourceState, destinationState] = await Promise.all([
@@ -37,8 +37,8 @@ export async function linkVoiceAction(sourceTarget, guildId, channelId) {
     renderPlayer();
     return;
   }
-  // Nguồn vẫn là player đang phát: không đổi target, không dời dây của app.
-  // Discord chỉ là thêm một đầu ra nữa của cùng nguồn đó.
+  // Source remains the playing player: do not switch active target or detach app audio.
+  // Discord is simply added as an additional output destination for that source.
   rememberState(state);
   rememberState(state.destinationState);
   app.voiceByGuild[guildId] = state.destinationState?.voice ?? {
@@ -50,11 +50,11 @@ export async function linkVoiceAction(sourceTarget, guildId, channelId) {
   renderPlayer();
 }
 
-/** Rút một đầu ra Voice (guildId) khỏi nguồn; bỏ guildId = rút mọi đầu ra của nguồn. */
+/** Disconnect a Voice output (guildId) from source; omit guildId = disconnect all Voice outputs. */
 export async function unlinkVoiceAction(target = app.target, guildId) {
   const state = await act(
     () => api.post("/voice/unlink", { target, guildId }),
-    "Đã rút dây kết nối Voice",
+    "Disconnected Voice connection",
   );
   if (!state) return;
   rememberState(state);
@@ -63,17 +63,17 @@ export async function unlinkVoiceAction(target = app.target, guildId) {
   renderPlayer();
 }
 
-/** Rút dây phía Ứng dụng: ngừng nghe trong app, nhạc ở Discord vẫn chạy. */
+/** Disconnect app audio output: stop listening in app, Discord audio continues playing. */
 export async function disconnectApp() {
   app.listen = false;
   renderPlayer();
   await syncAudio();
-  toast("Đã rút dây khỏi ứng dụng", "ok");
+  toast("Disconnected audio from app", "ok");
 }
 
-/** Server báo bot mất voice / dây bị rút tự động. Nguồn vẫn phát bình thường. */
+/** Server reports bot lost voice / connection unlinked automatically. Source continues playing normally. */
 export async function onVoiceUnlinked({ message, guildId }) {
-  toast(message || "Dây nối Voice đã được rút", "info", 6000);
+  toast(message || "Voice connection was disconnected", "info", 6000);
   delete app.voiceByGuild[guildId];
   const [local, guild] = await Promise.all([
     api.get("/state?target=local").catch(() => null),
@@ -92,7 +92,7 @@ export async function onVoiceUnlinked({ message, guildId }) {
 
 export async function connectToApp(sourceTarget) {
   if (app.listen && app.webAudioSourceTarget === sourceTarget) {
-    // Kéo/bấm lại vào cổng đã nối = rút dây.
+    // Clicking/dragging again to connected port = disconnect.
     await disconnectApp();
     return;
   }
@@ -101,5 +101,5 @@ export async function connectToApp(sourceTarget) {
   app.listen = true;
   renderPlayer();
   await syncAudio();
-  toast("Đã nối nguồn phát tới ứng dụng", "ok");
+  toast("Connected audio source to app", "ok");
 }

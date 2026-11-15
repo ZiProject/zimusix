@@ -17,7 +17,7 @@ export async function toggleFullscreen() {
   });
 }
 
-/** Menu khay hệ thống (Rust) gửi sự kiện "tray-play-pause" khi bấm "Phát / Tạm dừng". */
+/** System tray menu (Rust) emits "tray-play-pause" event on "Play / Pause" click. */
 export async function setupTray() {
   if (!api.isTauri()) return;
   try {

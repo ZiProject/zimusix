@@ -1,4 +1,4 @@
-/** Lưu lựa chọn preset + giá trị tuỳ chỉnh của người dùng (localStorage). */
+/** Persist preset choice + user customized values (localStorage). */
 const KEY = "zimusix-preset";
 
 export const DEFAULT_PRESET_KEY = "classic";

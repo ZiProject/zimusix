@@ -1,13 +1,13 @@
 /**
- * Schema của Preset + bộ đăng ký các "module" mà preset có thể chọn.
+ * Preset Schema + registry of "modules" presets can select.
  *
- * File này THUẦN (không đụng DOM/localStorage) để dùng chung cho:
- *   - runtime trong app (src/presets/runtime.js)
- *   - công cụ kiểm tra preset (scripts/presets.mjs)
+ * This file is PURE (no DOM/localStorage) for shared use by:
+ *   - in-app runtime (src/presets/runtime.js)
+ *   - preset validator tool (scripts/presets.mjs)
  *
- * Preset chỉ KHAI BÁO: "dùng module nào, với tham số nào". Phần code thực thi nằm
- * trong app (CSS + JS của từng module), nên preset (kể cả do người dùng thêm) không
- * chạy được mã tuỳ ý.
+ * Presets are strictly DECLARATIVE: "which module to use, with what parameters".
+ * Execution code lives in the app (CSS + JS of each module), so presets (even user-added)
+ * cannot execute arbitrary code.
  */
 
 export const SCHEMA_VERSION = 1;
@@ -43,29 +43,29 @@ const list = (values, def, max, doc) => ({
 const colors = (max, doc) => ({ type: "colors", default: [], max, doc });
 
 /**
- * Mỗi section là một "module" của preset. Giá trị `default` của tất cả tham số
- * trùng với giao diện gốc của Zimusix (preset `classic`).
+ * Each section is a preset "module". `default` values of all parameters
+ * match the original Zimusix look (the `classic` preset).
  */
 export const MODULES = {
   layout: {
-    doc: "Bố cục tổng thể của giao diện web (thanh bên, thanh phát, độ rộng nội dung).",
+    doc: "Overall layout of the web interface (sidebar, player bar, content width).",
     params: {
       shell: enumOf(
         ["classic", "stage", "focus", "split"],
         "classic",
-        "classic: danh sách | stage: sân khấu giữa | focus: tập trung lyrics | split: chia đôi sân khấu + nội dung",
+        "classic: list | stage: center stage | focus: lyrics focus | split: split stage + content",
       ),
       sidebar: enumOf(
         ["left", "right", "rail", "hidden"],
         "left",
-        "Vị trí thanh bên: trái, phải, thu gọn (chỉ icon) hoặc ẩn",
+        "Sidebar position: left, right, rail (icons only), or hidden",
       ),
       player: enumOf(
         ["bottom", "floating", "top", "minimal"],
         "bottom",
-        "Thanh phát: dưới, nổi, trên hoặc tối giản",
+        "Player bar: bottom, floating, top, or minimal",
       ),
-      density: enumOf(["comfortable", "compact"], "comfortable", "Độ dày khoảng cách"),
+      density: enumOf(["comfortable", "compact"], "comfortable", "Spacing density"),
       defaultView: enumOf(
         [
           "keep",
@@ -79,133 +79,133 @@ export const MODULES = {
           "discord",
         ],
         "keep",
-        'Tab mở khi chọn preset ("keep" = giữ tab hiện tại)',
+        'Default tab when preset is selected ("keep" = keep current tab)',
       ),
-      contentWidth: num(880, 560, 1400, "Độ rộng tối đa của nội dung (px)"),
-      radius: num(12, 0, 28, "Bo góc của panel (px)"),
+      contentWidth: num(880, 560, 1400, "Maximum content width (px)"),
+      radius: num(12, 0, 28, "Panel corner radius (px)"),
     },
   },
 
   controls: {
-    doc: "Giao diện của mọi nút, thanh công cụ, điều hướng và panel.",
+    doc: "Appearance of buttons, toolbars, navigation, and panels.",
     params: {
       buttons: enumOf(
         ["soft", "pill", "square", "ghost", "outline"],
         "soft",
-        "Kiểu nút chung: soft (mặc định) | pill (bo tròn) | square (vuông) | ghost (không nền) | outline (viền nhấn)",
+        "Button style: soft (default) | pill | square | ghost | outline",
       ),
-      playButton: enumOf(["circle", "square", "accent"], "circle", "Nút Phát/Tạm dừng: tròn | vuông bo | tô màu nhấn"),
-      nav: enumOf(["soft", "pill", "bar"], "soft", "Mục điều hướng ở thanh bên: soft | pill | bar (vạch nhấn)"),
+      playButton: enumOf(["circle", "square", "accent"], "circle", "Play/Pause button: circle | square | accent"),
+      nav: enumOf(["soft", "pill", "bar"], "soft", "Sidebar navigation item: soft | pill | bar"),
       toolbar: enumOf(
         ["docked", "floating", "transparent", "autohide"],
         "docked",
-        "Thanh công cụ phía trên: docked | floating (viên thuốc) | transparent | autohide (hiện khi rê chuột)",
+        "Top toolbar: docked | floating | transparent | autohide",
       ),
-      panels: enumOf(["solid", "glass", "flat"], "solid", "Nền của thanh bên/thanh phát/popup: đặc | kính mờ | phẳng (trong suốt)"),
-      iconSize: num(18, 14, 26, "Cỡ icon của nút và điều hướng (px)"),
+      panels: enumOf(["solid", "glass", "flat"], "solid", "Panel background: solid | glass | flat (transparent)"),
+      iconSize: num(18, 14, 26, "Button and navigation icon size (px)"),
     },
   },
 
   artwork: {
-    doc: "Cách trình bày ảnh bìa (thanh phát + khu Đang phát).",
+    doc: "Artwork presentation (player bar + Now Playing stage).",
     params: {
       style: enumOf(
         ["square", "rounded", "circle", "vinyl", "polaroid", "none"],
         "rounded",
-        "Kiểu khung ảnh",
+        "Artwork frame style",
       ),
-      size: num(56, 32, 96, "Kích thước ảnh trên thanh phát (px)"),
-      stageSize: num(320, 160, 560, "Kích thước ảnh ở khu Đang phát (px)"),
-      react: bool(true, "Ảnh nhún theo bass"),
-      reactAmount: num(8, 0, 20, "Mức nhún (%)"),
-      glow: bool(true, "Quầng sáng theo bass"),
-      spin: bool(false, "Quay khi đang phát (hợp với circle/vinyl)"),
-      spinSpeed: num(18, 4, 60, "Số giây cho một vòng quay"),
-      shadow: bool(false, "Đổ bóng cố định dưới ảnh"),
+      size: num(56, 32, 96, "Artwork size in player bar (px)"),
+      stageSize: num(320, 160, 560, "Artwork size in Now Playing stage (px)"),
+      react: bool(true, "Artwork bounces with bass"),
+      reactAmount: num(8, 0, 20, "Bounce amount (%)"),
+      glow: bool(true, "Glow ring pulses with bass"),
+      spin: bool(false, "Spin while playing (best with circle/vinyl)"),
+      spinSpeed: num(18, 4, 60, "Seconds per full revolution"),
+      shadow: bool(false, "Fixed shadow beneath artwork"),
     },
   },
 
   info: {
-    doc: "Cách hiển thị thông tin bài hát.",
+    doc: "Track info display style.",
     params: {
       style: enumOf(
         ["inline", "stacked", "centered", "huge"],
         "inline",
-        "inline: gọn | stacked: tiêu đề lớn | centered: căn giữa | huge: chữ rất lớn",
+        "inline: compact | stacked: large title | centered: center aligned | huge: extra large text",
       ),
       show: list(["title", "artist", "source", "duration"], ["title", "artist", "source"], 4),
-      marquee: bool(true, "Tiêu đề dài tự chạy chữ"),
-      titleScale: num(1, 0.7, 2, "Hệ số phóng chữ tiêu đề", 0.05),
+      marquee: bool(true, "Automatically scroll long titles"),
+      titleScale: num(1, 0.7, 2, "Title font size scale factor", 0.05),
     },
   },
 
   background: {
-    doc: "Hiệu ứng nền.",
+    doc: "Background visual effect.",
     params: {
       effect: enumOf(
         ["media", "aurora", "gradient", "solid", "particles"],
         "media",
-        "media: ảnh bìa/video | aurora | gradient | solid | particles",
+        "media: artwork/video | aurora | gradient | solid | particles",
       ),
       media: enumOf(
         ["auto", "on", "off"],
         "auto",
-        "Có phủ ảnh bìa/video lên không (auto: chỉ khi effect = media)",
+        "Overlay cover art/video (auto: only when effect = media)",
       ),
-      colors: colors(4, "Tối đa 4 màu hex; bỏ trống = dùng màu accent"),
-      speed: num(1, 0.2, 3, "Tốc độ hiệu ứng", 0.1),
-      intensity: num(0.6, 0, 1, "Độ đậm hiệu ứng", 0.05),
-      angle: num(135, 0, 360, "Góc gradient (độ)"),
-      count: num(70, 10, 200, "Số hạt (particles)"),
-      react: bool(true, "Hiệu ứng phản ứng theo nhạc"),
+      colors: colors(4, "Up to 4 hex colors; leave empty to use accent color"),
+      speed: num(1, 0.2, 3, "Effect animation speed", 0.1),
+      intensity: num(0.6, 0, 1, "Effect intensity/opacity", 0.05),
+      angle: num(135, 0, 360, "Gradient angle (degrees)"),
+      count: num(70, 10, 200, "Particle count"),
+      react: bool(true, "Background reacts to audio bass/energy"),
     },
   },
 
   visualizer: {
-    doc: "Visualizer âm thanh.",
+    doc: "Audio visualizer.",
     params: {
       type: enumOf(
         ["bars", "mirror", "wave", "circle", "dots", "none"],
         "bars",
-        "Kiểu vẽ",
+        "Visualizer draw style",
       ),
-      placement: list(["player", "stage", "background"], ["player"], 3, "Vẽ ở đâu (có thể nhiều nơi)"),
-      bars: num(32, 8, 96, "Số cột/điểm"),
-      colorMode: enumOf(["gradient", "accent", "solid"], "gradient", "Cách tô màu"),
-      color: color("#a78bfa", "Màu khi colorMode = solid"),
-      thickness: num(2, 1, 10, "Độ dày nét / khoảng cách giữa cột (px)"),
-      smoothing: num(0, 0, 0.95, "Làm mượt giữa các khung hình", 0.05),
-      opacity: num(1, 0.1, 1, "Độ đậm", 0.05),
-      height: num(120, 60, 420, "Chiều cao vùng vẽ ở khu Đang phát (px)"),
+      placement: list(["player", "stage", "background"], ["player"], 3, "Where to render (can specify multiple placements)"),
+      bars: num(32, 8, 96, "Bar / point count"),
+      colorMode: enumOf(["gradient", "accent", "solid"], "gradient", "Coloring mode"),
+      color: color("#a78bfa", "Color when colorMode = solid"),
+      thickness: num(2, 1, 10, "Bar thickness / spacing (px)"),
+      smoothing: num(0, 0, 0.95, "Smoothing factor between frames", 0.05),
+      opacity: num(1, 0.1, 1, "Visualizer opacity", 0.05),
+      height: num(120, 60, 420, "Draw height in Now Playing stage (px)"),
     },
   },
 
   lyrics: {
-    doc: "Cách hiển thị lời bài hát.",
+    doc: "Lyrics display style.",
     params: {
       mode: enumOf(
         ["list", "karaoke", "focus", "compact"],
         "list",
-        "list: cả bài | karaoke: dòng hiện tại to, mờ dần | focus: chỉ vài dòng quanh dòng hiện tại | compact: nhỏ gọn",
+        "list: full lyrics | karaoke: active line large, fading | focus: nearby lines only | compact: compact",
       ),
       placement: enumOf(
         ["view", "stage"],
         "view",
-        "view: tab Lời bài hát | stage: nhúng trong khu Đang phát",
+        "view: Lyrics tab | stage: embedded in Now Playing stage",
       ),
-      align: enumOf(["left", "center", "right"], "left", "Căn lề"),
-      showTime: bool(true, "Hiện mốc thời gian từng dòng"),
-      size: num(22, 14, 48, "Cỡ chữ dòng thường (px)"),
-      activeScale: num(1.27, 1, 1.8, "Dòng đang hát phóng to bao nhiêu lần", 0.01),
-      glow: bool(true, "Dòng hiện tại phát sáng theo nhạc"),
+      align: enumOf(["left", "center", "right"], "left", "Text alignment"),
+      showTime: bool(true, "Show timestamp per line"),
+      size: num(22, 14, 48, "Regular line font size (px)"),
+      activeScale: num(1.27, 1, 1.8, "Active line scale factor", 0.01),
+      glow: bool(true, "Active line glows with audio energy"),
     },
   },
 
   theme: {
-    doc: "Màu sắc & font. `colors` nhận mã hex.",
+    doc: "Colors & fonts. `colors` accepts hex color codes.",
     params: {
-      colorScheme: enumOf(["dark", "light"], "dark", "Hệ màu của control gốc (thanh cuộn, input)"),
-      fontFamily: { type: "font", default: "", doc: "Danh sách font CSS (an toàn, không ký tự đặc biệt)" },
+      colorScheme: enumOf(["dark", "light"], "dark", "Base controls color scheme (scrollbar, inputs)"),
+      fontFamily: { type: "font", default: "", doc: "CSS font family list (safe, no special characters)" },
     },
     colorKeys: ["accent", "accent2", "bg", "panel", "panel2", "line", "text", "muted", "ok", "danger"],
   },
@@ -213,7 +213,7 @@ export const MODULES = {
 
 export const SECTIONS = Object.keys(MODULES);
 
-/** Tên token màu → biến CSS. */
+/** Color token names → CSS variables. */
 export const COLOR_VARS = {
   accent: "--accent",
   accent2: "--accent-2",
@@ -248,7 +248,7 @@ export function isSafeRelPath(p) {
 
 const extOf = (p) => (p.includes(".") ? p.split(".").pop().toLowerCase() : "");
 
-/** Ép một giá trị về đúng kiểu của tham số. Trả `{ok, value}`. */
+/** Coerce value to parameter type. Returns `{ok, value}`. */
 export function coerceParam(spec, raw) {
   switch (spec.type) {
     case "number": {
@@ -288,7 +288,7 @@ export function coerceParam(spec, raw) {
 
 const cloneDefault = (v) => (Array.isArray(v) ? [...v] : v);
 
-/** Giá trị mặc định đầy đủ của một section. */
+/** Complete default values of a section. */
 export function defaultSection(name) {
   const out = {};
   for (const [key, spec] of Object.entries(MODULES[name].params))
@@ -301,41 +301,41 @@ function normalizeSection(name, raw, warn) {
   const out = defaultSection(name);
   if (raw === undefined) return out;
   if (!isObject(raw)) {
-    warn(`"${name}" phải là object — dùng mặc định`);
+    warn(`"${name}" must be an object — using defaults`);
     return out;
   }
   const specs = MODULES[name].params;
   for (const [key, value] of Object.entries(raw)) {
     if (name === "theme" && key === "colors") {
       if (!isObject(value)) {
-        warn('"theme.colors" phải là object');
+        warn('"theme.colors" must be an object');
         continue;
       }
       for (const [ck, cv] of Object.entries(value)) {
         if (!MODULES.theme.colorKeys.includes(ck))
-          warn(`theme.colors.${ck}: tên màu không có (hợp lệ: ${MODULES.theme.colorKeys.join(", ")})`);
-        else if (!isHexColor(cv)) warn(`theme.colors.${ck}: cần mã hex (#rgb, #rrggbb, #rrggbbaa)`);
+          warn(`theme.colors.${ck}: unknown color name (valid: ${MODULES.theme.colorKeys.join(", ")})`);
+        else if (!isHexColor(cv)) warn(`theme.colors.${ck}: requires hex code (#rgb, #rrggbb, #rrggbbaa)`);
         else out.colors[ck] = cv;
       }
       continue;
     }
     const spec = specs[key];
     if (!spec) {
-      warn(`${name}.${key}: tham số không tồn tại — bỏ qua`);
+      warn(`${name}.${key}: unknown parameter — ignored`);
       continue;
     }
     const res = coerceParam(spec, value);
     if (res.ok) out[key] = res.value;
-    else warn(`${name}.${key}: giá trị ${JSON.stringify(value)} không hợp lệ — dùng mặc định`);
+    else warn(`${name}.${key}: invalid value ${JSON.stringify(value)} — using default`);
   }
   return out;
 }
 
-/* ------------------------------------------------------------ settings (UI tuỳ chỉnh) */
+/* ------------------------------------------------------------ settings (UI customizer) */
 
 const SETTING_TYPES = ["range", "toggle", "select", "color"];
 
-/** Tra tham số mà `bind` trỏ tới. Trả `{kind:'param'|'themeColor'|'cssVar', ...}` hoặc null. */
+/** Resolve parameter pointed to by `bind`. Returns `{kind:'param'|'themeColor'|'cssVar', ...}` or null. */
 export function resolveBind(bind) {
   if (typeof bind !== "string") return null;
   if (bind.startsWith("css:")) {
@@ -360,7 +360,7 @@ export function resolveBind(bind) {
 function normalizeSettings(raw, sections, warn) {
   if (raw === undefined) return [];
   if (!Array.isArray(raw)) {
-    warn('"settings" phải là mảng');
+    warn('"settings" must be an array');
     return [];
   }
   const out = [];
@@ -368,25 +368,25 @@ function normalizeSettings(raw, sections, warn) {
   for (const [i, item] of raw.slice(0, 24).entries()) {
     const at = `settings[${i}]`;
     if (!isObject(item)) {
-      warn(`${at}: phải là object`);
+      warn(`${at}: must be an object`);
       continue;
     }
     if (!SETTING_KEY_RE.test(item.key ?? "")) {
-      warn(`${at}: "key" cần dạng camelCase, bắt đầu bằng chữ thường (tối đa 32 ký tự)`);
+      warn(`${at}: "key" must be camelCase, starting with lowercase letter (max 32 chars)`);
       continue;
     }
     if (seen.has(item.key)) {
-      warn(`${at}: key "${item.key}" bị trùng`);
+      warn(`${at}: duplicate key "${item.key}"`);
       continue;
     }
     if (!SETTING_TYPES.includes(item.type)) {
-      warn(`${at} (${item.key}): "type" phải là ${SETTING_TYPES.join(" | ")}`);
+      warn(`${at} (${item.key}): "type" must be ${SETTING_TYPES.join(" | ")}`);
       continue;
     }
     const bind = resolveBind(item.bind);
     if (!bind) {
       warn(
-        `${at} (${item.key}): "bind" không hợp lệ ("section.param", "theme.colors.<tên>" hoặc "css:--preset-<tên>")`,
+        `${at} (${item.key}): invalid "bind" ("section.param", "theme.colors.<name>" or "css:--preset-<name>")`,
       );
       continue;
     }
@@ -401,33 +401,33 @@ function normalizeSettings(raw, sections, warn) {
     if (item.type === "range") {
       const spec = bind.kind === "param" && bind.spec.type === "number" ? bind.spec : null;
       if (bind.kind === "param" && !spec) {
-        warn(`${at} (${item.key}): range chỉ bind được vào tham số số`);
+        warn(`${at} (${item.key}): range can only bind to numeric parameter`);
         continue;
       }
       const min = Number.isFinite(item.min) ? item.min : (spec?.min ?? 0);
       const max = Number.isFinite(item.max) ? item.max : (spec?.max ?? 100);
       if (min >= max) {
-        warn(`${at} (${item.key}): min phải nhỏ hơn max`);
+        warn(`${at} (${item.key}): min must be smaller than max`);
         continue;
       }
-      // khoảng cho phép không được rộng hơn khoảng của tham số
+      // allowed range cannot be wider than spec range
       setting.min = spec ? Math.max(min, spec.min) : min;
       setting.max = spec ? Math.min(max, spec.max) : max;
       setting.step = Number.isFinite(item.step) && item.step > 0 ? item.step : (spec?.step ?? 1);
       setting.unit = typeof item.unit === "string" ? item.unit.slice(0, 6) : "";
     } else if (item.type === "toggle") {
       if (bind.kind !== "param" || bind.spec.type !== "boolean") {
-        warn(`${at} (${item.key}): toggle chỉ bind được vào tham số boolean`);
+        warn(`${at} (${item.key}): toggle can only bind to boolean parameter`);
         continue;
       }
     } else if (item.type === "select") {
       if (!Array.isArray(item.options) || !item.options.length) {
-        warn(`${at} (${item.key}): select cần "options"`);
+        warn(`${at} (${item.key}): select requires "options"`);
         continue;
       }
       const spec = bind.kind === "param" && bind.spec.type === "enum" ? bind.spec : null;
       if (bind.kind === "param" && !spec) {
-        warn(`${at} (${item.key}): select chỉ bind được vào tham số enum`);
+        warn(`${at} (${item.key}): select can only bind to enum parameter`);
         continue;
       }
       const options = [];
@@ -436,13 +436,13 @@ function normalizeSettings(raw, sections, warn) {
         const label = isObject(opt) && opt.label ? String(opt.label) : String(value);
         if (typeof value !== "string") continue;
         if (spec && !spec.values.includes(value)) {
-          warn(`${at} (${item.key}): option "${value}" không phải giá trị hợp lệ của ${item.bind}`);
+          warn(`${at} (${item.key}): option "${value}" is not a valid value for ${item.bind}`);
           continue;
         }
         options.push({ value, label: label.slice(0, 40) });
       }
       if (!options.length) {
-        warn(`${at} (${item.key}): không có option hợp lệ`);
+        warn(`${at} (${item.key}): no valid options found`);
         continue;
       }
       setting.options = options;
@@ -452,18 +452,18 @@ function normalizeSettings(raw, sections, warn) {
         bind.kind === "cssVar" ||
         (bind.kind === "param" && bind.spec.type === "color");
       if (!ok) {
-        warn(`${at} (${item.key}): color chỉ bind được vào màu (theme.colors.*, tham số color, css:--preset-*)`);
+        warn(`${at} (${item.key}): color can only bind to color (theme.colors.*, color param, css:--preset-*)`);
         continue;
       }
     }
 
-    // default: lấy từ manifest nếu có, không thì từ giá trị hiện tại của tham số được bind
+    // default: get from manifest if provided, else from currently bound parameter value
     let def = item.default;
     if (def === undefined) def = currentBoundValue(bind, sections);
     const coerced = coerceSetting(setting, def);
     setting.default = coerced.ok ? coerced.value : fallbackSettingValue(setting);
     if (item.default !== undefined && !coerced.ok)
-      warn(`${at} (${item.key}): "default" không hợp lệ — dùng ${JSON.stringify(setting.default)}`);
+      warn(`${at} (${item.key}): invalid "default" — using ${JSON.stringify(setting.default)}`);
     seen.add(item.key);
     out.push(setting);
   }
@@ -489,7 +489,7 @@ function fallbackSettingValue(setting) {
   }
 }
 
-/** Ép giá trị người dùng chọn về đúng khoảng/lựa chọn mà setting cho phép. */
+/** Coerce user-selected value to range/option permitted by setting. */
 export function coerceSetting(setting, raw) {
   switch (setting.type) {
     case "range": {
@@ -513,10 +513,10 @@ export function coerceSetting(setting, raw) {
 /* ------------------------------------------------------------------ manifest */
 
 /**
- * Kiểm tra & chuẩn hoá manifest. Không ném lỗi:
+ * Validate & normalize manifest. Does not throw errors:
  *   { ok, manifest, errors[], warnings[] }
- * - `errors`: preset KHÔNG dùng được (thiếu id/name, schema quá mới…)
- * - `warnings`: preset vẫn dùng được, giá trị sai đã được thay bằng mặc định
+ * - `errors`: preset CANNOT be used (missing id/name, schema too new…)
+ * - `warnings`: preset is still usable, invalid values replaced by defaults
  */
 export function normalizeManifest(raw) {
   const errors = [];
@@ -524,15 +524,15 @@ export function normalizeManifest(raw) {
   const warn = (m) => warnings.push(m);
 
   if (!isObject(raw)) {
-    return { ok: false, manifest: null, errors: ["preset.json phải là một object JSON"], warnings };
+    return { ok: false, manifest: null, errors: ["preset.json must be a JSON object"], warnings };
   }
   if (typeof raw.id !== "string" || !ID_RE.test(raw.id))
-    errors.push('"id" phải gồm chữ thường, số, "-" hoặc "_" (2–48 ký tự, bắt đầu bằng chữ/số)');
-  if (typeof raw.name !== "string" || !raw.name.trim()) errors.push('Thiếu "name"');
+    errors.push('"id" must consist of lowercase letters, numbers, "-" or "_" (2–48 characters, starting with letter/number)');
+  if (typeof raw.name !== "string" || !raw.name.trim()) errors.push('Missing "name"');
   const schema = raw.schema ?? SCHEMA_VERSION;
-  if (!Number.isInteger(schema) || schema < 1) errors.push('"schema" phải là số nguyên ≥ 1');
+  if (!Number.isInteger(schema) || schema < 1) errors.push('"schema" must be an integer ≥ 1');
   else if (schema > SCHEMA_VERSION)
-    errors.push(`Preset dùng schema ${schema}; app này chỉ hỗ trợ tới ${SCHEMA_VERSION}. Hãy cập nhật Zimusix.`);
+    errors.push(`Preset uses schema ${schema}; this app only supports up to ${SCHEMA_VERSION}. Please update Zimusix.`);
 
   const known = new Set([
     "$schema",
@@ -548,7 +548,7 @@ export function normalizeManifest(raw) {
     "settings",
     ...SECTIONS,
   ]);
-  for (const key of Object.keys(raw)) if (!known.has(key)) warn(`Trường "${key}" không được hỗ trợ — bỏ qua`);
+  for (const key of Object.keys(raw)) if (!known.has(key)) warn(`Field "${key}" is not supported — ignored`);
 
   if (errors.length) return { ok: false, manifest: null, errors, warnings };
 
@@ -557,12 +557,12 @@ export function normalizeManifest(raw) {
 
   let preview = raw.preview;
   if (preview !== undefined && (!isSafeRelPath(preview) || !PREVIEW_EXTS.includes(extOf(preview)))) {
-    warn(`"preview" phải là đường dẫn tương đối tới ảnh (${PREVIEW_EXTS.join(", ")}) — dùng ${DEFAULT_PREVIEW}`);
+    warn(`"preview" must be a relative path to an image (${PREVIEW_EXTS.join(", ")}) — using ${DEFAULT_PREVIEW}`);
     preview = undefined;
   }
   let style = raw.style;
   if (style !== undefined && (!isSafeRelPath(style) || extOf(style) !== "css")) {
-    warn('"style" phải là đường dẫn tương đối tới file .css — bỏ qua');
+    warn('"style" must be a relative path to a .css file — ignored');
     style = undefined;
   }
   const tags = Array.isArray(raw.tags)
@@ -589,7 +589,7 @@ export function normalizeManifest(raw) {
 /* ------------------------------------------------------------- resolve config */
 
 /**
- * Gộp manifest + giá trị người dùng đã chỉnh → cấu hình cuối cùng mà runtime dùng.
+ * Merge manifest + user customized values → final config used by runtime.
  * `userValues` = { [settingKey]: value }.
  */
 export function resolveConfig(manifest, userValues = {}) {
@@ -620,7 +620,7 @@ function structuredCloneSafe(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-/** Manifest mặc định (tương đương preset `classic`) — dự phòng khi không tải được preset nào. */
+/** Default manifest (equivalent to `classic` preset) — fallback when no preset can be loaded. */
 export function defaultManifest() {
   return normalizeManifest({
     schema: SCHEMA_VERSION,
@@ -628,6 +628,6 @@ export function defaultManifest() {
     name: "Classic",
     version: "1.0.0",
     author: "Zimusix",
-    description: "Giao diện gốc của Zimusix.",
+    description: "Default Zimusix interface.",
   }).manifest;
 }

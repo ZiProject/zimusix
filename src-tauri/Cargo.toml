@@ -1,7 +1,7 @@
 [package]
 name = "zimusix"
 version = "0.1.0"
-description = "Zimusix - trình phát nhạc chạy trên app và bot Discord voice"
+description = "Zimusix - desktop music player with Discord voice bot integration"
 edition = "2021"
 
 [lib]

@@ -4,9 +4,9 @@
   "id": "my-preset",
   "name": "My Preset",
   "version": "1.0.0",
-  "author": "Tên của bạn",
-  "description": "Mô tả ngắn (tối đa 300 ký tự).",
-  "tags": ["mẫu"],
+  "author": "Your Name",
+  "description": "Short description (max 300 characters).",
+  "tags": ["template"],
   "preview": "preview.png",
   "style": "style.css",
 
@@ -20,13 +20,13 @@
   "lyrics": { "mode": "list", "placement": "view", "align": "left", "showTime": true },
 
   "settings": [
-    { "key": "accent", "label": "Màu nhấn", "type": "color", "bind": "theme.colors.accent" },
-    { "key": "buttons", "label": "Kiểu nút", "type": "select", "bind": "controls.buttons",
-      "options": [ { "value": "soft", "label": "Mềm" }, { "value": "pill", "label": "Bo tròn" }, { "value": "ghost", "label": "Không nền" } ] },
-    { "key": "bars", "label": "Số cột visualizer", "type": "range", "bind": "visualizer.bars", "min": 8, "max": 64 },
-    { "key": "spin", "label": "Ảnh bìa quay", "type": "toggle", "bind": "artwork.spin" },
-    { "key": "lyricsAlign", "label": "Căn lyrics", "type": "select", "bind": "lyrics.align",
-      "options": [ { "value": "left", "label": "Trái" }, { "value": "center", "label": "Giữa" } ] },
-    { "key": "cardGlow", "label": "Độ sáng viền thẻ", "type": "range", "bind": "css:--preset-card-glow", "min": 0, "max": 40, "unit": "px", "default": 12 }
+    { "key": "accent", "label": "Accent color", "type": "color", "bind": "theme.colors.accent" },
+    { "key": "buttons", "label": "Button style", "type": "select", "bind": "controls.buttons",
+      "options": [ { "value": "soft", "label": "Soft" }, { "value": "pill", "label": "Pill" }, { "value": "ghost", "label": "Ghost" } ] },
+    { "key": "bars", "label": "Visualizer bars", "type": "range", "bind": "visualizer.bars", "min": 8, "max": 64 },
+    { "key": "spin", "label": "Spin artwork", "type": "toggle", "bind": "artwork.spin" },
+    { "key": "lyricsAlign", "label": "Lyrics alignment", "type": "select", "bind": "lyrics.align",
+      "options": [ { "value": "left", "label": "Left" }, { "value": "center", "label": "Center" } ] },
+    { "key": "cardGlow", "label": "Card glow radius", "type": "range", "bind": "css:--preset-card-glow", "min": 0, "max": 40, "unit": "px", "default": 12 }
   ]
 }

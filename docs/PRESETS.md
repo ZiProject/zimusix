@@ -1,70 +1,70 @@
-# Preset Runtime & quy ước Preset
+# Preset Runtime & Preset Conventions
 
-Preset quyết định **toàn bộ cách Zimusix hiển thị**:
+Presets determine the **entire visual presentation of Zimusix**:
 
-| Preset quyết định | Section trong `preset.json` |
+| Preset controls | Section in `preset.json` |
 | --- | --- |
-| Bố cục hiển thị + cách bố trí giao diện web (thanh bên, thanh phát, mật độ, độ rộng) | `layout` |
-| **Mọi nút và thành phần điều khiển** (nút chung, nút Phát, điều hướng, thanh công cụ, nền panel, cỡ icon) | `controls` |
-| Cách trình bày artwork (ảnh bìa) | `artwork` |
-| Kiểu hiển thị thông tin bài hát | `info` |
-| Hiệu ứng nền | `background` |
+| Overall layout + web shell arrangement (sidebar, player bar, density, content width) | `layout` |
+| **All buttons and controls** (common buttons, Play button, navigation, toolbar, panel style, icon size) | `controls` |
+| Artwork presentation (cover art) | `artwork` |
+| Track information display style | `info` |
+| Background effects | `background` |
 | Visualizer | `visualizer` |
-| Cách hiển thị lyrics | `lyrics` |
-| Màu sắc, font | `theme` |
-| Thông số cho người dùng tự chỉnh | `settings` |
+| Lyrics display style | `lyrics` |
+| Colors, typography | `theme` |
+| User-configurable settings | `settings` |
 
-Preset là **dữ liệu khai báo**: nó chọn module có sẵn trong app và đặt tham số. Preset **không chứa JS/HTML**
-nên một preset tải từ nơi khác không chạy được mã tuỳ ý. Muốn tạo hiệu ứng riêng thì thêm `style.css`.
+Presets are **declarative data**: they select available modules in the app and assign parameters. Presets **do not contain executable JS or HTML**,
+ensuring imported presets cannot run arbitrary code. Custom visual effects are authored via `style.css`.
 
-## Cấu trúc thư mục
+## Directory Structure
 
 ```
-my-preset/                 ← tên thư mục = "id" trong preset.json
-├─ preset.json             BẮT BUỘC  manifest
-├─ preview.png             khuyến nghị  ảnh xem trước, 640×360 (16:9)
-├─ style.css               tuỳ chọn  CSS bổ sung
-├─ assets/                 tuỳ chọn  ảnh, font, video mà style.css dùng
+my-preset/                 ← folder name = "id" in preset.json
+├─ preset.json             REQUIRED  manifest
+├─ preview.png             recommended  preview image, 640×360 (16:9)
+├─ style.css               optional  additional CSS
+├─ assets/                 optional  images, fonts, videos used by style.css
 │   ├─ noise.png
 │   └─ ...
-└─ README.md               tuỳ chọn  ghi chú, giấy phép
+└─ README.md               optional  notes, license
 ```
 
-Quy ước:
+Conventions:
 
-- **Ảnh preview**: nằm ở **gốc thư mục preset**, mặc định tên `preview.png`. Đổi tên bằng `"preview": "ten-khac.webp"`
-  (đuôi: png, jpg, jpeg, webp, svg, avif). Khuyên dùng **640×360 px**, tỉ lệ 16:9, dưới 300 KB. Thiếu ảnh thì app hiện khung màu thay thế.
-- **`id`**: chữ thường, số, `-` hoặc `_`, 2–48 ký tự, bắt đầu bằng chữ/số. Nên trùng tên thư mục.
-- **Đuôi file cho phép**: `json css png jpg jpeg webp gif avif svg woff woff2 ttf otf mp4 webm md txt`.
-  Thư mục chứa đuôi khác (đặc biệt `.js`, `.html`) sẽ bị **từ chối** khi thêm.
-- **Giới hạn**: ≤ 200 file, ≤ 30 MB, lồng ≤ 6 cấp, không symlink, `preset.json` ≤ 128 KB.
-- **Đường dẫn** trong manifest/CSS luôn **tương đối** so với thư mục preset, dùng `/`, không có `..`.
+- **Preview image**: located at the **preset folder root**, default name `preview.png`. Custom name configured via `"preview": "custom-name.webp"`
+  (extensions: png, jpg, jpeg, webp, svg, avif). Recommended resolution **640×360 px**, 16:9 aspect ratio, under 300 KB. If missing, a styled placeholder is displayed.
+- **`id`**: lowercase letters, numbers, `-` or `_`, 2–48 characters, starting with alphanumeric. Must match directory name.
+- **Allowed file extensions**: `json css png jpg jpeg webp gif avif svg woff woff2 ttf otf mp4 webm md txt`.
+  Folders containing other extensions (especially `.js`, `.html`) are **rejected** during import.
+- **Limits**: ≤ 200 files, ≤ 30 MB, ≤ 6 directory levels deep, no symlinks, `preset.json` ≤ 128 KB.
+- **Paths** in manifest and CSS must always be **relative** to the preset folder root, using `/`, without `..`.
 
-Bản mẫu chép sẵn: [`docs/preset-template/`](./preset-template/).
+Starter template: [`docs/preset-template/`](./preset-template/).
 
-## Người dùng thêm preset thế nào?
+## How Users Install Presets
 
-1. Mở tab **Giao diện** → **Thêm thư mục preset**.
-2. Chọn *một thư mục preset* (có `preset.json`) **hoặc** một thư mục chứa nhiều thư mục preset con.
-3. Sidecar kiểm tra rồi **sao chép** vào kho của app (`<thư mục dữ liệu app>/presets/<id>/`), nên xoá thư mục gốc cũng không sao.
-4. Bấm **Dùng preset này**. Thông số nằm trong "Tuỳ chỉnh" ngay bên dưới (chỉ những thông số preset cho phép).
+1. Open the **Themes** tab → **Add preset folder**.
+2. Select *a preset folder* (containing `preset.json`) **or** a parent folder containing multiple preset subfolders.
+3. The sidecar validates and **copies** files into the app preset store (`<app data dir>/presets/<id>/`), so deleting or moving the original folder will not break the installed preset.
+4. Click **Use this preset**. Configurable parameters appear in the "Settings" section below (only parameters exposed by the preset author).
 
-Preset built-in nằm ở `public/presets/<id>/` và dùng **cùng quy ước**; danh sách ở `public/presets/index.json`
-(tự cập nhật bằng `npm run presets:index`). Preset người dùng được định danh nội bộ là `user:<id>` nên không bao giờ đè preset built-in.
+Built-in presets reside in `public/presets/<id>/` and follow the **same conventions**; listed in `public/presets/index.json`
+(regenerated via `npm run presets:index`). User-installed presets are prefixed with `user:<id>` internally, preventing collisions with built-in presets.
 
 ## `preset.json`
 
 ```jsonc
 {
-  "schema": 1,                    // phiên bản định dạng (hiện là 1)
+  "schema": 1,                    // schema format version (currently 1)
   "id": "my-preset",
-  "name": "Tên hiển thị",
+  "name": "Display Name",
   "version": "1.0.0",
   "author": "…",
-  "description": "≤ 300 ký tự",
-  "tags": ["…"],                  // ≤ 8 thẻ
+  "description": "≤ 300 characters",
+  "tags": ["…"],                  // ≤ 8 tags
   "preview": "preview.png",
-  "style": "style.css",           // tuỳ chọn
+  "style": "style.css",           // optional
 
   "layout": {}, "controls": {}, "artwork": {}, "info": {}, "background": {},
   "visualizer": {}, "lyrics": {}, "theme": {},
@@ -72,185 +72,185 @@ Preset built-in nằm ở `public/presets/<id>/` và dùng **cùng quy ước**;
 }
 ```
 
-Section nào bỏ trống thì dùng mặc định (= giao diện gốc `classic`). Tham số sai kiểu/ngoài khoảng **không làm hỏng preset**:
-app bỏ qua và dùng mặc định, đồng thời hiện cảnh báo trong thẻ preset.
+Any omitted section defaults to the original baseline (`classic`). Invalid or out-of-range parameters **do not crash the preset**:
+the app ignores invalid values and falls back to defaults while displaying non-fatal warnings on the preset card.
 
-## Tham số của từng module
+## Module Parameters
 
-Bảng dưới sinh tự động từ `src/presets/schema.js` (nguồn sự thật duy nhất).
+The tables below describe parameters defined in `src/presets/schema.js` (the single source of truth).
 
 ### `layout`
 
-Bố cục tổng thể của giao diện web (thanh bên, thanh phát, độ rộng nội dung).
+Overall interface layout (sidebar, player position, content width).
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `shell` | `classic` · `stage` · `focus` · `split` | `classic` | classic: danh sách \| stage: sân khấu giữa \| focus: tập trung lyrics \| split: chia đôi sân khấu + nội dung |
-| `sidebar` | `left` · `right` · `rail` · `hidden` | `left` | Vị trí thanh bên: trái, phải, thu gọn (chỉ icon) hoặc ẩn |
-| `player` | `bottom` · `floating` · `top` · `minimal` | `bottom` | Thanh phát: dưới, nổi, trên hoặc tối giản |
-| `density` | `comfortable` · `compact` | `comfortable` | Độ dày khoảng cách |
-| `defaultView` | `keep` · `search` · `library` · `queue` · `related` · `lyrics` · `nowplaying` · `presets` · `discord` | `keep` | Tab mở khi chọn preset ("keep" = giữ tab hiện tại) |
-| `contentWidth` | số 560–1400 | `880` | Độ rộng tối đa của nội dung (px) |
-| `radius` | số 0–28 | `12` | Bo góc của panel (px) |
+| `shell` | `classic` · `stage` · `focus` · `split` | `classic` | classic: vertical list \| stage: centered stage \| focus: lyrics emphasis \| split: side-by-side stage + content |
+| `sidebar` | `left` · `right` · `rail` · `hidden` | `left` | Sidebar position: left, right, collapsed icon rail, or hidden |
+| `player` | `bottom` · `floating` · `top` · `minimal` | `bottom` | Player position: bottom bar, floating pill, top bar, or minimal |
+| `density` | `comfortable` · `compact` | `comfortable` | Spacing and padding density |
+| `defaultView` | `keep` · `search` · `library` · `queue` · `related` · `lyrics` · `nowplaying` · `presets` · `discord` | `keep` | View to activate when selecting preset ("keep" preserves active tab) |
+| `contentWidth` | number 560–1400 | `880` | Maximum content width (px) |
+| `radius` | number 0–28 | `12` | Panel corner radius (px) |
 
 ### `controls`
 
-Giao diện của mọi nút, thanh công cụ, điều hướng và panel.
+Visual appearance of buttons, toolbars, navigation items, and panels.
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `buttons` | `soft` · `pill` · `square` · `ghost` · `outline` | `soft` | Kiểu nút chung: soft (mặc định) \| pill (bo tròn) \| square (vuông) \| ghost (không nền) \| outline (viền nhấn) |
-| `playButton` | `circle` · `square` · `accent` | `circle` | Nút Phát/Tạm dừng: tròn \| vuông bo \| tô màu nhấn |
-| `nav` | `soft` · `pill` · `bar` | `soft` | Mục điều hướng ở thanh bên: soft \| pill \| bar (vạch nhấn) |
-| `toolbar` | `docked` · `floating` · `transparent` · `autohide` | `docked` | Thanh công cụ phía trên: docked \| floating (viên thuốc) \| transparent \| autohide (hiện khi rê chuột) |
-| `panels` | `solid` · `glass` · `flat` | `solid` | Nền của thanh bên/thanh phát/popup: đặc \| kính mờ \| phẳng (trong suốt) |
-| `iconSize` | số 14–26 | `18` | Cỡ icon của nút và điều hướng (px) |
+| `buttons` | `soft` · `pill` · `square` · `ghost` · `outline` | `soft` | General button style: soft (default) \| pill \| square \| ghost (borderless) \| outline (accent border) |
+| `playButton` | `circle` · `square` · `accent` | `circle` | Play/Pause button: circle \| rounded square \| solid accent fill |
+| `nav` | `soft` · `pill` · `bar` | `soft` | Sidebar navigation item style: soft \| pill \| bar (indicator line) |
+| `toolbar` | `docked` · `floating` · `transparent` · `autohide` | `docked` | Top toolbar: docked \| floating pill \| transparent \| autohide on hover |
+| `panels` | `solid` · `glass` · `flat` | `solid` | Background of sidebar/player/dialogs: solid \| frosted glass \| flat (transparent) |
+| `iconSize` | number 14–26 | `18` | Button and navigation icon size (px) |
 
 ### `artwork`
 
-Cách trình bày ảnh bìa (thanh phát + khu Đang phát).
+Artwork presentation (player bar + Now Playing stage).
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `style` | `square` · `rounded` · `circle` · `vinyl` · `polaroid` · `none` | `rounded` | Kiểu khung ảnh |
-| `size` | số 32–96 | `56` | Kích thước ảnh trên thanh phát (px) |
-| `stageSize` | số 160–560 | `320` | Kích thước ảnh ở khu Đang phát (px) |
-| `react` | `true` / `false` | `true` | Ảnh nhún theo bass |
-| `reactAmount` | số 0–20 | `8` | Mức nhún (%) |
-| `glow` | `true` / `false` | `true` | Quầng sáng theo bass |
-| `spin` | `true` / `false` | `false` | Quay khi đang phát (hợp với circle/vinyl) |
-| `spinSpeed` | số 4–60 | `18` | Số giây cho một vòng quay |
-| `shadow` | `true` / `false` | `false` | Đổ bóng cố định dưới ảnh |
+| `style` | `square` · `rounded` · `circle` · `vinyl` · `polaroid` · `none` | `rounded` | Artwork shape style |
+| `size` | number 32–96 | `56` | Artwork size in bottom player bar (px) |
+| `stageSize` | number 160–560 | `320` | Artwork size on Now Playing stage (px) |
+| `react` | `true` / `false` | `true` | Artwork pulses with bass energy |
+| `reactAmount` | number 0–20 | `8` | Pulse intensity (%) |
+| `glow` | `true` / `false` | `true` | Dynamic glow aura reacting to bass |
+| `spin` | `true` / `false` | `false` | Rotates during playback (best for circle / vinyl) |
+| `spinSpeed` | number 4–60 | `18` | Seconds per rotation |
+| `shadow` | `true` / `false` | `false` | Drop shadow beneath artwork |
 
 ### `info`
 
-Cách hiển thị thông tin bài hát.
+Track metadata rendering.
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `style` | `inline` · `stacked` · `centered` · `huge` | `inline` | inline: gọn \| stacked: tiêu đề lớn \| centered: căn giữa \| huge: chữ rất lớn |
-| `show` | mảng ⊂ {`title`, `artist`, `source`, `duration`} | `["title","artist","source"]` |  |
-| `marquee` | `true` / `false` | `true` | Tiêu đề dài hơn khung thì chạy chữ vòng liền mạch (rê chuột để dừng). Tắt thì cắt bằng "…" (kiểu `huge` thì xuống dòng, tối đa 2 dòng). CSS preset có thể bám vào `html[data-info-marquee]` |
-| `titleScale` | số 0.7–2 | `1` | Hệ số phóng chữ tiêu đề |
+| `style` | `inline` · `stacked` · `centered` · `huge` | `inline` | inline: compact \| stacked: larger title \| centered: center alignment \| huge: poster typography |
+| `show` | array ⊂ {`title`, `artist`, `source`, `duration`} | `["title","artist","source"]` | Metadata fields to display |
+| `marquee` | `true` / `false` | `true` | Marquee scrolling when title overflows container (pauses on hover). When disabled, truncates with ellipsis (huge wraps to 2 lines max). CSS can hook into `html[data-info-marquee]` |
+| `titleScale` | number 0.7–2 | `1` | Font scale multiplier for title |
 
 ### `background`
 
-Hiệu ứng nền.
+Background visual effects.
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `effect` | `media` · `aurora` · `gradient` · `solid` · `particles` | `media` | media: ảnh bìa/video \| aurora \| gradient \| solid \| particles |
-| `media` | `auto` · `on` · `off` | `auto` | Có phủ ảnh bìa/video lên không (auto: chỉ khi effect = media) |
-| `colors` | mảng ≤ 4 màu hex | `[]` | Tối đa 4 màu hex; bỏ trống = dùng màu accent |
-| `speed` | số 0.2–3 | `1` | Tốc độ hiệu ứng |
-| `intensity` | số 0–1 | `0.6` | Độ đậm hiệu ứng |
-| `angle` | số 0–360 | `135` | Góc gradient (độ) |
-| `count` | số 10–200 | `70` | Số hạt (particles) |
-| `react` | `true` / `false` | `true` | Hiệu ứng phản ứng theo nhạc |
+| `effect` | `media` · `aurora` · `gradient` · `solid` · `particles` | `media` | media: cover art/video \| aurora \| gradient \| solid \| particles |
+| `media` | `auto` · `on` · `off` | `auto` | Whether to overlay cover art/video (auto: only when effect = media) |
+| `colors` | array of ≤ 4 hex colors | `[]` | Up to 4 hex colors; empty = derives from accent color |
+| `speed` | number 0.2–3 | `1` | Animation speed multiplier |
+| `intensity` | number 0–1 | `0.6` | Visual effect opacity/intensity |
+| `angle` | number 0–360 | `135` | Gradient angle (degrees) |
+| `count` | number 10–200 | `70` | Particle count (particles effect) |
+| `react` | `true` / `false` | `true` | Reacts dynamically to music energy |
 
 ### `visualizer`
 
-Visualizer âm thanh.
+Audio visualizer.
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `type` | `bars` · `mirror` · `wave` · `circle` · `dots` · `none` | `bars` | Kiểu vẽ |
-| `placement` | mảng ⊂ {`player`, `stage`, `background`} | `["player"]` | Vẽ ở đâu (có thể nhiều nơi) |
-| `bars` | số 8–96 | `32` | Số cột/điểm |
-| `colorMode` | `gradient` · `accent` · `solid` | `gradient` | Cách tô màu |
-| `color` | màu hex | `#a78bfa` | Màu khi colorMode = solid |
-| `thickness` | số 1–10 | `2` | Độ dày nét / khoảng cách giữa cột (px) |
-| `smoothing` | số 0–0.95 | `0` | Làm mượt giữa các khung hình |
-| `opacity` | số 0.1–1 | `1` | Độ đậm |
-| `height` | số 60–420 | `120` | Chiều cao vùng vẽ ở khu Đang phát (px) |
+| `type` | `bars` · `mirror` · `wave` · `circle` · `dots` · `none` | `bars` | Visualizer rendering type |
+| `placement` | array ⊂ {`player`, `stage`, `background`} | `["player"]` | Where to render (can target multiple placements) |
+| `bars` | number 8–96 | `32` | Number of frequency bars/points |
+| `colorMode` | `gradient` · `accent` · `solid` | `gradient` | Color mode |
+| `color` | hex color | `#a78bfa` | Color when colorMode = solid |
+| `thickness` | number 1–10 | `2` | Stroke thickness / bar gap (px) |
+| `smoothing` | number 0–0.95 | `0` | Temporal frame smoothing factor |
+| `opacity` | number 0.1–1 | `1` | Visualizer opacity |
+| `height` | number 60–420 | `120` | Visualizer canvas height on Now Playing stage (px) |
 
 ### `lyrics`
 
-Cách hiển thị lời bài hát.
+Lyrics presentation.
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `mode` | `list` · `karaoke` · `focus` · `compact` | `list` | list: cả bài \| karaoke: dòng hiện tại to, mờ dần \| focus: chỉ vài dòng quanh dòng hiện tại \| compact: nhỏ gọn |
-| `placement` | `view` · `stage` | `view` | view: tab Lời bài hát \| stage: nhúng trong khu Đang phát |
-| `align` | `left` · `center` · `right` | `left` | Căn lề |
-| `showTime` | `true` / `false` | `true` | Hiện mốc thời gian từng dòng |
-| `size` | số 14–48 | `22` | Cỡ chữ dòng thường (px) |
-| `activeScale` | số 1–1.8 | `1.27` | Dòng đang hát phóng to bao nhiêu lần |
-| `glow` | `true` / `false` | `true` | Dòng hiện tại phát sáng theo nhạc |
+| `mode` | `list` · `karaoke` · `focus` · `compact` | `list` | list: full list \| karaoke: active line prominent, distant lines blurred \| focus: active + adjacent lines centered \| compact: dense text |
+| `placement` | `view` · `stage` | `view` | view: Lyrics tab \| stage: embedded on Now Playing stage |
+| `align` | `left` · `center` · `right` | `left` | Text alignment |
+| `showTime` | `true` / `false` | `true` | Show timestamp per line |
+| `size` | number 14–48 | `22` | Base font size (px) |
+| `activeScale` | number 1–1.8 | `1.27` | Active line scale multiplier |
+| `glow` | `true` / `false` | `true` | Active line glows with music energy |
 
 ### `theme`
 
-Màu sắc & font. `colors` nhận mã hex.
+Colors & typography. `colors` takes hex color codes.
 
-| Tham số | Giá trị | Mặc định | Ý nghĩa |
+| Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `colorScheme` | `dark` · `light` | `dark` | Hệ màu của control gốc (thanh cuộn, input) |
-| `fontFamily` | chuỗi font-family | — | Danh sách font CSS (an toàn, không ký tự đặc biệt) |
-| `colors` | object | `{}` | Khoá: `accent`, `accent2`, `bg`, `panel`, `panel2`, `line`, `text`, `muted`, `ok`, `danger` → mã hex |
+| `colorScheme` | `dark` · `light` | `dark` | Native control color scheme (scrollbars, form inputs) |
+| `fontFamily` | font-family string | — | CSS font-family stack (sanitized, alphanumeric + quotes) |
+| `colors` | object | `{}` | Keys: `accent`, `accent2`, `bg`, `panel`, `panel2`, `line`, `text`, `muted`, `ok`, `danger` → hex values |
 
-## `settings` — thông số cho người dùng chỉnh
+## `settings` — User Configurable Options
 
-Mỗi phần tử khai báo một ô điều khiển trong tab **Giao diện → Tuỳ chỉnh** và **trỏ tới** một tham số bằng `bind`.
-Người dùng chỉ chỉnh được những gì bạn khai báo; giá trị được kẹp vào khoảng bạn cho phép và nhớ theo từng preset.
+Each item registers an interactive control in **Themes → Settings** that binds to a parameter via `bind`.
+Users can only modify options you explicitly declare; values are clamped to specified ranges and persisted per preset.
 
-| Trường | Ý nghĩa |
+| Field | Description |
 | --- | --- |
-| `key` | Tên duy nhất, camelCase (`^[a-z][A-Za-z0-9]{0,31}$`) |
-| `label` / `description` | Nhãn và chú thích |
-| `type` | `range` (số) · `toggle` (boolean) · `select` (enum) · `color` (hex) |
-| `bind` | Đích: `"section.param"` (vd `"visualizer.bars"`), `"theme.colors.accent"`, hoặc `"css:--preset-ten"` |
-| `min` `max` `step` `unit` | Cho `range`. Khoảng không được rộng hơn khoảng của tham số được bind |
-| `options` | Cho `select`: `[{ "value": "...", "label": "..." }]`, `value` phải hợp lệ với tham số |
-| `default` | Tuỳ chọn; thiếu thì lấy giá trị hiện tại của tham số được bind |
+| `key` | Unique camelCase identifier (`^[a-z][A-Za-z0-9]{0,31}$`) |
+| `label` / `description` | Display label and tooltip note |
+| `type` | `range` (number) · `toggle` (boolean) · `select` (enum) · `color` (hex) |
+| `bind` | Target: `"section.param"` (e.g. `"visualizer.bars"`), `"theme.colors.accent"`, or `"css:--preset-name"` |
+| `min` `max` `step` `unit` | For `range`. Range cannot exceed parameter bounds |
+| `options` | For `select`: `[{ "value": "...", "label": "..." }]`, `value` must be a valid enum choice |
+| `default` | Optional fallback; if omitted, defaults to the section parameter value |
 
-Ghép kiểu: `range`→tham số số, `toggle`→boolean, `select`→enum, `color`→tham số màu / `theme.colors.*` / `css:--preset-*`.
-`css:--preset-*` đặt một CSS variable để `style.css` của bạn dùng (tiền tố `--preset-` bắt buộc, tránh ghi đè biến lõi).
-Thứ tự ưu tiên: giá trị người dùng chọn > `default` của setting > giá trị trong section.
+Type bindings: `range` → numeric parameter, `toggle` → boolean, `select` → enum, `color` → color parameter / `theme.colors.*` / `css:--preset-*`.
+`css:--preset-*` sets a CSS custom property for consumption in your `style.css` (the `--preset-` prefix is mandatory to avoid colliding with core variables).
+Precedence order: user selection > setting `default` > section manifest value.
 
 ## `style.css`
 
-Được nạp khi preset đang dùng và gỡ khi đổi preset. App **làm sạch** trước khi chèn:
+Loaded while the preset is active and unloaded when switching presets. The app **sanitizes** styles before injection:
 
-- `@import` bị bỏ.
-- `url(...)` chỉ nhận đường dẫn tương đối trong thư mục preset (vd `url(assets/noise.png)` — đường dẫn tính từ vị trí file css) hoặc `data:`. URL `http(s)://` bị chặn → preset chạy offline.
-- `expression()`, `behavior`, `-moz-binding` bị bỏ.
+- `@import` rules are stripped.
+- `url(...)` only accepts relative paths within the preset folder (e.g. `url(assets/noise.png)`) or `data:` URIs. External `http(s)://` URLs are blocked → presets run fully offline.
+- `expression()`, `behavior`, `-moz-binding` are stripped.
 
-Các móc hữu ích: thuộc tính `data-*` trên `<html>` (`data-shell`, `data-sidebar`, `data-player-pos`, `data-artwork`, `data-info`,
-`data-btn`, `data-nav`, `data-toolbar`, `data-panels`, `data-bg-effect`, `data-viz`, `data-lyrics-mode`, `data-preset`), class `is-playing` trên `<html>`, biến `--accent`, `--accent-2`,
-`--bg`, `--panel`, `--music-bass` / `--music-energy` (0–1, đổi theo nhạc), và các class như `.stage-cover`, `.stage-title`, `.lyric-line`.
+Useful CSS hooks: `data-*` attributes on `<html>` (`data-shell`, `data-sidebar`, `data-player-pos`, `data-artwork`, `data-info`,
+`data-btn`, `data-nav`, `data-toolbar`, `data-panels`, `data-bg-effect`, `data-viz`, `data-lyrics-mode`, `data-preset`), the `is-playing` class on `<html>`, CSS variables `--accent`, `--accent-2`,
+`--bg`, `--panel`, `--music-bass` / `--music-energy` (0–1 dynamic audio values), and element classes like `.stage-cover`, `.stage-title`, `.lyric-line`.
 
-## Kiểm tra preset
+## Validating Presets
 
 ```sh
-npm run presets:check                       # preset built-in + bản mẫu
-node scripts/presets.mjs check ./my-preset  # preset của bạn (hoặc thư mục chứa nhiều preset)
+npm run presets:check                       # built-in presets + starter template
+node scripts/presets.mjs check ./my-preset  # custom preset (or directory of presets)
 ```
 
-Công cụ dùng đúng bộ kiểm tra của app và kiểm tra thêm file thật (preview, style.css, đuôi file, dung lượng).
+The CLI runner uses the exact same schema validator as the app and verifies real assets on disk (preview, style.css, file extensions, file sizes).
 
-## Kiến trúc runtime (cho người sửa app)
+## Runtime Architecture (For Contributors)
 
 ```
 src/presets/
-├─ schema.js       đăng ký module + tham số, normalizeManifest(), resolveConfig()   (thuần, dùng chung với scripts/)
-├─ css.js          làm sạch style.css                                               (thuần)
-├─ loader.js       nạp preset built-in (public/presets) và của người dùng (sidecar GET /presets)
-├─ store.js        lưu preset đang chọn + giá trị tuỳ chỉnh (localStorage "zimusix-preset")
-├─ runtime.js      applyPreset / setPresetSetting; đặt data-* và CSS variables lên <html>; phát sự kiện onPresetChange
-├─ visualizers.js  bars · mirror · wave · circle · dots
-└─ bg-fx.js        hiệu ứng nền particles (aurora/gradient/solid làm bằng CSS)
+├─ schema.js       module registration + parameters, normalizeManifest(), resolveConfig() (shared with scripts/)
+├─ css.js          CSS sanitizer                                                           (pure)
+├─ loader.js       loads built-in presets (public/presets) and user presets (sidecar GET /presets)
+├─ store.js        persists selected preset + custom settings in localStorage ("zimusix-preset")
+├─ runtime.js      applyPreset / setPresetSetting; sets data-* attributes and CSS vars on <html>; fires onPresetChange
+├─ visualizers.js  bars · mirror · wave · circle · dots canvas visualizers
+└─ bg-fx.js        particles background effect (aurora/gradient/solid implemented in CSS)
 src/styles/preset-layout.css   shell / sidebar / player / density
 src/styles/preset-modules.css  artwork / info / visualizer / lyrics / background
-src/styles/preset-controls.css nút, điều hướng, thanh công cụ, panel, cỡ icon
-sidecar/presets.js             cài, liệt kê, xoá, phục vụ file preset (kiểm tra an toàn đường dẫn, đuôi file, dung lượng)
+src/styles/preset-controls.css buttons, navigation, toolbar, panels, icon size
+sidecar/presets.js             install, list, delete, serve preset files (sandboxed path/ext/size checks)
 ```
 
-Thêm một **giá trị mới cho module** (vd kiểu visualizer mới): thêm vào `MODULES` trong `schema.js`, viết phần vẽ/CSS tương ứng,
-rồi `npm run presets:check`. Bảng tham số ở trên sẽ tự cập nhật khi chạy lại bộ sinh tài liệu.
+Adding a **new value for a module** (e.g. a new visualizer type): add it to `MODULES` in `schema.js`, implement corresponding rendering/CSS,
+then run `npm run presets:check`. The parameter tables above update automatically when running documentation generators.
 
-API sidecar (đều cần token): `GET /presets` · `POST /presets/import {path}` · `POST /presets/remove {id}` · `GET /presets/file?id=&path=`.
+Sidecar API endpoints (all require bearer token): `GET /presets` · `POST /presets/import {path}` · `POST /presets/remove {id}` · `GET /presets/file?id=&path=`.
 
-## Hành vi của app (không do preset quyết định)
+## App Behavior (Independent of Presets)
 
-- **Ẩn nội dung (phím `H` / nút con mắt)**: đang ẩn mà bấm một tab ở thanh bên (Tìm kiếm, Hàng đợi, Lời bài hát…) hoặc nút Lời bài hát ở thanh phát thì nội dung tự hiện lại.
-- Mục **Đang phát** luôn ở đầu thanh bên.
+- **Minimal view toggle (`H` key / eye icon)**: when hidden, selecting any sidebar tab (Search, Queue, Lyrics…) or clicking the Lyrics button in the player bar automatically restores the view.
+- The **Now Playing** item is always pinned at the top of the sidebar.

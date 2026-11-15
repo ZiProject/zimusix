@@ -3,7 +3,7 @@
 .player {
   grid-area: player;
   display: grid;
-  /* minmax(0, …): cột được phép co lại, để tiêu đề dài bị cắt/chạy chữ thay vì đẩy tràn sang cột bên cạnh */
+  /* minmax(0, …): allow columns to shrink, ensuring long titles truncate/marquee rather than overflowing */
   grid-template-columns: minmax(0, 1fr) minmax(300px, 1.4fr) minmax(0, 1fr);
   align-items: center;
   gap: 20px;
@@ -120,7 +120,7 @@
   flex: none;
 }
 
-/* Cửa sổ hẹp: bớt thứ phụ trước, giữ nguyên các nút chính */
+/* Narrow window: collapse secondary elements first, preserving main controls */
 @media (max-width: 1100px) {
   .viz {
     display: none;
@@ -136,7 +136,7 @@
   }
 }
 
-/* ---- thanh trượt (tua nhạc, âm lượng): phần đã chạy được tô màu, nút tròn hiện khi rê chuột ---- */
+/* ---- Sliders (seek, volume): filled portion is colored, thumb appears on hover ---- */
 
 input[type="range"] {
   --fill: 0%;

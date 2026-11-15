@@ -1,14 +1,14 @@
 /* ------------------------------------------------------------------------------------------
    Preset · MODULES — artwork, info, visualizer, lyrics, background.
-   Bám vào các thuộc tính data-* trên <html> (xem src/presets/runtime.js).
+   Driven by data-* attributes on <html> (see src/presets/runtime.js).
    ------------------------------------------------------------------------------------------ */
 
 /* =============================================================== ARTWORK ===================== */
-/* Chỉ áp dụng cho ảnh bìa ở thanh phát (.cover-slot) và khu Đang phát (.stage-cover),
-   không đụng tới ảnh nhỏ trong danh sách bài hát. */
+/* Only applies to artwork in player bar (.cover-slot) and Now Playing area (.stage-cover),
+   does not affect small thumbnails in track lists. */
 
 .stage-cover .cover {
-  /* kích thước thật do artwork.stageSize; không vượt quá 46% chiều cao cửa sổ */
+  /* actual size controlled by artwork.stageSize; does not exceed 46% of window height */
   width: min(var(--stage-art, 320px), 46vh) !important;
   height: min(var(--stage-art, 320px), 46vh) !important;
   border-radius: calc(var(--radius, 12px) + 4px);
@@ -28,7 +28,7 @@ html[data-artwork="circle"] :is(.cover-slot, .stage-cover) .cover {
   border-radius: 50%;
 }
 
-/* polaroid: khung trắng, hơi nghiêng */
+/* polaroid: white border, slightly tilted */
 html[data-artwork="polaroid"] :is(.cover-slot, .stage-cover) .cover {
   padding: 6% 6% 18%;
   border-radius: 3px;
@@ -42,7 +42,7 @@ html[data-artwork="polaroid"] .stage-cover .cover {
   transform: rotate(-3deg);
 }
 
-/* vinyl: đĩa than, ảnh bìa làm nhãn đĩa */
+/* vinyl: turntable record, cover art used as center label */
 html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover {
   position: relative;
   border-radius: 50%;
@@ -67,7 +67,7 @@ html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover svg {
   height: 24%;
 }
 html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover::before {
-  /* lỗ giữa đĩa */
+  /* spindle hole in center */
   content: "";
   position: absolute;
   z-index: 2;
@@ -81,7 +81,7 @@ html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover::before {
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6);
 }
 html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover::after {
-  /* ánh phản chiếu */
+  /* vinyl light reflection */
   content: "";
   position: absolute;
   inset: 0;
@@ -101,7 +101,7 @@ html[data-art-shadow="1"] :is(.cover-slot, .stage-cover) .cover {
   box-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
 }
 
-/* quay khi đang phát (artwork.spin) */
+/* spin while playing (artwork.spin) */
 html[data-art-spin="1"] :is(.cover-slot, .stage-cover) .cover {
   animation: art-spin var(--spin-speed, 18s) linear infinite;
   animation-play-state: paused;
@@ -117,8 +117,8 @@ html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
 
 /* ================================================================== INFO ===================== */
 
-/* Chữ chạy: hai bản chữ nối nhau trong .marquee-track, trượt đúng một bản thì lặp lại (liền mạch).
-   Hai đầu khung mờ dần; phần mờ bên trái chỉ hiện lúc chữ đang trượt để đầu chữ không bị mờ khi đứng yên. */
+/* Marquee text: two identical copies in .marquee-track, smoothly scrolling one full copy width then looping.
+   Both edges have soft gradient fades; left fade only appears while scrolling so start of text stays crisp at rest. */
 @property --mq-left {
   syntax: "<length>";
   inherits: false;
@@ -171,7 +171,7 @@ html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
   }
 }
 
-/* khu Đang phát */
+/* Now Playing stage */
 .stage-info {
   display: flex;
   flex-direction: column;
@@ -180,8 +180,8 @@ html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
   width: 100%;
   max-width: min(100%, 760px);
 }
-/* width: 100% là điểm mấu chốt: trong cột flex căn giữa, phần tử không có width sẽ nở theo độ dài chữ,
-   nên chữ không bao giờ "tràn khung" và không chạy chữ được. */
+/* width: 100% is critical: in a centered flex column, an element without width shrinks/grows to text content,
+   which prevents text from ever overflowing the container and breaking marquee detection. */
 .stage-title,
 .stage-sub {
   width: 100%;
@@ -203,7 +203,7 @@ html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
   white-space: nowrap;
 }
 
-/* stacked: tiêu đề lớn hơn, dòng phụ rõ hơn */
+/* stacked: larger title, prominent subtitle */
 html[data-info="stacked"] .np-title {
   font-size: calc(16px * var(--info-title-scale, 1));
   font-weight: 700;
@@ -215,9 +215,9 @@ html[data-info="stacked"] .stage-sub {
   font-size: 16px;
 }
 
-/* centered: căn giữa */
-/* Thanh phát luôn xếp ảnh | chữ theo hàng (xếp cột làm ảnh + 2 dòng chữ cao hơn thanh phát và đè lên nút);
-   "căn giữa" nghĩa là chữ nằm giữa phần còn lại. */
+/* centered: center alignment */
+/* Player bar always places artwork and text in a row (column layout makes bar too tall and covers controls);
+   "centered" aligns text in the remaining center area. */
 html[data-info="centered"] .np {
   justify-content: flex-start;
 }
@@ -237,7 +237,7 @@ html[data-info="centered"] .stage-title {
   font-size: calc(30px * var(--info-title-scale, 1));
 }
 
-/* huge: chữ rất lớn (poster) */
+/* huge: oversized typography (poster style) */
 html[data-info="huge"] .np-title {
   font-size: calc(18px * var(--info-title-scale, 1));
   font-weight: 800;
@@ -255,7 +255,7 @@ html[data-info="huge"] .stage-title {
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.12;
-  /* tắt chạy chữ: cho xuống dòng, tối đa 2 dòng */
+  /* marquee disabled: wrap lines, up to 2 lines */
   white-space: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -263,7 +263,7 @@ html[data-info="huge"] .stage-title {
   line-clamp: 2;
   text-wrap: balance;
 }
-/* bật chạy chữ: một dòng và chạy khi dài hơn khung */
+/* marquee enabled: single line, scrolls when longer than frame */
 html[data-info="huge"][data-info-marquee="1"] .stage-title {
   display: block;
   white-space: nowrap;
@@ -291,7 +291,7 @@ html[data-viz-player="0"] .viz {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* visualizer làm nền: mờ dần để không át lyrics/chữ phía trên */
+  /* background visualizer: subtle opacity so it doesn't distract from lyrics and text above */
   opacity: 0.55;
   mix-blend-mode: screen;
   -webkit-mask-image: linear-gradient(0deg, #000, transparent 85%);
@@ -317,14 +317,14 @@ html[data-lyrics-align="right"] .lyric-line {
   justify-content: flex-end;
   text-align: right;
 }
-/* căn giữa/phải: mốc thời gian lệch bố cục nên ẩn */
+/* center/right alignment: hide timestamp to keep balanced layout */
 html:is([data-lyrics-align="center"], [data-lyrics-align="right"])
   .lyric-line
   .line-time {
   display: none;
 }
 
-/* karaoke: dòng hiện tại sáng rõ, các dòng xa mờ và nhòe dần */
+/* karaoke: active line fully crisp and visible, distant lines faded and blurred */
 html[data-lyrics-mode="karaoke"] .lyrics-list {
   gap: 16px;
 }
@@ -346,7 +346,7 @@ html[data-lyrics-mode="karaoke"] .lyric-line.active {
   background: none;
 }
 
-/* focus: chỉ dòng hiện tại + vài dòng kế tiếp, đặt giữa khung */
+/* focus: only active line + next few lines, centered in viewport */
 html[data-lyrics-mode="focus"] .lyrics-list {
   justify-content: center;
   overflow: hidden;
@@ -370,7 +370,7 @@ html[data-lyrics-mode="focus"] .lyric-line.active {
   background: none;
 }
 
-/* compact: chữ nhỏ, khít */
+/* compact: smaller typography, tighter spacing */
 html[data-lyrics-mode="compact"] .lyrics-list {
   gap: 8px;
   padding: 16px 8px 60px;
@@ -383,7 +383,7 @@ html[data-lyrics-mode="compact"] .lyric-line.active {
   font-size: calc(var(--lyrics-size, 22px) * 0.72 * var(--lyrics-active-scale, 1.27));
 }
 
-/* lyrics nhúng trong khu Đang phát */
+/* embedded lyrics in Now Playing stage */
 .stage-lyrics .lyrics-list {
   flex: 1;
   padding: 12vh 8px;
@@ -396,7 +396,7 @@ html[data-lyrics-mode="compact"] .lyric-line.active {
 }
 
 /* ============================================================== BACKGROUND =================== */
-/* Lớp #bg-fx nằm giữa ảnh/video nền và lớp phủ tối (#bg-overlay). */
+/* #bg-fx layer sits between media background (image/video) and dark tint (#bg-overlay). */
 
 .bg-fx {
   position: absolute;
@@ -431,14 +431,14 @@ html[data-lyrics-mode="compact"] .lyric-line.active {
   opacity: 1;
 }
 
-/* aurora: ba đốm sáng mờ trôi chậm */
+/* aurora: three blurred light blobs moving slowly */
 .fx-blob {
   display: none;
   position: absolute;
   width: 62vmax;
   height: 62vmax;
   border-radius: 50%;
-  /* quầng sáng bằng radial-gradient thay cho filter: blur() — nhẹ hơn nhiều cho GPU */
+  /* aura drawn with radial-gradient instead of filter: blur() — much lighter on GPU */
   background: radial-gradient(circle, var(--fx-c, #7c5cff) 0%, transparent 68%);
   will-change: transform;
 }
@@ -484,7 +484,7 @@ html:not(.is-playing) .fx-blob {
     transform: translate(18vmax, -16vmax) scale(1.2);
   }
 }
-/* phản ứng theo nhạc: độ sáng tăng theo năng lượng */
+/* music reactive: brightness pulses with energy */
 .bg-layer.fx-react[data-effect="aurora"] .bg-fx {
   opacity: min(1, calc(var(--fx-intensity, 0.6) * (0.85 + var(--music-energy, 0) * 0.7)));
   transition: opacity 0.12s linear;
@@ -506,8 +506,8 @@ html:not(.is-playing) .fx-blob {
   }
 }
 
-/* ============================================ VÒNG VISUALIZER ÔM ẢNH BÌA (circle + stage) ====== */
-/* --cover-d: đường kính ảnh; vòng lớn gấp ~1,6 lần nên chừa lề quanh ảnh để vòng không đè lên chữ. */
+/* ============================================ VISUALIZER RING AROUND ARTWORK (circle + stage) == */
+/* --cover-d: artwork diameter; ring is ~1.6x larger so provide margin around cover so ring doesn't overlap text. */
 .stage-main.has-ring {
   --cover-d: min(var(--stage-art, 320px), 33vh);
   gap: 0;
@@ -535,7 +535,7 @@ html:not(.is-playing) .fx-blob {
   -webkit-mask-image: none;
   mask-image: none;
 }
-/* tiêu đề dời xuống sát lyrics */
+/* title pushed down closer to lyrics */
 .has-ring .stage-info {
   margin-top: clamp(0px, 6vh, 64px);
 }

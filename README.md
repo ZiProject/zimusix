@@ -1,133 +1,133 @@
 # Zimusix
 
-Trình phát nhạc desktop (Tauri v2) dựng trên **ZiPlayer**. Phát nhạc ngay trong app **hoặc** qua **bot Discord** vào kênh thoại. Nguồn nhạc: tìm kiếm qua plugin (YouTube, SoundCloud, Spotify) hoặc file nhạc trên máy.
+Desktop music player (Tauri v2) built on **ZiPlayer**. Play music in-app **or** stream into voice channels via a **Discord bot**. Audio sources: search via plugins (YouTube, SoundCloud, Spotify) or local audio files on your machine.
 
-## Kiến trúc
+## Architecture
 
 ```
 ┌──────────────────────── Tauri (Rust) ────────────────────────┐
-│  chọn port + token ngẫu nhiên → spawn `node sidecar/server.js` │
-│  lệnh `backend_info` trả port/token cho frontend               │
+│  assigns random port + token → spawns `node sidecar/server.js` │
+│  `backend_info` command returns port/token to frontend         │
 └───────────────┬───────────────────────────────┬────────────────┘
-                │ WebView (Vite, JS thuần)      │ stdin pipe: đóng app → sidecar tự thoát
+                │ WebView (Vite, vanilla JS)    │ stdin pipe: closing app → sidecar auto-exits
                 │                               ▼
   HTTP + SSE (Bearer token)        ┌──────── sidecar (Node.js) ────────┐
   /search /play /control …  ─────► │ ZiPlayer PlayerManager            │
-                │                  │  • plugin: YouTube/SoundCloud/    │
-  WS /listen (Opus, ZI v1) ◄────── │    Spotify/Attachments (file)     │
-  @ziplayer/client giải mã         │  • WebAudioConnection → relay WS  │
+                │                  │  • plugins: YouTube/SoundCloud/   │
+  WS /listen (Opus, ZI v1) ◄────── │    Spotify/Attachments (files)    │
+  @ziplayer/client decodes         │  • WebAudioConnection → WS relay  │
   Opus → AudioWorklet              │  • discord.js → @discordjs/voice  │
                                    └───────────────────────────────────┘
 ```
 
-- Mỗi đích phát là một `Player` của ZiPlayer: `local` (trong app) hoặc `guildId` (Discord).
-- Cả hai output dùng chung một `AudioPlayer`, nên khi bot đang phát trong Discord bạn vẫn có thể bật **Nghe trong app** (nút tai nghe) mà không tốn thêm transcode.
-- File local đi qua `AttachmentsPlugin`; sidecar đọc thêm tag/thời lượng/ảnh bìa bằng `music-metadata` (plugin trả `duration = 0` nên không seek được nếu thiếu bước này).
+- Each playback target is a ZiPlayer `Player`: `local` (in-app) or `guildId` (Discord).
+- Both outputs share a single `AudioPlayer`, so when the bot is streaming into Discord you can still enable **Listen in-app** (headphone button) without extra transcoding.
+- Local files route through `AttachmentsPlugin`; the sidecar parses tags/duration/embedded covers using `music-metadata` (plugins return `duration = 0` so seeking requires this step).
 
-## Yêu cầu
+## Prerequisites
 
-- Node.js **>= 20.3** khi chạy dev (bản đóng gói đã kèm Node; có thể ép dùng bản khác bằng `ZIMUSIX_NODE=/đường/dẫn/node`)
-- Rust + [điều kiện hệ thống của Tauri v2](https://v2.tauri.app/start/prerequisites/)
-- Với Discord: một bot token, bot đã được mời vào server (quyền View Channels, Connect, Speak)
+- Node.js **>= 20.3** for development (the packaged release bundles Node; override with `ZIMUSIX_NODE=/path/to/node`)
+- Rust + [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/)
+- For Discord: a bot token, with the bot invited to your server (View Channels, Connect, Speak permissions)
 
-## Chạy thử
+## Getting Started
 
 ```sh
-npm run setup      # cài deps frontend + sidecar
-npm run dev        # mở app Tauri (dev)
+npm run setup      # install frontend + sidecar dependencies
+npm run dev        # launch Tauri app (dev mode)
 ```
 
-Kiểm tra phần preset (không cần Rust/ffmpeg): `npm run test:presets`; kiểm tra thư mục preset: `npm run presets:check`.
+Run preset verification (no Rust/ffmpeg required): `npm run test:presets`; check preset directory: `npm run presets:check`.
 
-Chỉ kiểm tra backend (không cần Rust): `npm test` (sinh file mp3, phát qua sidecar, nhận khung Opus qua WebSocket, kiểm tra queue/seek/volume).
+Test backend only (no Rust required): `npm test` (generates test mp3, streams via sidecar, verifies Opus frames over WebSocket, tests queue/seek/volume).
 
-Chạy frontend trong trình duyệt để debug: `npm run sidecar` (in `ZIMUSIX_READY {port, token}`), rồi `npm run web` và mở `http://localhost:1420/?port=<port>&token=<token>`. (Sidecar đứng riêng sẽ in token ra nếu bạn không đặt `ZIMUSIX_TOKEN`.)
+Run frontend in browser for debugging: `npm run sidecar` (outputs `ZIMUSIX_READY {port, token}`), then `npm run web` and open `http://localhost:1420/?port=<port>&token=<token>`. (Stand-alone sidecar prints token if `ZIMUSIX_TOKEN` is unset.)
 
-## Dùng
+## Usage
 
-| Việc | Cách làm |
+| Task | Action |
 | --- | --- |
-| Tìm nhạc | Tab **Tìm kiếm**, chọn nguồn (Tất cả/YouTube/SoundCloud/Spotify) hoặc dán link / đường dẫn file. Nút ▶ phát ngay, ⏭ phát tiếp theo, ＋ thêm cuối hàng đợi |
-| File local | Tab **File local**: chọn file, chọn thư mục (quét tối đa 3 cấp, 1000 file) hoặc **kéo thả** vào cửa sổ |
-| Phát lên Discord | Tab **Discord**: dán token → Đăng nhập → bấm vào kênh thoại. Sidebar mục **Phát tới** sẽ chuyển sang server đó, mọi điều khiển áp dụng cho bot |
-| Nghe cả trong app khi phát Discord | Nút tai nghe ở thanh dưới |
-| Nối đầu ra | Nút dây ở thanh phát: chọn nguồn, kéo từ cổng nguồn tới **Ứng dụng này** và/hoặc các kênh Discord. Một nguồn nối được nhiều đầu ra cùng lúc (Ứng dụng + mỗi server một kênh), tất cả cùng phát một âm thanh; nguồn không bị dừng hay seek lại khi nối thêm. Cùng một bot không thể phát đồng thời hai kênh trong cùng server |
-| Ngắt kết nối | Bấm/kéo lại vào cổng đang nối, hoặc nút **Rút dây khỏi #kênh / Ứng dụng**. Rút một kênh Voice thì bot rời kênh đó, nguồn và các đầu ra còn lại vẫn phát; rút khỏi Ứng dụng thì chỉ ngừng nghe trên máy. Bot bị kick/mất voice thì dây tự rút kèm thông báo |
-| Điều khiển | Phát/tạm dừng (phím Space), bài trước/sau, seek, âm lượng, lặp (tắt → hàng đợi → một bài), tự phát bài liên quan, trộn, sắp xếp/xoá trong hàng đợi |
-| Đổi giao diện (Preset) | Tab **Giao diện**: chọn preset, **Thêm thư mục preset** để cài preset của bạn, chỉnh các thông số preset cho phép. Chi tiết: [docs/PRESETS.md](docs/PRESETS.md) |
-| Ẩn nội dung để xem nền | Nút con mắt ở thanh trên cùng hoặc phím **H**: ẩn nội dung tab (tìm kiếm, file, hàng đợi…) để lộ ảnh/video nền; thanh công cụ vẫn còn để bật lại. Lựa chọn được nhớ cho lần mở sau |
-| Toàn màn hình | Nút toàn màn hình hoặc phím **F11** (cần quyền `core:window:allow-set-fullscreen` trong `src-tauri/capabilities/default.json`) |
+| Search music | **Search** tab, select source (All/YouTube/SoundCloud/Spotify) or paste a URL / local file path. ▶ plays now, ⏭ plays next, ＋ appends to queue |
+| Local files | **Local Files** tab: select files, select folders (scans up to 3 levels deep, max 1000 files), or **drag and drop** into the window |
+| Stream to Discord | **Discord** tab: paste token → Login → click a voice channel. The sidebar **Playing to** switches to that server, and controls apply to the bot |
+| In-app monitor during Discord stream | Headphone button in the bottom player bar |
+| Voice wiring / output routing | Wiring button in the player bar: choose source, drag wire to **This App** and/or Discord channels. One source can route to multiple outputs simultaneously (in-app + one channel per server), all playing in sync without restarting or re-seeking. A single bot cannot join two channels in the same server concurrently |
+| Disconnect | Click/drag back to a connected port, or click **Disconnect from #channel / This App**. Disconnecting a voice channel makes the bot leave that channel while the source and remaining outputs continue playing; disconnecting from This App only silences local speaker playback. If the bot is kicked or loses voice, wires disconnect automatically with a notification |
+| Playback controls | Play/pause (Space), previous/next, seek, volume, loop (off → queue → track), autoplay related tracks, shuffle, reorder/remove queued tracks |
+| Change theme (Preset) | **Themes** tab: select preset, click **Add preset folder** to install custom presets, configure available preset settings. Details: [docs/PRESETS.md](docs/PRESETS.md) |
+| Minimal / Media view | Eye button in top toolbar or press **H**: hides tab contents (search, files, queue…) to showcase background artwork/video; toolbar remains accessible to toggle back. Preference is persisted across sessions |
+| Fullscreen | Fullscreen button or press **F11** (requires `core:window:allow-set-fullscreen` permission in `src-tauri/capabilities/default.json`) |
 
-## Cấu trúc frontend (`src/`)
+## Frontend Structure (`src/`)
 
 ```
 src/
-├─ main.js            khởi động app (boot), màn hình lỗi/FFmpeg
-├─ events.js          phím tắt & listener toàn cục (Space, H, F11, click ngoài panel)
-├─ state.js           `app` (state chung), `root`, `refs`
-├─ api.js             gọi sidecar (HTTP/SSE)
-├─ lib/               tiện ích: dom.js (h, fmtTime…), icons.js, constants.js, toast.js, storage.js
-├─ features/          logic, không dựng DOM chính
-│   ├─ audio.js       nghe trong app (WebAudioClient)
+├─ main.js            app boot, error / FFmpeg diagnostic screen
+├─ events.js          global shortcuts & listeners (Space, H, F11, outside click)
+├─ state.js           `app` (shared state), `root`, `refs`
+├─ api.js             sidecar client (HTTP/SSE)
+├─ lib/               utilities: dom.js (h, fmtTime…), icons.js, constants.js, toast.js, storage.js
+├─ features/          business logic, non-DOM rendering
+│   ├─ audio.js       in-app audio client (WebAudioClient)
 │   ├─ playback.js    setState / watch / setTarget / control / playTrack
-│   ├─ background.js  nền video + ảnh bìa
+│   ├─ background.js  video background + cover artwork
 │   ├─ lyrics.js  voice.js  related.js  files.js  search.js  discord.js
-│   ├─ layout.js      đổi view, ẩn thanh bên, ẩn nội dung
-│   └─ window.js      toàn màn hình
-├─ ui/                dựng giao diện
-│   ├─ main-view.js   khung chính + thanh công cụ trên
-│   │   views/nowplaying.js  khu "Đang phát" (ảnh lớn, thông tin, visualizer, lyrics nhúng)
-│   │   views/presets.js     trang "Giao diện": thư viện preset + tuỳ chỉnh
+│   ├─ layout.js      view routing, sidebar toggle, content toggle
+│   └─ window.js      fullscreen control
+├─ ui/                UI components & views
+│   ├─ main-view.js   main frame + top toolbar
+│   │   views/nowplaying.js  "Now Playing" stage (large cover, info, visualizer, embedded lyrics)
+│   │   views/presets.js     "Themes" page: preset gallery + settings
 │   ├─ sidebar.js  player.js  wiring.js  visualizer.js  bg-panel.js  shared.js
-│   ├─ mascot.js      trạng thái mascot (ảnh trong public/mascot/): loading, trống, lỗi, không có kết quả…
+│   ├─ mascot.js      mascot states (images in public/mascot/): loading, empty, error, no-results…
 │   └─ views/         search, library, queue, related, lyrics, discord
-├─ presets/           Preset Runtime: schema.js (module + tham số + kiểm tra), loader.js, runtime.js,
-│                     store.js, css.js (làm sạch style.css), visualizers.js, bg-fx.js
-└─ styles/            index.css import base, layout, search, library, player,
+├─ presets/           Preset Runtime: schema.js (modules + parameters + validation), loader.js, runtime.js,
+│                     store.js, css.js (style.css sanitizer), visualizers.js, bg-fx.js
+└─ styles/            index.css imports base, layout, search, library, player,
                       toast, background, wiring, lyrics, related, effects,
                       preset-layout, preset-modules, preset-gallery
 
-public/presets/<id>/  preset built-in (preset.json, preview.png, style.css…) + index.json
-docs/PRESETS.md       quy ước thư mục preset, tham số từng module, hướng dẫn tạo preset
-docs/preset-template/ bản mẫu để chép ra làm preset mới
+public/presets/<id>/  built-in presets (preset.json, preview.png, style.css…) + index.json
+docs/PRESETS.md       preset specification, module options, authoring guide
+docs/preset-template/ starter template for creating new presets
 ```
 
-## Bảo mật
+## Security
 
-- Sidecar chỉ bind `127.0.0.1`; mọi HTTP/SSE/WS đều cần token ngẫu nhiên được tạo mỗi lần mở app, và CORS chỉ cho origin của Tauri/localhost.
-- Token bot Discord lưu dạng văn bản thường trong `settings.json` ở thư mục dữ liệu app (quyền 0600 trên Unix). Dùng nút **Đăng xuất bot** để xoá.
-- CSP trong `tauri.conf.json` cho phép `'wasm-unsafe-eval'` và `blob:` vì `opus-decoder` (WASM) và AudioWorklet cần chúng.
+- Sidecar binds to `127.0.0.1` only; all HTTP/SSE/WS requests require a random token generated on each app launch, and CORS permits only Tauri/localhost origins.
+- Discord bot token is stored in plaintext in `settings.json` within the app data directory (mode 0600 on Unix). Use the **Log out bot** button to remove it.
+- CSP in `tauri.conf.json` allows `'wasm-unsafe-eval'` and `blob:` because `opus-decoder` (WASM) and AudioWorklet require them.
 
 ## FFmpeg
 
-File local, seek và filter cần FFmpeg. Sidecar tìm theo thứ tự: `FFMPEG_PATH` → `ffmpeg-static` → `ffmpeg` trong PATH.
+Local audio files, seeking, and audio filters require FFmpeg. The sidecar searches in order: `FFMPEG_PATH` → `ffmpeg-static` → `ffmpeg` in PATH.
 
-Lỗi `FFmpeg/avconv not found!` thường do **npm mới chặn script cài đặt** của `ffmpeg-static` (binary không được tải). `sidecar/package.json` đã khai báo `allowScripts` cho gói này; nếu bạn vẫn gặp lỗi:
+The `FFmpeg/avconv not found!` error typically occurs when **modern npm blocks install scripts** for `ffmpeg-static` (binary is not downloaded). `sidecar/package.json` declares `allowScripts` for this package; if you still encounter this error:
 
 ```sh
-npm install --prefix sidecar          # tải lại
-node sidecar/node_modules/ffmpeg-static/install.js   # tải thủ công binary
+npm install --prefix sidecar          # re-download
+node sidecar/node_modules/ffmpeg-static/install.js   # manually run binary download script
 ```
 
-hoặc cài FFmpeg hệ thống / đặt `FFMPEG_PATH`. Khi khởi động, nếu thiếu binary sidecar sẽ tự thử tải một lần; nếu vẫn thiếu, `/health` báo `ffmpeg.ok = false`, app hiện cảnh báo và mọi lỗi phát được đẩy lên UI (không chỉ nằm trong console).
+or install system FFmpeg / set `FFMPEG_PATH`. On launch, if the binary is missing the sidecar attempts an automatic download once; if it still cannot be found, `/health` reports `ffmpeg.ok = false`, the app displays a warning screen, and playback errors are reported in the UI (not just logged to console).
 
-## Debug & log
+## Debugging & Logging
 
-- Sidecar bật `debugLevel: "time"` của `PlayerManager` và in mọi sự kiện `debug` (đổi bằng `ZIMUSIX_DEBUG_LEVEL=off|error|warn|info|debug|verbose|time`).
-- Bản release ghi stdout/stderr của sidecar vào `sidecar.log` trong thư mục dữ liệu app (Windows: `%APPDATA%\app.zimusix.desktop`, macOS: `~/Library/Application Support/app.zimusix.desktop`, Linux: `~/.local/share/app.zimusix.desktop`). Nếu sidecar thoát sớm, màn hình lỗi của app hiển thị 15 dòng cuối của log đó.
+- Sidecar enables `debugLevel: "time"` in `PlayerManager` and logs all `debug` events (configurable via `ZIMUSIX_DEBUG_LEVEL=off|error|warn|info|debug|verbose|time`).
+- Release builds write sidecar stdout/stderr to `sidecar.log` in the app data directory (Windows: `%APPDATA%\app.zimusix.desktop`, macOS: `~/Library/Application Support/app.zimusix.desktop`, Linux: `~/.local/share/app.zimusix.desktop`). If the sidecar exits prematurely, the app error screen shows the last 15 lines of this log.
 
-## Đóng gói (`npm run build`)
+## Packaging (`npm run build`)
 
-`npm run build` chạy `scripts/bundle.mjs` trước: copy `sidecar/`, cài `node_modules` chỉ production (kèm binary FFmpeg) và **copy chính bản Node.js đang chạy** vào `src-tauri/resources/`. Người dùng cuối không cần cài Node. Kết quả khá nặng (~300 MB trước khi nén: Node ~120 MB, FFmpeg ~80 MB, module ~100 MB).
+`npm run build` triggers `scripts/bundle.mjs` first: copies `sidecar/`, installs production-only `node_modules` (including FFmpeg binary), and **copies the currently running Node.js binary** into `src-tauri/resources/`. End users do not need Node.js installed. Output size is around ~300 MB uncompressed (Node ~120 MB, FFmpeg ~80 MB, modules ~100 MB).
 
-- Cần mạng khi build (npm + GitHub cho FFmpeg); script dừng với lỗi rõ ràng nếu thiếu binary FFmpeg.
-- Phải build trên từng hệ điều hành/kiến trúc đích (Node, FFmpeg và các module native là theo nền tảng).
-- Rust tìm Node theo thứ tự: `ZIMUSIX_NODE` → bản đóng gói kèm → PATH → vị trí phổ biến (Homebrew, nvm, Volta, Program Files…).
+- Network access is required during build (npm + GitHub for FFmpeg); the script exits with an informative error if the FFmpeg binary is missing.
+- Builds must run on each target OS and architecture (Node, FFmpeg, and native modules are platform-specific).
+- Rust searches for Node in order: `ZIMUSIX_NODE` → bundled binary → PATH → standard locations (Homebrew, nvm, Volta, Program Files…).
 
-## Giới hạn đã biết
+## Known Limitations
 
-- Nguồn trực tuyến (YouTube/SoundCloud/Spotify) phụ thuộc thư viện bên thứ ba (`youtubei.js`, `@zibot/scdl`, `spotify-url-info`) và có thể hỏng khi các nền tảng đổi API. Lỗi từng nguồn được báo trên toast; kết quả từ các nguồn còn lại vẫn hiển thị.
-- Phát nhạc lên Discord cần thư viện voice mã hoá của Discord; nếu kết nối thoại thất bại hãy kiểm tra quyền kênh và phiên bản `@discordjs/voice`/`@snazzah/davey` mà `ziplayer` kéo về.
-- Nếu nối voice báo `AbortError`/hết thời gian, bot chưa hoàn tất voice handshake nên chưa thể phát Discord. Kiểm tra quyền **Connect/Speak**, cho phép Node/Zimusix qua firewall và bảo đảm mạng/VPN không chặn UDP; giao diện chỉ đánh dấu dây đã nối khi kết nối Discord đã sẵn sàng.
-- Sidecar giữ một cache nhỏ các `Track` kết quả tìm kiếm để phát lại đúng object (giữ metadata và tag file local đã đọc) thay vì tìm lại qua mạng.
-- Bản dev của `ziplayer`/`@ziplayer/plugin` (tag `dev`) được dùng vì `WebAudioConnection` chưa có ở bản `latest`.
+- Online sources (YouTube/SoundCloud/Spotify) depend on third-party libraries (`youtubei.js`, `@zibot/scdl`, `spotify-url-info`) and may break when platforms update their APIs. Failures on specific sources are reported via toasts; results from healthy sources are preserved.
+- Streaming to Discord requires Discord voice encryption libraries; if voice connection fails, check channel permissions and versions of `@discordjs/voice`/`@snazzah/davey`.
+- If voice connection times out with `AbortError`, the bot did not complete the voice handshake. Check **Connect/Speak** permissions, allow Node/Zimusix through firewall, and ensure UDP is not blocked by VPN/network. The UI only marks connections as active once the voice connection enters the ready state.
+- Sidecar caches recent search `Track` objects to replay the exact object (preserving metadata and parsed local tags) without re-fetching over the network.
+- Development builds of `ziplayer`/`@ziplayer/plugin` (`dev` tag) are currently used as `WebAudioConnection` is not yet available in `latest`.

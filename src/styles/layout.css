@@ -14,7 +14,7 @@
   display: none;
 }
 #app.dragging::after {
-  content: "Thả file hoặc thư mục để thêm vào Zimusix";
+  content: "Drop files or folders to add to Zimusix";
   position: fixed;
   inset: 12px;
   display: grid;
@@ -221,7 +221,7 @@ nav {
   grid-area: main;
   min-width: 0;
   overflow-y: auto;
-  overflow-x: hidden; /* không bao giờ hiện thanh cuộn ngang: nội dung dài phải tự co/cắt/chạy chữ */
+  overflow-x: hidden; /* never show horizontal scrollbar: long text must truncate/marquee */
   padding: 24px 28px;
 }
 .main-toolbar {
@@ -310,14 +310,14 @@ nav {
   color: var(--danger);
 }
 
-/* Ẩn nội dung: chỉ còn thanh công cụ (trong suốt) trên nền ảnh/video. */
+/* Hidden content: only toolbar (transparent) visible over background media. */
 #app.content-hidden .main-toolbar {
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-/* Ẩn nội dung: thanh player thu gọn, chỉ còn timeline. Rê chuột vào (hoặc mở bảng nối voice) thì hiện đủ. */
+/* Hidden content: player collapses to minimal timeline. Hovering (or opening voice wiring) reveals full bar. */
 #app.content-hidden {
   grid-template-rows: 1fr 34px;
 }
@@ -334,12 +334,12 @@ nav {
 #app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) .buttons {
   display: none;
 }
-/* Timeline ngắn lại, nằm giữa. */
+/* Shortened timeline centered. */
 #app.content-hidden .player:not(:hover):not(:has(:focus-visible)):not(.pinned) .transport {
   width: min(420px, 100%);
   justify-self: center;
 }
-/* Mở rộng: nổi lên trên cùng, không đẩy layout (hàng lưới vẫn 34px). */
+/* Expanded: floats on top without shifting grid layout (grid row remains 34px). */
 #app.content-hidden .player:is(:hover, :has(:focus-visible), .pinned) {
   position: fixed;
   left: 0;

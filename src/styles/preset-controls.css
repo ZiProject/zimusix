@@ -1,10 +1,10 @@
 /* ------------------------------------------------------------------------------------------
-   Preset · CONTROLS — mọi nút, thanh công cụ, điều hướng và panel đều thuộc giao diện.
-   Bám vào: html[data-btn] [data-play-btn] [data-nav] [data-toolbar] [data-panels] và --icon-size.
-   Mặc định (soft / circle / soft / docked / solid / 18px) = giao diện gốc.
+   Preset · CONTROLS — buttons, toolbars, navigation, and panels across views.
+   Driven by: html[data-btn] [data-play-btn] [data-nav] [data-toolbar] [data-panels] and --icon-size.
+   Default (soft / circle / soft / docked / solid / 18px) = original look.
    ------------------------------------------------------------------------------------------ */
 
-/* ---- Cỡ icon ---------------------------------------------------------------------------- */
+/* ---- Icon size --------------------------------------------------------------------------- */
 .icon-btn:not(.big) svg,
 .nav-item svg,
 .main-toolbar .icon-btn svg {
@@ -12,7 +12,7 @@
   height: var(--icon-size, 18px);
 }
 
-/* ---- Nút chung -------------------------------------------------------------------------- */
+/* ---- Common buttons ---------------------------------------------------------------------- */
 html[data-btn="pill"] button:not(.icon-btn, .play-btn, .nav-item, .target, .channel) {
   border-radius: 99px;
 }
@@ -44,7 +44,7 @@ html[data-btn="outline"] .icon-btn {
   border-color: var(--line);
 }
 
-/* ---- Nút Phát/Tạm dừng -------------------------------------------------------------------- */
+/* ---- Play/Pause button ------------------------------------------------------------------- */
 html[data-play-btn="square"] .play-btn {
   border-radius: 14px;
 }
@@ -59,7 +59,7 @@ html[data-play-btn="accent"] .play-btn:hover:not(:disabled) {
   border-color: var(--accent-2);
 }
 
-/* ---- Điều hướng thanh bên ------------------------------------------------------------------ */
+/* ---- Sidebar navigation ------------------------------------------------------------------ */
 html[data-nav="pill"] .nav-item {
   border-radius: 99px;
 }
@@ -85,12 +85,12 @@ html[data-nav="bar"][data-sidebar="right"] .nav-item.active {
   box-shadow: inset -3px 0 0 var(--accent);
 }
 
-/* ---- Thanh công cụ phía trên -------------------------------------------------------------- */
+/* ---- Top toolbar ------------------------------------------------------------------------- */
 html[data-toolbar="floating"] .main-toolbar {
   width: fit-content;
   min-width: min(100%, 220px);
   gap: 16px;
-  margin: -8px 0 16px auto; /* sát lề phải, cùng phía với nút ẩn nội dung */
+  margin: -8px 0 16px auto; /* aligned to right edge, same side as content toggle button */
   padding: 4px 10px;
   border: 1px solid var(--line);
   border-radius: 99px;
@@ -101,7 +101,7 @@ html[data-toolbar="transparent"] .main-toolbar {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
-/* autohide: chỉ hiện khi rê chuột lên vùng thanh, hoặc khi đang focus bằng bàn phím / mở bảng nền */
+/* autohide: only shows when hovering the toolbar area, on keyboard focus, or when background panel is open */
 html[data-toolbar="autohide"] .main-toolbar {
   background: transparent;
   backdrop-filter: none;
@@ -114,7 +114,7 @@ html[data-toolbar="autohide"] #app.content-hidden .main-toolbar {
   opacity: 1;
 }
 
-/* ---- Panel: kính mờ / phẳng ---------------------------------------------------------------- */
+/* ---- Panels: glass / flat ---------------------------------------------------------------- */
 html[data-panels="glass"] :is(.sidebar, .player) {
   background: rgb(var(--panel-rgb) / 0.55);
   backdrop-filter: blur(18px) saturate(1.2);

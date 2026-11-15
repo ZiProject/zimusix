@@ -1,6 +1,6 @@
-// Media Session API: hiện bài đang phát + nút điều khiển trên phím media, SMTC (Windows), Control Center (macOS)...
-// Âm thanh của app đi qua Web Audio (không có thẻ <audio>) nên trình duyệt không tự tạo media session.
-// Cách xử lý: phát kèm một <audio> im lặng, lặp vô hạn, chỉ để WebView coi trang này là "đang phát media".
+// Media Session API: displays current track + playback controls on media keys, Windows SMTC, macOS Control Center...
+// App audio routes through Web Audio (no <audio> element), so browsers do not create a media session automatically.
+// Workaround: play an inaudible, looping silent <audio> element so WebView registers active media playback.
 import * as api from "../api.js";
 import { app } from "../state.js";
 import { ensureAudio } from "./audio.js";
@@ -12,7 +12,7 @@ let keepAlive = null;
 let lastTrackKey = null;
 let lastTooltip = null;
 
-/** WAV 8-bit mono im lặng (giá trị 128 = 0 với PCM 8-bit không dấu). */
+/** Silent 8-bit mono WAV (value 128 = 0 for unsigned 8-bit PCM). */
 function silentWavUrl(seconds = 10, sampleRate = 8000) {
   const dataLength = seconds * sampleRate;
   const buffer = new ArrayBuffer(44 + dataLength);
@@ -48,7 +48,7 @@ function setHandler(action, handler) {
   try {
     navigator.mediaSession.setActionHandler(action, handler);
   } catch {
-    // WebView này chưa hỗ trợ action đó: bỏ qua
+    // WebView does not support this action: ignore
   }
 }
 
@@ -57,7 +57,7 @@ export function initMediaSession() {
 
   keepAlive = new Audio(silentWavUrl());
   keepAlive.loop = true;
-  keepAlive.volume = 0.01; // vẫn im lặng (dữ liệu toàn 0) nhưng không bị coi là "muted"
+  keepAlive.volume = 0.01; // still silent (all zeros) but not treated as "muted"
 
   setHandler("play", async () => {
     await ensureAudio();
@@ -89,7 +89,7 @@ function artworkFor(track) {
   return [{ src: track?.thumbnail || fallback }];
 }
 
-/** Gọi mỗi khi trạng thái player đổi (renderPlayer). Rẻ: chỉ cập nhật metadata khi đổi bài. */
+/** Called whenever player state updates (renderPlayer). Cheap: only updates metadata when track changes. */
 export function syncMediaSession() {
   if (!("mediaSession" in navigator)) return;
   const s = app.state;
@@ -100,7 +100,7 @@ export function syncMediaSession() {
     lastTrackKey = track?.key ?? null;
     navigator.mediaSession.metadata = track
       ? new MediaMetadata({
-          title: track.title ?? "Không rõ tên",
+          title: track.title ?? "Unknown Title",
           artist: track.author ?? "",
           album: "Zimusix",
           artwork: artworkFor(track),
@@ -125,7 +125,7 @@ export function syncMediaSession() {
       navigator.mediaSession.setPositionState();
     }
   } catch {
-    // giá trị không hợp lệ tạm thời (vd. duration chưa có): bỏ qua
+    // temporary invalid values (e.g. duration not yet available): ignore
   }
 
   if (keepAlive) {
@@ -136,7 +136,7 @@ export function syncMediaSession() {
   syncTrayTooltip(track, playing);
 }
 
-/** Tooltip khi rê chuột lên icon ở khay hệ thống. */
+/** Tooltip when hovering over system tray icon. */
 async function syncTrayTooltip(track, playing) {
   if (!api.isTauri()) return;
   const text = track
@@ -148,6 +148,6 @@ async function syncTrayTooltip(track, playing) {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("set_tray_tooltip", { text });
   } catch {
-    // không critical
+    // non-critical
   }
 }

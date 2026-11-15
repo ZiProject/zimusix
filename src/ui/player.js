@@ -15,7 +15,7 @@ import { drawWires, finishWireDrag, moveWireDrag, renderWiringPanel } from "./wi
 
 export let dragging = false;
 
-/** Tô phần đã chạy của thanh trượt (CSS dùng biến --fill). */
+/** Paint elapsed track progress on slider (CSS uses --fill variable). */
 function paintRange(input) {
   const max = Number(input.max) || 1;
   const pct = Math.min(100, Math.max(0, (Number(input.value) / max) * 100));
@@ -26,23 +26,23 @@ export function buildPlayer() {
   document.addEventListener("pointermove", moveWireDrag);
   document.addEventListener("pointerup", finishWireDrag);
   refs.cover = h("div", { class: "cover-slot" });
-  refs.title = h("div", { class: "np-title" }, "Chưa phát");
+  refs.title = h("div", { class: "np-title" }, "Not playing");
   refs.sub = h("div", { class: "np-sub" });
   refs.btnPlay = h("button", {
     class: "play-btn",
-    title: "Phát / Tạm dừng",
+    title: "Play / Pause",
     onclick: () => onPlayPause(),
   });
   refs.btnLoop = h("button", {
     class: "icon-btn",
-    title: "Lặp",
+    title: "Loop",
     onclick: () => cycleLoop(),
   });
   refs.btnAuto = h(
     "button",
     {
       class: "icon-btn",
-      title: "Tự động phát bài liên quan",
+      title: "Autoplay related tracks",
       onclick: () => control("autoplay", { enabled: !app.state?.autoPlay }),
     },
     icon("infinity", 18),
@@ -51,7 +51,7 @@ export function buildPlayer() {
     "button",
     {
       class: "icon-btn",
-      title: "Nghe trong app",
+      title: "Listen in app",
       onclick: () => {
         if (app.listen) {
           void disconnectApp();
@@ -69,7 +69,7 @@ export function buildPlayer() {
     "button",
     {
       class: "icon-btn",
-      title: "Lời bài hát (Sync)",
+      title: "Lyrics (Sync)",
       onclick: () => switchView("lyrics"),
     },
     icon("mic", 18),
@@ -87,7 +87,7 @@ export function buildPlayer() {
     "button",
     {
       class: "icon-btn wire-toggle",
-      title: "Nối đầu ra Voice",
+      title: "Route Voice Output",
       onclick: () => {
         app.wiringOpen = !app.wiringOpen;
         if (app.wiringOpen) app.wireSourceTarget = app.target;
@@ -154,7 +154,7 @@ export function buildPlayer() {
           "button",
           {
             class: "icon-btn",
-            title: "Trộn hàng đợi",
+            title: "Shuffle queue",
             onclick: () => control("shuffle"),
           },
           icon("shuffle", 18),
@@ -163,7 +163,7 @@ export function buildPlayer() {
           "button",
           {
             class: "icon-btn big",
-            title: "Bài trước",
+            title: "Previous track",
             onclick: () => control("previous"),
           },
           icon("prev", 22),
@@ -173,7 +173,7 @@ export function buildPlayer() {
           "button",
           {
             class: "icon-btn big",
-            title: "Bài tiếp",
+            title: "Next track",
             onclick: () => control("skip"),
           },
           icon("next", 22),
@@ -204,7 +204,7 @@ export async function onPlayPause() {
   if (s?.currentTrack && s.isPlaying && !s.isPaused) control("pause");
   else if (s?.currentTrack && s.isPaused) control("resume");
   else if (s?.currentTrack) control("resume");
-  else toast("Chưa có bài nào. Hãy tìm nhạc hoặc thêm file local.", "info");
+  else toast("No tracks in queue. Search for music or add local files.", "info");
 }
 
 function cycleLoop() {
@@ -219,23 +219,23 @@ export function renderPlayer() {
   const s = app.state;
   const track = s?.currentTrack;
   const info = cfg().info;
-  // Chỉ dựng lại ảnh khi bài/ảnh/kích thước đổi: dựng lại mỗi lần nhận state sẽ làm đĩa quay bị giật về 0°.
+  // Only recreate cover when track/image/size changes: rebuilding on every state causes rotating vinyl to jump to 0deg.
   const coverSig = `${track?.key ?? ""}|${track?.thumbnail ?? ""}|${cfg().artwork.size}`;
   if (refs.cover.dataset.sig !== coverSig) {
     refs.cover.dataset.sig = coverSig;
     refs.cover.replaceChildren(trackCover(track, cfg().artwork.size));
   }
-  setMarqueeText(refs.title, track?.title ?? "Chưa phát", info.marquee);
+  setMarqueeText(refs.title, track?.title ?? "Not playing", info.marquee);
   refs.title.hidden = Boolean(track) && !info.show.includes("title");
   refs.sub.replaceChildren(
-    ...(track ? trackSubParts(track) : [`Phát tới: ${targetLabel()}`]),
+    ...(track ? trackSubParts(track) : [`Playing to: ${targetLabel()}`]),
   );
   const playing = Boolean(track && s.isPlaying && !s.isPaused);
-  // CSS dùng class này để quay đĩa/ảnh khi đang phát (artwork.spin)
+  // CSS uses this class to spin disc/artwork while playing (artwork.spin)
   document.documentElement.classList.toggle("is-playing", playing);
   refs.btnPlay.replaceChildren(icon(playing ? "pause" : "play", 26));
   refs.btnLoop.className = `icon-btn ${s?.loop && s.loop !== "off" ? "on" : ""}`;
-  refs.btnLoop.title = `Lặp: ${{ off: "tắt", queue: "hàng đợi", track: "bài này" }[s?.loop ?? "off"]}`;
+  refs.btnLoop.title = `Loop: ${{ off: "off", queue: "queue", track: "current track" }[s?.loop ?? "off"]}`;
   refs.btnLoop.replaceChildren(
     ...[
       icon("repeat", 18),
@@ -245,20 +245,20 @@ export function renderPlayer() {
   refs.btnAuto.className = `icon-btn ${s?.autoPlay ? "on" : ""}`;
   refs.btnListen.className = `icon-btn ${app.listen ? "on" : ""}`;
   refs.btnListen.title = app.listen
-    ? "Đang nghe trong app (bấm để tắt)"
-    : "Nghe trong app";
+    ? "Listening in app (click to disable)"
+    : "Listen in app";
   refs.btnLyrics.className = `icon-btn ${app.view === "lyrics" ? "on" : ""}`;
   refs.btnVideo.className = `icon-btn ${app.videoBg ? "on" : ""}`;
   refs.btnVideo.title = app.videoBg
-    ? "Đang bật Video Background (player.saveVideo)"
-    : "Video Background tắt";
+    ? "Video Background enabled (player.saveVideo)"
+    : "Video Background disabled";
   const outputs = s?.linkedVoices ?? [];
   refs.btnVoiceLink.className = `icon-btn wire-toggle ${app.wiringOpen || outputs.length || s?.feedingFrom ? "on" : ""}`;
   refs.btnVoiceLink.title = outputs.length
-    ? `Đang nối tới ${outputs.map((l) => `#${l.channelName || "thoại"}`).join(", ")}`
+    ? `Routing audio to ${outputs.map((l) => `#${l.channelName || "voice"}`).join(", ")}`
     : s?.feedingFrom
-      ? "Đang nhận âm thanh từ nguồn khác"
-      : "Nối đầu ra Voice";
+      ? "Receiving audio from another source"
+      : "Route Voice Output";
   refs.wiringPanel.hidden = !app.wiringOpen;
   refs.wiringPanel.replaceChildren(
     ...(app.wiringOpen ? [renderWiringPanel()] : []),

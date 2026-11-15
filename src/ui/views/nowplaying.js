@@ -6,8 +6,8 @@ import { setMarqueeText, trackCover, trackSubParts } from "../shared.js";
 import { lyricsBody } from "./lyrics.js";
 
 /**
- * Khu "Đang phát": nơi preset bày ảnh bìa lớn + thông tin bài hát + visualizer + lyrics.
- * Mỗi thành phần do preset quyết định có hiện không và hiện thế nào (xem docs/PRESETS.md).
+ * Now Playing stage: where presets lay out artwork + track info + visualizer + lyrics.
+ * Each component visibility and layout is configured by the preset (see docs/PRESETS.md).
  */
 export function viewNowPlaying() {
   const track = app.state?.currentTrack;
@@ -15,8 +15,8 @@ export function viewNowPlaying() {
     return h(
       "section",
       { class: "view np-stage" },
-      mascotState("idle", "Chưa phát bài nào. Hãy tìm nhạc hoặc thêm file local.", {
-        title: "Đang phát",
+      mascotState("idle", "No track playing. Search for music or add local files.", {
+        title: "Now Playing",
       }),
     );
   }
@@ -25,7 +25,7 @@ export function viewNowPlaying() {
   const main = h("div", { class: "stage-main" });
 
   const wantsViz = visualizer.type !== "none" && visualizer.placement.includes("stage");
-  // Visualizer dạng vòng thì ôm quanh ảnh bìa (ảnh nằm trong vòng) thay vì nằm riêng bên dưới.
+  // Circle visualizer wraps around artwork instead of rendering below.
   const ring = wantsViz && visualizer.type === "circle" && artwork.style !== "none";
   if (ring) main.classList.add("has-ring");
 

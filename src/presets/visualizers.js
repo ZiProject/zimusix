@@ -1,17 +1,17 @@
 /**
- * Các kiểu vẽ visualizer. Mỗi hàm nhận mảng `bands` (giá trị 0..1) và vẽ lên canvas 2D
- * kích thước w×h (đơn vị CSS px — canvas đã được scale theo devicePixelRatio ở nơi gọi).
+ * Visualizer draw modes. Each function receives `bands` array (values 0..1) and draws onto 2D canvas
+ * with dimensions w×h (CSS px units — canvas is scaled by caller according to devicePixelRatio).
  */
 
 export const VIZ_TYPES = ["bars", "mirror", "wave", "circle", "dots"];
 
-/** Một cột bo tròn; roundRect có sẵn trên WebView2/Chromium, thiếu thì rơi về fillRect. */
+/** Rounded pillar; roundRect available on Chromium/WebView2, falls back to rect. */
 function pill(ctx, x, y, w, h, r) {
   if (ctx.roundRect) ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
   else ctx.rect(x, y, w, h);
 }
 
-/** Canvas lớn (khu Đang phát, nền) thì thêm quầng sáng; canvas nhỏ trên thanh phát giữ nguyên cho nhẹ. */
+/** Large canvas (stage, bg) adds glow; small player bar canvas keeps it lightweight without glow. */
 function glow(ctx, w, style) {
   if (w < 240 || style.glow === false) return;
   ctx.shadowColor = style.colorMode === "solid" ? style.color : style.accent;
@@ -24,7 +24,7 @@ function bars(ctx, bands, w, h, style) {
   const bw = (w - gap * (n - 1)) / n;
   const r = Math.min(bw / 2, 6);
   glow(ctx, w, style);
-  ctx.beginPath(); // một path cho cả dải: quầng sáng chỉ tính một lần
+  ctx.beginPath(); // single path for all bars: glow computed once
   for (let i = 0; i < n; i++) {
     const bh = Math.max(Math.min(bw, 4), bands[i] * h);
     pill(ctx, i * (bw + gap), h - bh, bw, bh, r);
@@ -64,7 +64,7 @@ function wave(ctx, bands, w, h, { thickness }) {
   }
   ctx.lineTo(x(n - 1), y(n - 1));
   ctx.stroke();
-  // phần tô mờ bên dưới đường
+  // Translucent fill beneath line
   const alpha = ctx.globalAlpha;
   ctx.globalAlpha = alpha * 0.18;
   ctx.lineTo(w, h);
@@ -79,12 +79,12 @@ function circle(ctx, bands, w, h, { thickness, ring }) {
   const cx = w / 2;
   const cy = h / 2;
   const base = Math.min(w, h);
-  // ring: vòng ôm ảnh bìa — để trống phần giữa cho ảnh, vạch mọc ra ngoài
+  // ring: circle wrapping artwork — center left blank for image, bars point outward
   const r0 = base * (ring ? 0.33 : 0.26);
   const maxLen = base * (ring ? 0.15 : 0.24);
   ctx.lineCap = "round";
   ctx.lineWidth = Math.max(2, thickness);
-  // đối xứng trái/phải cho cân đối
+  // Symmetrical left/right for balanced appearance
   for (let i = 0; i < n; i++) {
     const len = Math.max(2, bands[i] * maxLen);
     const a = (i / (n - 1 || 1)) * Math.PI - Math.PI / 2;
@@ -117,7 +117,7 @@ function dots(ctx, bands, w, h) {
 
 const DRAW = { bars, mirror, wave, circle, dots };
 
-/** Tạo màu tô theo `colorMode`. */
+/** Create fill color/gradient based on `colorMode`. */
 export function makeFill(ctx, type, w, h, { colorMode, color, accent, accent2 }) {
   if (colorMode === "accent") return accent;
   if (colorMode === "solid") return color;
@@ -128,7 +128,7 @@ export function makeFill(ctx, type, w, h, { colorMode, color, accent, accent2 })
   return grad;
 }
 
-/** Vẽ một khung hình. */
+/** Draw one frame. */
 export function drawVisualizer(ctx, type, bands, w, h, style) {
   const draw = DRAW[type];
   if (!draw) return;

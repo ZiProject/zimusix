@@ -13,18 +13,18 @@ function loadBgSettings() {
 }
 
 export const app = {
-  target: "local", // "local" hoặc guildId
+  target: "local", // "local" or guildId
   state: null,
   view: "search",
   source: "all",
   query: "",
   results: [],
-  searchDone: false, // đã có ít nhất một lần tìm xong
+  searchDone: false, // completed at least one search
   searchedQuery: "",
   searchError: null,
   searching: false,
-  listen: true, // nghe âm thanh ngay trong app
-  addMode: "end", // end | now (khi thêm file local)
+  listen: true, // play audio in app
+  addMode: "end", // end | now (when adding local files)
   discord: {
     status: "logged-out",
     user: null,
@@ -36,12 +36,12 @@ export const app = {
   stateByTarget: {},
   dragging: false,
   receivedAt: 0,
-  videoBg: true, // video background bằng player.saveVideo
+  videoBg: true, // video background via player.saveVideo
   bgPanelOpen: false,
   bg: loadBgSettings(),
   sidebarHidden: false,
-  contentHidden: readFlag(CONTENT_HIDDEN_KEY), // ẩn nội dung các tab để lộ ảnh/video nền
-  lyrics: null, // lời bài hát đồng bộ
+  contentHidden: readFlag(CONTENT_HIDDEN_KEY), // hide tab content to reveal background
+  lyrics: null, // synchronized lyrics
   lyricsLoading: false,
   wiringOpen: false,
   webAudioSourceTarget: "local",

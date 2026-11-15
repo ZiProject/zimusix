@@ -118,7 +118,7 @@ input:focus {
   display: none;
 }
 #app.dragging::after {
-  content: "Thả file hoặc thư mục để thêm vào Zimusix";
+  content: "Drop files or folders to add to Zimusix";
   position: fixed;
   inset: 12px;
   display: grid;
@@ -849,14 +849,14 @@ input[type="range"]:disabled {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  /* --bg-blur / --bg-opacity do slider điều khiển, --music-punch do bass (mỗi frame) */
+  /* --bg-blur / --bg-opacity controlled by sliders, --music-punch driven by bass (per frame) */
   transform: scale(calc(var(--bg-scale, 1.08) + var(--music-punch, 0) * 0.035));
   filter: blur(calc(var(--bg-blur, 8) * 1px))
     brightness(calc(0.9 + var(--music-punch, 0) * 0.3)) saturate(1.15);
   transition: opacity 1s ease;
   will-change: transform, filter, opacity;
 }
-/* ảnh bìa độ phân giải thấp nên blur thêm để không bị vỡ hạt */
+/* low-resolution artwork gets extra blur to prevent pixelation */
 .bg-art {
   filter: blur(calc(var(--bg-blur, 8) * 1px + 18px))
     brightness(calc(0.9 + var(--music-punch, 0) * 0.3)) saturate(1.3);

@@ -7,7 +7,7 @@ import { coerceSetting, defaultManifest, normalizeManifest, resolveConfig } from
 
 const base = { id: "t-one", name: "T" };
 
-test("manifest tối thiểu hợp lệ và có đủ mặc định", () => {
+test("minimal manifest is valid and has defaults populated", () => {
   const r = normalizeManifest(base);
   assert.ok(r.ok);
   assert.equal(r.manifest.layout.shell, "classic");
@@ -15,14 +15,14 @@ test("manifest tối thiểu hợp lệ và có đủ mặc định", () => {
   assert.deepEqual(r.manifest.visualizer.placement, ["player"]);
 });
 
-test("lỗi nặng: thiếu id/name, id xấu, schema mới", () => {
+test("fatal errors: missing id/name, invalid id, newer schema", () => {
   assert.equal(normalizeManifest({}).ok, false);
   assert.equal(normalizeManifest({ id: "Bad ID", name: "x" }).ok, false);
   assert.equal(normalizeManifest({ ...base, schema: 2 }).ok, false);
   assert.equal(normalizeManifest([]).ok, false);
 });
 
-test("giá trị sai → cảnh báo + dùng mặc định, không hỏng preset", () => {
+test("invalid values → warning + fallback to default, without breaking preset", () => {
   const r = normalizeManifest({
     ...base,
     layout: { shell: "nope", contentWidth: 99999, bogus: 1 },
@@ -37,7 +37,7 @@ test("giá trị sai → cảnh báo + dùng mặc định, không hỏng preset
   assert.ok(r.warnings.length >= 3);
 });
 
-test("settings: bind hợp lệ/không hợp lệ và ép kiểu", () => {
+test("settings: valid/invalid bind and type coercion", () => {
   const r = normalizeManifest({
     ...base,
     visualizer: { bars: 40 },
@@ -55,15 +55,15 @@ test("settings: bind hợp lệ/không hợp lệ và ép kiểu", () => {
   });
   assert.deepEqual(r.manifest.settings.map((s) => s.key), ["bars", "col", "glow", "t"]);
   const bars = r.manifest.settings[0];
-  assert.equal(bars.min, 8); // kẹp theo khoảng của tham số
+  assert.equal(bars.min, 8); // clamped to parameter range
   assert.equal(bars.max, 96);
-  assert.equal(bars.default, 40); // lấy từ section
+  assert.equal(bars.default, 40); // taken from section
   assert.deepEqual(r.manifest.settings[3].options.map((o) => o.value), ["list", "karaoke"]);
   assert.equal(coerceSetting(bars, 500).value, 96);
   assert.equal(coerceSetting(bars, "abc").ok, false);
 });
 
-test("resolveConfig: ưu tiên giá trị người dùng, kẹp khoảng, css var", () => {
+test("resolveConfig: prefers user values, clamps range, css var", () => {
   const { manifest } = normalizeManifest({
     ...base,
     settings: [
@@ -78,11 +78,11 @@ test("resolveConfig: ưu tiên giá trị người dùng, kẹp khoảng, css va
   assert.equal(c.cssVars["--preset-glow"], "3px");
   c = resolveConfig(manifest, { bars: 9999, col: "javascript:x", glow: 7 });
   assert.equal(c.visualizer.bars, 50);
-  assert.equal(c.theme.colors.accent, "#112233"); // giá trị sai bị bỏ
+  assert.equal(c.theme.colors.accent, "#112233"); // invalid value discarded
   assert.equal(c.cssVars["--preset-glow"], "7px");
 });
 
-test("defaultManifest dùng được", () => {
+test("defaultManifest is usable", () => {
   assert.equal(resolveConfig(defaultManifest()).layout.sidebar, "left");
 });
 
@@ -103,14 +103,14 @@ test("sanitizePresetCss", () => {
   assert.match(sanitizePresetCss(".a{background:url(n.png)}", resolve, "css/sub").css, /\/f\/css\/sub\/n\.png/);
 });
 
-test("preset built-in đều hợp lệ và index khớp thư mục", () => {
+test("built-in presets are valid and index matches directory", () => {
   const dir = new URL("../public/presets/", import.meta.url);
   const { presets } = JSON.parse(fs.readFileSync(new URL("index.json", dir), "utf8"));
   assert.ok(presets.includes("classic"));
   for (const id of presets) {
     const r = normalizeManifest(JSON.parse(fs.readFileSync(new URL(`${id}/preset.json`, dir), "utf8")));
     assert.ok(r.ok, `${id}: ${r.errors}`);
-    assert.deepEqual(r.warnings, [], `${id} có cảnh báo`);
-    assert.ok(fs.existsSync(new URL(`${id}/${r.manifest.preview}`, dir)), `${id} thiếu preview`);
+    assert.deepEqual(r.warnings, [], `${id} has warnings`);
+    assert.ok(fs.existsSync(new URL(`${id}/${r.manifest.preview}`, dir)), `${id} missing preview`);
   }
 });

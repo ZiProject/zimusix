@@ -1,6 +1,6 @@
 /* --------------------------------------------------------- reactive effects */
 
-/* Ảnh bìa nhún/phát sáng theo bass. Mức độ do preset quyết định qua --art-react / --art-glow. */
+/* Artwork pulses/glows with bass. Intensity configured by presets via --art-react / --art-glow. */
 .cover-slot,
 .stage-cover {
   transform: scale(calc(1 + var(--music-bass, 0) * var(--art-react, 0.08)));
@@ -8,7 +8,7 @@
     transform 0.08s ease-out,
     filter 0.08s ease-out;
 }
-/* drop-shadow chỉ bật khi đang phát: filter luôn bật trên ảnh lớn đang quay rất tốn GPU */
+/* drop-shadow only active during playback: continuous filter on large spinning covers is GPU intensive */
 html.is-playing .cover-slot,
 html.is-playing .stage-cover {
   filter: drop-shadow(

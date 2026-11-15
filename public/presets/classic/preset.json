@@ -4,7 +4,7 @@
   "name": "Classic",
   "version": "1.0.0",
   "author": "Zimusix",
-  "description": "Giao diện gốc của Zimusix: thanh bên trái, thanh phát dưới, ảnh bìa nền mờ.",
-  "tags": ["mặc định", "tối"],
+  "description": "Default Zimusix interface: left sidebar, bottom player, blurred album art background.",
+  "tags": ["default", "dark"],
   "preview": "preview.png"
 }

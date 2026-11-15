@@ -6,7 +6,7 @@ import { icon } from "../../lib/icons.js";
 import { app } from "../../state.js";
 import { mascotState } from "../mascot.js";
 
-/** Danh sách dòng lyric đồng bộ (dùng cho cả tab Lời bài hát và khu Đang phát). */
+/** Synchronized lyric lines list (used in both Lyrics tab and Now Playing stage). */
 function lyricsList(lyr) {
   return h(
     "div",
@@ -24,7 +24,7 @@ function lyricsList(lyr) {
               line.timeMs / 1000,
             );
           },
-          title: "Bấm để nhảy tới đoạn này",
+          title: "Click to jump to this lyric line",
         },
         h("span", { class: "line-time" }, fmtTime(line.timeMs)),
         h("span", { class: "line-text" }, line.text),
@@ -34,24 +34,24 @@ function lyricsList(lyr) {
 }
 
 /**
- * Phần thân lời bài hát (trạng thái trống / đang tải / lỗi / đồng bộ / thường).
- * `embedded` = nhúng trong khu Đang phát: bỏ tiêu đề, dùng mascot gọn.
+ * Lyrics body (empty / loading / error / synced / plain).
+ * `embedded` = embedded in Now Playing stage: omit header, compact mascot.
  */
 export function lyricsBody({ embedded = false } = {}) {
   const track = app.state?.currentTrack;
   if (!track)
-    return mascotState("idle", "Chưa phát bài nào. Hãy chọn bài để xem lời đồng bộ.");
+    return mascotState("idle", "No track playing. Select a track to view synchronized lyrics.");
   if (app.lyricsLoading)
-    return mascotState("loading", "Đang tìm kiếm lời bài hát đồng bộ từ LRCLIB...");
+    return mascotState("loading", "Searching for synced lyrics from LRCLIB...");
   const lyr = app.lyrics;
   if (!lyr || lyr.error)
-    return mascotState("noResult", lyr?.error || "Không tìm thấy lời bài hát cho bài này.", {
+    return mascotState("noResult", lyr?.error || "No lyrics found for this track.", {
       action: embedded
-        ? h("button", { class: "small", onclick: () => loadLyrics(true) }, icon("refresh", 14), " Thử lại")
+        ? h("button", { class: "small", onclick: () => loadLyrics(true) }, icon("refresh", 14), " Retry")
         : null,
     });
   if (lyr.lines?.length) return lyricsList(lyr);
-  return h("div", { class: "plain-lyrics" }, lyr.text || "Chưa có lời bài hát.");
+  return h("div", { class: "plain-lyrics" }, lyr.text || "No lyrics available.");
 }
 
 export function viewLyrics() {
@@ -60,7 +60,7 @@ export function viewLyrics() {
     return h(
       "section",
       { class: "view lyrics-view" },
-      h("h2", null, "Lời bài hát (Lyrics)"),
+      h("h2", null, "Lyrics"),
       lyricsBody(),
     );
   }
@@ -70,12 +70,12 @@ export function viewLyrics() {
   const failed = !app.lyricsLoading && (!lyr || lyr.error);
 
   const title = app.lyricsLoading
-    ? "Lời bài hát (Sync)"
+    ? "Lyrics (Sync)"
     : failed
-      ? "Lời bài hát"
+      ? "Lyrics"
       : synced
-        ? "Lời bài hát (Đồng bộ theo nhạc)"
-        : "Lời bài hát";
+        ? "Lyrics (Synced)"
+        : "Lyrics";
   const subtitle = synced
     ? `${lyr.trackName || track.title} · ${lyr.artistName || track.author || ""}`
     : `${track.title} · ${track.author || ""}`;
@@ -86,7 +86,7 @@ export function viewLyrics() {
       "button",
       { onclick: () => loadLyrics(true) },
       icon("refresh", 16),
-      " Thử lại",
+      " Retry",
     );
   else if (synced)
     actions = h(
@@ -95,7 +95,7 @@ export function viewLyrics() {
       h("span", { class: "badge lrclib" }, "Sync LRC"),
       h(
         "button",
-        { onclick: () => loadLyrics(true), title: "Tải lại lời bài hát" },
+        { onclick: () => loadLyrics(true), title: "Reload lyrics" },
         icon("refresh", 16),
       ),
     );

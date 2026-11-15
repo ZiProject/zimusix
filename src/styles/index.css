@@ -1,4 +1,4 @@
-/* Thứ tự import giữ nguyên thứ tự cascade của file CSS gốc. */
+/* Import order preserves the cascade hierarchy of original stylesheet. */
 @import "./base.css";
 @import "./layout.css";
 @import "./search.css";
@@ -11,8 +11,8 @@
 @import "./related.css";
 @import "./mascot.css";
 @import "./effects.css";
-/* Preset Runtime: mỗi module (layout, artwork, info, background, visualizer, lyrics) có CSS riêng,
-   bám vào thuộc tính data-* trên <html> do src/presets/runtime.js đặt. Giá trị mặc định = giao diện gốc. */
+/* Preset Runtime: each module (layout, artwork, info, background, visualizer, lyrics) has dedicated CSS,
+   driven by data-* attributes on <html> set by src/presets/runtime.js. Defaults = original look. */
 @import "./preset-layout.css";
 @import "./preset-modules.css";
 @import "./preset-controls.css";

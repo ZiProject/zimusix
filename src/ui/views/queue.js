@@ -15,19 +15,19 @@ export function viewQueue() {
     h(
       "div",
       { class: "view-head" },
-      h("h2", null, "Hàng đợi"),
+      h("h2", null, "Queue"),
       h(
         "div",
         { class: "button-row" },
         h(
           "button",
           { onclick: () => control("shuffle"), disabled: queue.length < 2 },
-          "Trộn",
+          "Shuffle",
         ),
         h(
           "button",
           { onclick: () => control("clear"), disabled: !queue.length },
-          "Xoá hết",
+          "Clear all",
         ),
       ),
     ),
@@ -35,7 +35,7 @@ export function viewQueue() {
       ? h(
           "div",
           { class: "now-playing-card" },
-          h("small", null, "Đang phát"),
+          h("small", null, "Now Playing"),
           trackRow(state.currentTrack, { actions: [] }),
         )
       : null,
@@ -48,35 +48,35 @@ export function viewQueue() {
               actions: [
                 iconButton(
                   "play",
-                  "Phát bài này",
+                  "Play this track",
                   () => control("skip", { index }),
                   "accent",
                 ),
                 iconButton(
                   "up",
-                  "Lên",
+                  "Move up",
                   () =>
                     index > 0 &&
                     control("move", { from: index, to: index - 1 }),
                 ),
                 iconButton(
                   "down",
-                  "Xuống",
+                  "Move down",
                   () =>
                     index < queue.length - 1 &&
                     control("move", { from: index, to: index + 1 }),
                 ),
-                iconButton("x", "Xoá", () => control("remove", { index })),
+                iconButton("x", "Remove", () => control("remove", { index })),
               ],
             }),
           ),
         )
-      : mascotState("empty", "Hàng đợi trống. Hãy thêm vài bài nhạc nhé!", {
-          title: "Chưa có nhạc",
+      : mascotState("empty", "Queue is empty. Add some tracks to get started!", {
+          title: "No music",
           action: h(
             "button",
             { class: "primary", onclick: () => switchView("search") },
-            "Thêm nhạc",
+            "Add music",
           ),
         }),
     state?.related?.length
@@ -87,7 +87,7 @@ export function viewQueue() {
             "div",
             { class: "related-title" },
             icon("sparkles", 16),
-            "Gợi ý tiếp theo (Related Tracks)",
+            "Recommended Next (Related Tracks)",
           ),
           h(
             "div",
@@ -97,11 +97,11 @@ export function viewQueue() {
                 actions: [
                   iconButton(
                     "play",
-                    "Phát ngay",
+                    "Play now",
                     () => playTrack(track, "now"),
                     "accent",
                   ),
-                  iconButton("plus", "Thêm vào hàng đợi", () =>
+                  iconButton("plus", "Add to queue", () =>
                     playTrack(track, "end"),
                   ),
                 ],

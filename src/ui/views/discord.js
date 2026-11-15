@@ -9,18 +9,18 @@ export function viewDiscord() {
     const tokenInput = h("input", {
       type: "password",
       placeholder: d.hasSavedToken
-        ? "Dùng token đã lưu (để trống)"
-        : "Dán token bot Discord",
+        ? "Use saved token (leave empty)"
+        : "Paste Discord bot token",
       autocomplete: "off",
     });
     return h(
       "section",
       { class: "view" },
-      h("h2", null, "Bot Discord"),
+      h("h2", null, "Discord Bot"),
       h(
         "p",
         { class: "muted" },
-        "Zimusix chạy bot của bạn để phát nhạc vào kênh thoại. Token được lưu cục bộ trên máy này.",
+        "Zimusix runs your bot to stream music into voice channels. Token is stored locally on this machine.",
       ),
       d.error ? h("p", { class: "error-text" }, d.error) : null,
       h(
@@ -34,7 +34,7 @@ export function viewDiscord() {
             disabled: d.status === "connecting",
             onclick: () => discordLogin(tokenInput.value.trim()),
           },
-          d.status === "connecting" ? "Đang đăng nhập…" : "Đăng nhập",
+          d.status === "connecting" ? "Logging in…" : "Log in",
         ),
       ),
       h(
@@ -43,19 +43,19 @@ export function viewDiscord() {
         h(
           "li",
           null,
-          "Tạo ứng dụng + bot tại Discord Developer Portal, copy Bot Token.",
+          "Create an application + bot in the Discord Developer Portal, then copy the Bot Token.",
         ),
         h(
           "li",
           null,
-          "Mời bot vào server bằng OAuth2 URL với scope ",
+          "Invite the bot to your server using the OAuth2 URL with the ",
           h("code", null, "bot"),
-          " và quyền Connect + Speak + View Channels.",
+          " scope and Connect + Speak + View Channels permissions.",
         ),
         h(
           "li",
           null,
-          "Quay lại đây, đăng nhập và chọn kênh thoại để bot tham gia.",
+          "Return here, log in, and select a voice channel for the bot to join.",
         ),
       ),
     );
@@ -70,11 +70,11 @@ export function viewDiscord() {
       h(
         "div",
         { class: "button-row" },
-        h("button", { onclick: loadDiscord }, "Làm mới"),
+        h("button", { onclick: loadDiscord }, "Refresh"),
         h(
           "button",
           { class: "danger", onclick: discordLogout },
-          "Đăng xuất bot",
+          "Log out bot",
         ),
       ),
     ),
@@ -98,7 +98,7 @@ export function viewDiscord() {
                       class: "danger small",
                       onclick: () => discordLeave(guild.id),
                     },
-                    "Rời kênh",
+                    "Leave channel",
                   )
                 : null,
             ),
@@ -119,16 +119,16 @@ export function viewDiscord() {
                         : null,
                     ),
                   )
-                : h("small", { class: "muted" }, "Không có kênh thoại"),
+                : h("small", { class: "muted" }, "No voice channels"),
             ),
           );
         })
       : mascotState(
           "empty",
-          "Bot chưa ở trong server nào. Hãy mời bot vào server rồi bấm Làm mới.",
+          "The bot is not in any server yet. Invite the bot to your server, then click Refresh.",
           {
-            title: "Chưa có server",
-            action: h("button", { onclick: loadDiscord }, "Làm mới"),
+            title: "No servers",
+            action: h("button", { onclick: loadDiscord }, "Refresh"),
           },
         ),
   );

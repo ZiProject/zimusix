@@ -5,7 +5,7 @@ import { renderMain } from "../ui/main-view.js";
 import { renderSidebar } from "../ui/sidebar.js";
 
 export function switchView(view) {
-  // Đang ẩn nội dung mà bấm sang một tab (Tìm kiếm, Hàng đợi…) thì hiện nội dung lại, nếu không người dùng sẽ không thấy gì.
+  // If content is hidden and user switches tabs (Search, Queue...), unhide content so they can see it.
   if (app.contentHidden) toggleContent(false, { render: false });
   app.view = view;
   renderSidebar();
@@ -19,7 +19,7 @@ export function toggleSidebar() {
   renderMain();
 }
 
-/** Ẩn/hiện nội dung các tab (tìm kiếm, file, hàng đợi…) để thấy trọn nền. Thanh công cụ vẫn còn. */
+/** Toggle tab content (search, files, queue...) to reveal background. Toolbar stays visible. */
 export function toggleContent(force, { render = true } = {}) {
   app.contentHidden = force ?? !app.contentHidden;
   if (app.contentHidden) app.bgPanelOpen = false;
