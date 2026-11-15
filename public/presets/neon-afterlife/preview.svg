@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+<defs>
+  <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#070810"/><stop offset=".55" stop-color="#171027"/><stop offset="1" stop-color="#36052f"/></linearGradient>
+  <linearGradient id="neon" x2="1"><stop stop-color="#f8f500"/><stop offset=".52" stop-color="#ff2bd6"/><stop offset="1" stop-color="#00e5ff"/></linearGradient>
+  <radialGradient id="halo"><stop stop-color="#ff2bd6" stop-opacity=".35"/><stop offset="1" stop-color="#ff2bd6" stop-opacity="0"/></radialGradient>
+  <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#00e5ff" stroke-opacity=".13"/></pattern>
+  <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1280" height="720" fill="url(#bg)"/><rect width="1280" height="720" fill="url(#grid)"/>
+<ellipse cx="650" cy="300" rx="560" ry="400" fill="url(#halo)"/>
+<path d="M0 560L250 440 380 500 560 360 740 470 930 330 1280 500V720H0Z" fill="#090b16" stroke="#ff2bd6" stroke-opacity=".55" stroke-width="2"/>
+<path d="M0 610L280 500 430 555 630 415 800 520 1020 390 1280 560" fill="none" stroke="#00e5ff" stroke-opacity=".7" stroke-width="3" filter="url(#glow)"/>
+<g transform="translate(80 82)">
+  <text x="0" y="0" fill="#f8f500" font-family="Arial,sans-serif" font-size="18" font-weight="bold" letter-spacing="7">ZIMUSIX / NIGHT CITY SIGNAL</text>
+  <text x="0" y="88" fill="#f7f4ff" font-family="Arial,sans-serif" font-size="66" font-weight="900" letter-spacing="-3">NEON</text>
+  <text x="0" y="158" fill="url(#neon)" font-family="Arial,sans-serif" font-size="66" font-weight="900" letter-spacing="-3">AFTERLIFE</text>
+  <path d="M0 184H430" stroke="#f8f500" stroke-width="4"/>
+  <text x="0" y="222" fill="#aaa6bd" font-family="Arial,sans-serif" font-size="15" letter-spacing="4">BASS // NEON // NO TOMORROW</text>
+</g>
+<g transform="translate(770 140)" filter="url(#glow)">
+  <rect x="0" y="0" width="350" height="350" rx="3" fill="#111321" stroke="#f8f500" stroke-width="3" transform="rotate(3 175 175)"/>
+  <rect x="22" y="22" width="306" height="306" fill="#210e2d" stroke="#00e5ff" stroke-opacity=".7"/>
+  <circle cx="175" cy="175" r="112" fill="none" stroke="#ff2bd6" stroke-width="2"/>
+  <circle cx="175" cy="175" r="82" fill="none" stroke="#00e5ff" stroke-width="9" stroke-dasharray="18 9"/>
+  <path d="M65 210L125 140 175 190 230 100 285 165" fill="none" stroke="#f8f500" stroke-width="7"/>
+  <text x="175" y="280" fill="#f8f500" font-family="Arial,sans-serif" font-size="18" font-weight="bold" text-anchor="middle" letter-spacing="4">NOW PLAYING</text>
+</g>
+<g transform="translate(80 590)">
+  <rect width="1120" height="62" rx="3" fill="#0d101b" stroke="#00e5ff" stroke-opacity=".65"/>
+  <rect x="18" y="18" width="26" height="26" fill="#f8f500"/>
+  <path d="M25 22L25 40L39 31Z" fill="#070810"/>
+  <text x="66" y="27" fill="#f8f500" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">PLAYING NOW</text>
+  <text x="66" y="47" fill="#f7f4ff" font-family="Arial,sans-serif" font-size="16" font-weight="bold">MIDNIGHT RUN / NEON DISTRICT</text>
+  <path d="M570 31H1080" stroke="#343044" stroke-width="4"/>
+  <path d="M570 31H860" stroke="url(#neon)" stroke-width="4" filter="url(#glow)"/>
+  <g fill="#00e5ff"><rect x="900" y="18" width="4" height="26"/><rect x="910" y="10" width="4" height="34"/><rect x="920" y="22" width="4" height="22"/><rect x="930" y="5" width="4" height="39"/><rect x="940" y="15" width="4" height="29"/></g>
+</g>
+<text x="1190" y="54" fill="#ff2bd6" font-family="Arial,sans-serif" font-size="13" text-anchor="end" letter-spacing="3">VOL. 01 / 2077</text>
+</svg>

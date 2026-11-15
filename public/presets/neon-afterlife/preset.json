@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "id": "neon-afterlife",
+  "name": "NEON AFTERLIFE",
+  "version": "1.0.0",
+  "author": "Zimusix Preset Lab",
+  "description": "A high-voltage dystopian night drive: acid yellow, toxic magenta, electric cyan, brutal panels and bass-reactive neon.",
+  "tags": [
+    "cyberpunk",
+    "neon",
+    "night-drive",
+    "edm",
+    "futuristic",
+    "dark"
+  ],
+  "preview": "preview.svg",
+  "style": "style.css",
+  "layout": {
+    "shell": "stage",
+    "sidebar": "rail",
+    "player": "floating",
+    "density": "compact",
+    "defaultView": "nowplaying",
+    "contentWidth": 1240,
+    "radius": 4
+  },
+  "controls": {
+    "buttons": "square",
+    "playButton": "accent",
+    "nav": "bar",
+    "toolbar": "floating",
+    "panels": "glass",
+    "iconSize": 19
+  },
+  "artwork": {
+    "style": "polaroid",
+    "size": 62,
+    "stageSize": 390,
+    "react": true,
+    "reactAmount": 10,
+    "glow": true,
+    "spin": false,
+    "shadow": true
+  },
+  "info": {
+    "style": "huge",
+    "show": [
+      "title",
+      "artist",
+      "source",
+      "duration"
+    ],
+    "marquee": true,
+    "titleScale": 1.42
+  },
+  "background": {
+    "effect": "aurora",
+    "media": "off",
+    "colors": [
+      "#070810",
+      "#180D27",
+      "#3A1038",
+      "#00D9F5"
+    ],
+    "speed": 1.05,
+    "intensity": 0.72,
+    "angle": 132,
+    "count": 112,
+    "react": true
+  },
+  "visualizer": {
+    "type": "bars",
+    "placement": [
+      "stage",
+      "player"
+    ],
+    "bars": 64,
+    "colorMode": "gradient",
+    "thickness": 2,
+    "smoothing": 0.84,
+    "opacity": 0.92,
+    "height": 148
+  },
+  "lyrics": {
+    "mode": "focus",
+    "placement": "stage",
+    "align": "center",
+    "showTime": false,
+    "size": 25,
+    "activeScale": 1.55,
+    "glow": true
+  },
+  "theme": {
+    "colorScheme": "dark",
+    "fontFamily": "Arial, 'Segoe UI', sans-serif",
+    "colors": {
+      "accent": "#F8F500",
+      "accent2": "#FF2BD6",
+      "bg": "#070810",
+      "panel": "#10121D",
+      "panel2": "#191326",
+      "line": "#343044",
+      "text": "#F5F4FF",
+      "muted": "#9693AA",
+      "ok": "#00F5A0",
+      "danger": "#FF3864"
+    }
+  },
+  "settings": [
+    {
+      "key": "neonIntensity",
+      "label": "Neon intensity",
+      "description": "Boost the cyberpunk glow and edge lighting.",
+      "type": "range",
+      "bind": "css:--preset-neon-intensity",
+      "min": 0.2,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.85
+    },
+    {
+      "key": "scanlineOpacity",
+      "label": "Scanline strength",
+      "description": "CRT scanlines over the interface.",
+      "type": "range",
+      "bind": "css:--preset-scanline-opacity",
+      "min": 0,
+      "max": 0.35,
+      "step": 0.01,
+      "default": 0.12
+    },
+    {
+      "key": "accentColor",
+      "label": "Primary neon",
+      "description": "Change the acid-yellow highlight.",
+      "type": "color",
+      "bind": "theme.colors.accent",
+      "default": "#F8F500"
+    },
+    {
+      "key": "bassResponse",
+      "label": "Bass-reactive effects",
+      "description": "Enable audio-reactive background and artwork effects.",
+      "type": "toggle",
+      "bind": "background.react",
+      "default": true
+    }
+  ]
+}

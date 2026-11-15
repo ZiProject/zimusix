@@ -1,0 +1,32 @@
+{
+  "$schema": "https://zimusix.app/schema/preset-1.json",
+  "schema": 1,
+  "id": "my-preset",
+  "name": "My Preset",
+  "version": "1.0.0",
+  "author": "Tên của bạn",
+  "description": "Mô tả ngắn (tối đa 300 ký tự).",
+  "tags": ["mẫu"],
+  "preview": "preview.png",
+  "style": "style.css",
+
+  "theme": { "colors": { "accent": "#7c5cff", "accent2": "#a78bfa" } },
+  "layout": { "shell": "classic", "sidebar": "left", "player": "bottom", "density": "comfortable", "defaultView": "keep" },
+  "controls": { "buttons": "soft", "playButton": "circle", "nav": "soft", "toolbar": "docked", "panels": "solid", "iconSize": 18 },
+  "artwork": { "style": "rounded", "size": 56, "stageSize": 320, "spin": false },
+  "info": { "style": "inline", "show": ["title", "artist", "source"], "marquee": true },
+  "background": { "effect": "media" },
+  "visualizer": { "type": "bars", "placement": ["player"], "bars": 32 },
+  "lyrics": { "mode": "list", "placement": "view", "align": "left", "showTime": true },
+
+  "settings": [
+    { "key": "accent", "label": "Màu nhấn", "type": "color", "bind": "theme.colors.accent" },
+    { "key": "buttons", "label": "Kiểu nút", "type": "select", "bind": "controls.buttons",
+      "options": [ { "value": "soft", "label": "Mềm" }, { "value": "pill", "label": "Bo tròn" }, { "value": "ghost", "label": "Không nền" } ] },
+    { "key": "bars", "label": "Số cột visualizer", "type": "range", "bind": "visualizer.bars", "min": 8, "max": 64 },
+    { "key": "spin", "label": "Ảnh bìa quay", "type": "toggle", "bind": "artwork.spin" },
+    { "key": "lyricsAlign", "label": "Căn lyrics", "type": "select", "bind": "lyrics.align",
+      "options": [ { "value": "left", "label": "Trái" }, { "value": "center", "label": "Giữa" } ] },
+    { "key": "cardGlow", "label": "Độ sáng viền thẻ", "type": "range", "bind": "css:--preset-card-glow", "min": 0, "max": 40, "unit": "px", "default": 12 }
+  ]
+}

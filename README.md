@@ -37,6 +37,8 @@ npm run setup      # cài deps frontend + sidecar
 npm run dev        # mở app Tauri (dev)
 ```
 
+Kiểm tra phần preset (không cần Rust/ffmpeg): `npm run test:presets`; kiểm tra thư mục preset: `npm run presets:check`.
+
 Chỉ kiểm tra backend (không cần Rust): `npm test` (sinh file mp3, phát qua sidecar, nhận khung Opus qua WebSocket, kiểm tra queue/seek/volume).
 
 Chạy frontend trong trình duyệt để debug: `npm run sidecar` (in `ZIMUSIX_READY {port, token}`), rồi `npm run web` và mở `http://localhost:1420/?port=<port>&token=<token>`. (Sidecar đứng riêng sẽ in token ra nếu bạn không đặt `ZIMUSIX_TOKEN`.)
@@ -52,6 +54,7 @@ Chạy frontend trong trình duyệt để debug: `npm run sidecar` (in `ZIMUSIX
 | Nối đầu ra | Nút dây ở thanh phát: chọn nguồn, kéo từ cổng nguồn tới **Ứng dụng này** và/hoặc các kênh Discord. Một nguồn nối được nhiều đầu ra cùng lúc (Ứng dụng + mỗi server một kênh), tất cả cùng phát một âm thanh; nguồn không bị dừng hay seek lại khi nối thêm. Cùng một bot không thể phát đồng thời hai kênh trong cùng server |
 | Ngắt kết nối | Bấm/kéo lại vào cổng đang nối, hoặc nút **Rút dây khỏi #kênh / Ứng dụng**. Rút một kênh Voice thì bot rời kênh đó, nguồn và các đầu ra còn lại vẫn phát; rút khỏi Ứng dụng thì chỉ ngừng nghe trên máy. Bot bị kick/mất voice thì dây tự rút kèm thông báo |
 | Điều khiển | Phát/tạm dừng (phím Space), bài trước/sau, seek, âm lượng, lặp (tắt → hàng đợi → một bài), tự phát bài liên quan, trộn, sắp xếp/xoá trong hàng đợi |
+| Đổi giao diện (Preset) | Tab **Giao diện**: chọn preset, **Thêm thư mục preset** để cài preset của bạn, chỉnh các thông số preset cho phép. Chi tiết: [docs/PRESETS.md](docs/PRESETS.md) |
 | Ẩn nội dung để xem nền | Nút con mắt ở thanh trên cùng hoặc phím **H**: ẩn nội dung tab (tìm kiếm, file, hàng đợi…) để lộ ảnh/video nền; thanh công cụ vẫn còn để bật lại. Lựa chọn được nhớ cho lần mở sau |
 | Toàn màn hình | Nút toàn màn hình hoặc phím **F11** (cần quyền `core:window:allow-set-fullscreen` trong `src-tauri/capabilities/default.json`) |
 
@@ -73,11 +76,20 @@ src/
 │   └─ window.js      toàn màn hình
 ├─ ui/                dựng giao diện
 │   ├─ main-view.js   khung chính + thanh công cụ trên
+│   │   views/nowplaying.js  khu "Đang phát" (ảnh lớn, thông tin, visualizer, lyrics nhúng)
+│   │   views/presets.js     trang "Giao diện": thư viện preset + tuỳ chỉnh
 │   ├─ sidebar.js  player.js  wiring.js  visualizer.js  bg-panel.js  shared.js
 │   ├─ mascot.js      trạng thái mascot (ảnh trong public/mascot/): loading, trống, lỗi, không có kết quả…
 │   └─ views/         search, library, queue, related, lyrics, discord
+├─ presets/           Preset Runtime: schema.js (module + tham số + kiểm tra), loader.js, runtime.js,
+│                     store.js, css.js (làm sạch style.css), visualizers.js, bg-fx.js
 └─ styles/            index.css import base, layout, search, library, player,
-                      toast, background, wiring, lyrics, related, effects
+                      toast, background, wiring, lyrics, related, effects,
+                      preset-layout, preset-modules, preset-gallery
+
+public/presets/<id>/  preset built-in (preset.json, preview.png, style.css…) + index.json
+docs/PRESETS.md       quy ước thư mục preset, tham số từng module, hướng dẫn tạo preset
+docs/preset-template/ bản mẫu để chép ra làm preset mới
 ```
 
 ## Bảo mật

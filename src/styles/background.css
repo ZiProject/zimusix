@@ -41,8 +41,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, rgba(14, 14, 20, 0.85), transparent 45%),
-    rgba(14, 14, 20, var(--bg-dim, 0.45));
+    linear-gradient(to top, rgb(var(--bg-rgb) / 0.85), transparent 45%),
+    rgb(var(--bg-rgb) / var(--bg-dim, 0.45));
 }
 
 #app {

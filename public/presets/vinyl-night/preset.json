@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "id": "vinyl-night",
+  "name": "Vinyl Night",
+  "version": "1.1.2",
+  "author": "Zimusix",
+  "description": "Không khí analog ấm áp với đĩa than chuyển động, aurora nhiều lớp và lời bài hát kiểu karaoke.",
+  "tags": [
+    "vinyl",
+    "aurora",
+    "warm"
+  ],
+  "preview": "preview.png",
+  "theme": {
+    "colorScheme": "dark",
+    "colors": {
+      "accent": "#FF896D",
+      "accent2": "#E8B4FF",
+      "bg": "#130F19",
+      "panel": "#211824",
+      "panel2": "#302238",
+      "line": "#49364D",
+      "text": "#FFF3EF",
+      "muted": "#BDA8B7"
+    }
+  },
+  "layout": {
+    "shell": "split",
+    "sidebar": "rail",
+    "player": "floating",
+    "density": "comfortable",
+    "defaultView": "nowplaying",
+    "contentWidth": 1100,
+    "radius": 24
+  },
+  "controls": {
+    "buttons": "pill",
+    "playButton": "accent",
+    "nav": "pill",
+    "toolbar": "floating",
+    "panels": "glass",
+    "iconSize": 20
+  },
+  "artwork": {
+    "style": "vinyl",
+    "size": 58,
+    "stageSize": 360,
+    "react": true,
+    "reactAmount": 4,
+    "glow": true,
+    "spin": true,
+    "spinSpeed": 24,
+    "shadow": true
+  },
+  "info": {
+    "style": "stacked",
+    "show": [
+      "title",
+      "artist",
+      "source"
+    ],
+    "marquee": true,
+    "titleScale": 1.06
+  },
+  "background": {
+    "effect": "aurora",
+    "media": "off",
+    "colors": [
+      "#7B3F52",
+      "#50306E",
+      "#173E59"
+    ],
+    "speed": 0.65,
+    "intensity": 0.52,
+    "angle": 145,
+    "react": true
+  },
+  "visualizer": {
+    "type": "wave",
+    "placement": [
+      "stage"
+    ],
+    "bars": 44,
+    "colorMode": "accent",
+    "thickness": 2,
+    "smoothing": 0.48,
+    "opacity": 0.8,
+    "height": 100
+  },
+  "lyrics": {
+    "mode": "karaoke",
+    "placement": "stage",
+    "align": "left",
+    "showTime": true,
+    "size": 26,
+    "activeScale": 1.28,
+    "glow": true
+  },
+  "settings": [
+    {
+      "key": "spinSpeed",
+      "label": "Tốc độ quay đĩa",
+      "type": "range",
+      "bind": "artwork.spinSpeed",
+      "min": 6,
+      "max": 40,
+      "unit": "s"
+    },
+    {
+      "key": "accent",
+      "label": "Màu nhấn",
+      "type": "color",
+      "bind": "theme.colors.accent"
+    },
+    {
+      "key": "aurora",
+      "label": "Cường độ aurora",
+      "type": "range",
+      "bind": "background.intensity",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "key": "lyricsSize",
+      "label": "Cỡ chữ lời bài hát",
+      "type": "range",
+      "bind": "lyrics.size",
+      "min": 16,
+      "max": 40,
+      "unit": "px"
+    },
+    {
+      "key": "panels",
+      "label": "Kiểu nền panel",
+      "type": "select",
+      "bind": "controls.panels",
+      "options": [
+        {
+          "value": "solid",
+          "label": "Đặc"
+        },
+        {
+          "value": "glass",
+          "label": "Kính mờ"
+        },
+        {
+          "value": "flat",
+          "label": "Phẳng"
+        }
+      ]
+    }
+  ]
+}

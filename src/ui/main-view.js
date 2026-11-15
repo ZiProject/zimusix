@@ -7,6 +7,8 @@ import { renderBgPanel } from "./bg-panel.js";
 import { viewDiscord } from "./views/discord.js";
 import { viewLibrary } from "./views/library.js";
 import { viewLyrics } from "./views/lyrics.js";
+import { viewNowPlaying } from "./views/nowplaying.js";
+import { viewPresets } from "./views/presets.js";
 import { viewQueue } from "./views/queue.js";
 import { viewRelated } from "./views/related.js";
 import { viewSearch } from "./views/search.js";
@@ -18,6 +20,8 @@ export function renderMain() {
     queue: viewQueue,
     related: viewRelated,
     lyrics: viewLyrics,
+    nowplaying: viewNowPlaying,
+    presets: viewPresets,
     discord: viewDiscord,
   };
   // giữ focus & vị trí con trỏ của ô tìm kiếm khi re-render

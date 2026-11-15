@@ -5,10 +5,12 @@ import { renderMain } from "../ui/main-view.js";
 import { renderSidebar } from "../ui/sidebar.js";
 
 export function switchView(view) {
+  // Đang ẩn nội dung mà bấm sang một tab (Tìm kiếm, Hàng đợi…) thì hiện nội dung lại, nếu không người dùng sẽ không thấy gì.
+  if (app.contentHidden) toggleContent(false, { render: false });
   app.view = view;
   renderSidebar();
   renderMain();
-  if (view === "lyrics") loadLyrics();
+  if (view === "lyrics" || view === "nowplaying") loadLyrics();
 }
 
 export function toggleSidebar() {
@@ -18,10 +20,10 @@ export function toggleSidebar() {
 }
 
 /** Ẩn/hiện nội dung các tab (tìm kiếm, file, hàng đợi…) để thấy trọn nền. Thanh công cụ vẫn còn. */
-export function toggleContent(force) {
+export function toggleContent(force, { render = true } = {}) {
   app.contentHidden = force ?? !app.contentHidden;
   if (app.contentHidden) app.bgPanelOpen = false;
   writeFlag(CONTENT_HIDDEN_KEY, app.contentHidden);
   root.classList.toggle("content-hidden", app.contentHidden);
-  renderMain();
+  if (render) renderMain();
 }

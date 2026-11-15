@@ -11,3 +11,9 @@
 @import "./related.css";
 @import "./mascot.css";
 @import "./effects.css";
+/* Preset Runtime: mỗi module (layout, artwork, info, background, visualizer, lyrics) có CSS riêng,
+   bám vào thuộc tính data-* trên <html> do src/presets/runtime.js đặt. Giá trị mặc định = giao diện gốc. */
+@import "./preset-layout.css";
+@import "./preset-modules.css";
+@import "./preset-controls.css";
+@import "./preset-gallery.css";

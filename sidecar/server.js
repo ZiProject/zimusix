@@ -13,6 +13,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { WebSocketServer } = require("ws");
+const { createPresetStore } = require("./presets");
 const { PlayerManager, WebAudioConnection } = require("ziplayer");
 const {
   YouTubePlugin,
@@ -64,6 +65,11 @@ function saveSettings() {
     console.error("Không lưu được settings:", error.message);
   }
 }
+
+/* ------------------------------------------------------------------ presets */
+
+// Preset giao diện do người dùng thêm (thư mục). Xem docs/PRESETS.md.
+const presetStore = createPresetStore(DATA_DIR);
 
 /* ------------------------------------------------------------------ ffmpeg */
 
@@ -1403,6 +1409,17 @@ const routes = {
     ffmpeg,
   }),
 
+  "GET /presets": async () => ({
+    dir: presetStore.root,
+    presets: presetStore.list(),
+  }),
+
+  "POST /presets/import": async (_req, _url, body) =>
+    presetStore.importFrom(body.path),
+
+  "POST /presets/remove": async (_req, _url, body) =>
+    presetStore.remove(body.id),
+
   "GET /state": async (_req, url) =>
     playerState(url.searchParams.get("target") || LOCAL_TARGET),
 
@@ -1561,6 +1578,19 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/presets/file") {
+    try {
+      const info = presetStore.resolveFile(
+        url.searchParams.get("id"),
+        url.searchParams.get("path"),
+      );
+      return presetStore.serveFile(req, res, info, corsHeaders(req));
+    } catch (error) {
+      return sendJson(req, res, error.statusCode ?? 500, {
+        error: error.message || "Lỗi không xác định",
+      });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/thumbnail") {
     return handleThumbnail(req, res, url);
   }

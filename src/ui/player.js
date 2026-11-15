@@ -9,7 +9,8 @@ import { fmtTime, h } from "../lib/dom.js";
 import { icon } from "../lib/icons.js";
 import { toast } from "../lib/toast.js";
 import { app, refs } from "../state.js";
-import { badge, targetLabel, trackCover } from "./shared.js";
+import { cfg } from "../presets/runtime.js";
+import { setMarqueeText, targetLabel, trackCover, trackSubParts } from "./shared.js";
 import { drawWires, finishWireDrag, moveWireDrag, renderWiringPanel } from "./wiring.js";
 
 export let dragging = false;
@@ -205,14 +206,21 @@ export function renderPlayer() {
   if (!refs.cover) return;
   const s = app.state;
   const track = s?.currentTrack;
-  refs.cover.replaceChildren(trackCover(track, 56));
-  refs.title.textContent = track?.title ?? "Chưa phát";
+  const info = cfg().info;
+  // Chỉ dựng lại ảnh khi bài/ảnh/kích thước đổi: dựng lại mỗi lần nhận state sẽ làm đĩa quay bị giật về 0°.
+  const coverSig = `${track?.key ?? ""}|${track?.thumbnail ?? ""}|${cfg().artwork.size}`;
+  if (refs.cover.dataset.sig !== coverSig) {
+    refs.cover.dataset.sig = coverSig;
+    refs.cover.replaceChildren(trackCover(track, cfg().artwork.size));
+  }
+  setMarqueeText(refs.title, track?.title ?? "Chưa phát", info.marquee);
+  refs.title.hidden = Boolean(track) && !info.show.includes("title");
   refs.sub.replaceChildren(
-    ...(track
-      ? [badge(track.source), track.author ? ` ${track.author}` : ""]
-      : [`Phát tới: ${targetLabel()}`]),
+    ...(track ? trackSubParts(track) : [`Phát tới: ${targetLabel()}`]),
   );
   const playing = Boolean(track && s.isPlaying && !s.isPaused);
+  // CSS dùng class này để quay đĩa/ảnh khi đang phát (artwork.spin)
+  document.documentElement.classList.toggle("is-playing", playing);
   refs.btnPlay.replaceChildren(icon(playing ? "pause" : "play", 26));
   refs.btnLoop.className = `icon-btn ${s?.loop && s.loop !== "off" ? "on" : ""}`;
   refs.btnLoop.title = `Lặp: ${{ off: "tắt", queue: "hàng đợi", track: "bài này" }[s?.loop ?? "off"]}`;

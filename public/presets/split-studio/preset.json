@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "id": "split-studio",
+  "name": "Split Studio",
+  "version": "1.1.2",
+  "author": "Zimusix",
+  "description": "Bố cục chia đôi như một studio nghe nhạc: khu nội dung rộng, artwork kiểu ảnh in và visualizer nền tinh tế.",
+  "tags": [
+    "split",
+    "studio",
+    "polaroid"
+  ],
+  "preview": "preview.png",
+  "theme": {
+    "colorScheme": "dark",
+    "colors": {
+      "accent": "#F28BBE",
+      "accent2": "#FFB36B",
+      "bg": "#151019",
+      "panel": "#211A27",
+      "panel2": "#2B2232",
+      "line": "#443448",
+      "text": "#FFF4FA",
+      "muted": "#B5A0B2"
+    }
+  },
+  "layout": {
+    "shell": "split",
+    "sidebar": "right",
+    "player": "top",
+    "density": "comfortable",
+    "defaultView": "nowplaying",
+    "contentWidth": 1160,
+    "radius": 18
+  },
+  "controls": {
+    "buttons": "soft",
+    "playButton": "square",
+    "nav": "bar",
+    "toolbar": "floating",
+    "panels": "solid",
+    "iconSize": 18
+  },
+  "artwork": {
+    "style": "polaroid",
+    "size": 56,
+    "stageSize": 320,
+    "react": true,
+    "reactAmount": 4,
+    "glow": false,
+    "spin": false,
+    "shadow": true
+  },
+  "info": {
+    "style": "centered",
+    "show": [
+      "title",
+      "artist",
+      "duration"
+    ],
+    "marquee": true,
+    "titleScale": 1.08
+  },
+  "background": {
+    "effect": "media",
+    "media": "auto",
+    "colors": [
+      "#42243B",
+      "#1C1726",
+      "#17131C"
+    ],
+    "speed": 0.75,
+    "intensity": 0.36,
+    "angle": 135,
+    "react": true
+  },
+  "visualizer": {
+    "type": "mirror",
+    "placement": [
+      "background"
+    ],
+    "bars": 56,
+    "colorMode": "gradient",
+    "thickness": 3,
+    "smoothing": 0.25,
+    "opacity": 0.28,
+    "height": 160
+  },
+  "lyrics": {
+    "mode": "list",
+    "placement": "stage",
+    "align": "left",
+    "showTime": true,
+    "size": 21,
+    "activeScale": 1.18,
+    "glow": false
+  },
+  "settings": [
+    {
+      "key": "radius",
+      "label": "Độ bo góc",
+      "type": "range",
+      "bind": "layout.radius",
+      "min": 0,
+      "max": 28,
+      "unit": "px"
+    },
+    {
+      "key": "density",
+      "label": "Mật độ giao diện",
+      "type": "select",
+      "bind": "layout.density",
+      "options": [
+        {
+          "value": "comfortable",
+          "label": "Thoáng"
+        },
+        {
+          "value": "compact",
+          "label": "Gọn"
+        }
+      ]
+    },
+    {
+      "key": "vizOpacity",
+      "label": "Độ rõ visualizer nền",
+      "type": "range",
+      "bind": "visualizer.opacity",
+      "min": 0.1,
+      "max": 0.8,
+      "step": 0.05
+    },
+    {
+      "key": "buttons",
+      "label": "Kiểu nút",
+      "type": "select",
+      "bind": "controls.buttons",
+      "options": [
+        {
+          "value": "soft",
+          "label": "Mềm"
+        },
+        {
+          "value": "pill",
+          "label": "Viên thuốc"
+        },
+        {
+          "value": "square",
+          "label": "Vuông"
+        },
+        {
+          "value": "ghost",
+          "label": "Trong suốt"
+        },
+        {
+          "value": "outline",
+          "label": "Viền"
+        }
+      ]
+    }
+  ]
+}

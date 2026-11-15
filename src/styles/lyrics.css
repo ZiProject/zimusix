@@ -32,6 +32,7 @@
 }
 
 .lyrics-list {
+  position: relative; /* offsetTop của dòng lyric tính theo khung này (cuộn dòng đang hát vào giữa) */
   flex: 1;
   overflow-y: auto;
   padding: 40px 16px 140px;
@@ -64,7 +65,7 @@
 }
 
 .lyric-line {
-  font-size: 22px;
+  font-size: var(--lyrics-size, 22px);
   font-weight: 600;
   line-height: 1.4;
   color: var(--muted);
@@ -97,12 +98,16 @@
 }
 
 .lyric-line.active {
-  font-size: 28px;
+  font-size: calc(var(--lyrics-size, 22px) * var(--lyrics-active-scale, 1.27));
   font-weight: 800;
-  color: #fff;
+  color: var(--lyrics-active-color, #fff);
   opacity: 1;
   transform: scale(1.02);
-  background: linear-gradient(90deg, rgba(124, 92, 255, 0.15), transparent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 15%, transparent),
+    transparent
+  );
 }
 
 .lyric-line.past {

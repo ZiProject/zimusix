@@ -1,0 +1,159 @@
+{
+  "schema": 1,
+  "id": "neon-stage",
+  "name": "Neon Stage",
+  "version": "1.1.2",
+  "author": "Zimusix",
+  "description": "Sân khấu âm nhạc đậm chất neon với artwork trung tâm, visualizer vòng tròn và ánh sáng chuyển động.",
+  "tags": [
+    "neon",
+    "stage",
+    "visualizer"
+  ],
+  "preview": "preview.png",
+  "theme": {
+    "colorScheme": "dark",
+    "colors": {
+      "accent": "#53E7F5",
+      "accent2": "#F47BEA",
+      "bg": "#080914",
+      "panel": "#111326",
+      "panel2": "#191D35",
+      "line": "#292D4B",
+      "text": "#F6F5FF",
+      "muted": "#9699B8"
+    }
+  },
+  "layout": {
+    "shell": "stage",
+    "sidebar": "hidden",
+    "player": "minimal",
+    "density": "comfortable",
+    "defaultView": "nowplaying",
+    "contentWidth": 1120,
+    "radius": 20
+  },
+  "controls": {
+    "buttons": "outline",
+    "playButton": "accent",
+    "nav": "bar",
+    "toolbar": "autohide",
+    "panels": "glass",
+    "iconSize": 20
+  },
+  "artwork": {
+    "style": "circle",
+    "size": 56,
+    "stageSize": 300,
+    "react": true,
+    "reactAmount": 7,
+    "glow": true,
+    "spin": true,
+    "spinSpeed": 42,
+    "shadow": true
+  },
+  "info": {
+    "style": "huge",
+    "show": [
+      "title",
+      "artist"
+    ],
+    "marquee": true,
+    "titleScale": 1.12
+  },
+  "background": {
+    "effect": "particles",
+    "media": "off",
+    "colors": [
+      "#101A3B",
+      "#35144A",
+      "#07131E"
+    ],
+    "speed": 0.8,
+    "intensity": 0.62,
+    "angle": 135,
+    "count": 72,
+    "react": true
+  },
+  "visualizer": {
+    "type": "circle",
+    "placement": [
+      "stage"
+    ],
+    "bars": 48,
+    "colorMode": "gradient",
+    "thickness": 3,
+    "smoothing": 0.3,
+    "opacity": 0.9,
+    "height": 220
+  },
+  "lyrics": {
+    "mode": "focus",
+    "placement": "stage",
+    "align": "center",
+    "showTime": true,
+    "size": 23,
+    "activeScale": 1.24,
+    "glow": true
+  },
+  "settings": [
+    {
+      "key": "particles",
+      "label": "Mật độ hạt sáng",
+      "type": "range",
+      "bind": "background.count",
+      "min": 10,
+      "max": 160,
+      "step": 5
+    },
+    {
+      "key": "vizHeight",
+      "label": "Chiều cao visualizer",
+      "type": "range",
+      "bind": "visualizer.height",
+      "min": 100,
+      "max": 360,
+      "unit": "px"
+    },
+    {
+      "key": "vizType",
+      "label": "Kiểu visualizer",
+      "type": "select",
+      "bind": "visualizer.type",
+      "options": [
+        {
+          "value": "circle",
+          "label": "Vòng tròn"
+        },
+        {
+          "value": "bars",
+          "label": "Cột"
+        },
+        {
+          "value": "mirror",
+          "label": "Đối xứng"
+        },
+        {
+          "value": "dots",
+          "label": "Chấm"
+        },
+        {
+          "value": "wave",
+          "label": "Sóng"
+        }
+      ]
+    },
+    {
+      "key": "spin",
+      "label": "Xoay artwork",
+      "type": "toggle",
+      "bind": "artwork.spin"
+    },
+    {
+      "key": "accent",
+      "label": "Màu neon chính",
+      "type": "color",
+      "bind": "theme.colors.accent"
+    }
+  ]
+}

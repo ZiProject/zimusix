@@ -1,0 +1,140 @@
+/* ------------------------------------------------------------------------------------------
+   Preset · CONTROLS — mọi nút, thanh công cụ, điều hướng và panel đều thuộc giao diện.
+   Bám vào: html[data-btn] [data-play-btn] [data-nav] [data-toolbar] [data-panels] và --icon-size.
+   Mặc định (soft / circle / soft / docked / solid / 18px) = giao diện gốc.
+   ------------------------------------------------------------------------------------------ */
+
+/* ---- Cỡ icon ---------------------------------------------------------------------------- */
+.icon-btn:not(.big) svg,
+.nav-item svg,
+.main-toolbar .icon-btn svg {
+  width: var(--icon-size, 18px);
+  height: var(--icon-size, 18px);
+}
+
+/* ---- Nút chung -------------------------------------------------------------------------- */
+html[data-btn="pill"] button:not(.icon-btn, .play-btn, .nav-item, .target, .channel) {
+  border-radius: 99px;
+}
+html[data-btn="square"] button:not(.play-btn) {
+  border-radius: 3px;
+}
+html[data-btn="square"] .chip,
+html[data-btn="square"] .segmented {
+  border-radius: 3px;
+}
+html[data-btn="ghost"] button:not(.primary, .play-btn, .danger, .active, .on) {
+  background: transparent;
+  border-color: transparent;
+}
+html[data-btn="ghost"] button:not(.primary, .play-btn, .active, .on):hover:not(:disabled) {
+  background: var(--panel-2);
+}
+html[data-btn="outline"]
+  button:not(.primary, .play-btn, .icon-btn, .active, .on, .nav-item, .target) {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+}
+html[data-btn="outline"]
+  button:not(.primary, .play-btn, .icon-btn, .active, .on, .nav-item, .target):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+html[data-btn="outline"] .icon-btn {
+  border-color: var(--line);
+}
+
+/* ---- Nút Phát/Tạm dừng -------------------------------------------------------------------- */
+html[data-play-btn="square"] .play-btn {
+  border-radius: 14px;
+}
+html[data-play-btn="accent"] .play-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 calc(6px + var(--music-bass, 0) * 14px) color-mix(in srgb, var(--accent) 60%, transparent);
+}
+html[data-play-btn="accent"] .play-btn:hover:not(:disabled) {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+/* ---- Điều hướng thanh bên ------------------------------------------------------------------ */
+html[data-nav="pill"] .nav-item {
+  border-radius: 99px;
+}
+html[data-nav="pill"] .nav-item.active {
+  background: var(--accent);
+  color: #fff;
+}
+html[data-nav="pill"] .nav-item.active .count {
+  background: #fff;
+  color: var(--accent);
+}
+html[data-nav="bar"] .nav-item {
+  border-radius: 0 8px 8px 0;
+}
+html[data-nav="bar"] .nav-item.active {
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--text);
+}
+html[data-nav="bar"][data-sidebar="right"] .nav-item {
+  border-radius: 8px 0 0 8px;
+}
+html[data-nav="bar"][data-sidebar="right"] .nav-item.active {
+  box-shadow: inset -3px 0 0 var(--accent);
+}
+
+/* ---- Thanh công cụ phía trên -------------------------------------------------------------- */
+html[data-toolbar="floating"] .main-toolbar {
+  width: fit-content;
+  min-width: min(100%, 220px);
+  gap: 16px;
+  margin: -8px 0 16px auto; /* sát lề phải, cùng phía với nút ẩn nội dung */
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: rgb(var(--panel-rgb) / 0.7);
+}
+html[data-toolbar="transparent"] .main-toolbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* autohide: chỉ hiện khi rê chuột lên vùng thanh, hoặc khi đang focus bằng bàn phím / mở bảng nền */
+html[data-toolbar="autohide"] .main-toolbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+html[data-toolbar="autohide"] .main-toolbar:is(:hover, :focus-within),
+html[data-toolbar="autohide"] #app.content-hidden .main-toolbar {
+  opacity: 1;
+}
+
+/* ---- Panel: kính mờ / phẳng ---------------------------------------------------------------- */
+html[data-panels="glass"] :is(.sidebar, .player) {
+  background: rgb(var(--panel-rgb) / 0.55);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+html[data-panels="glass"]
+  :is(.bg-panel, .wiring-popover, .preset-card, .preset-settings, .guild, .now-playing-card, .searchbar) {
+  background: rgb(var(--panel-rgb) / 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+html[data-panels="flat"] :is(.sidebar, .player) {
+  background: transparent;
+  border-color: transparent;
+}
+html[data-panels="flat"] .main-toolbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-panels="flat"] :is(.preset-card, .preset-settings, .guild, .now-playing-card) {
+  background: rgb(var(--panel-rgb) / 0.35);
+}

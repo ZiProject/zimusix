@@ -1,0 +1,428 @@
+/* ------------------------------------------------------------------------------------------
+   Preset · MODULES — artwork, info, visualizer, lyrics, background.
+   Bám vào các thuộc tính data-* trên <html> (xem src/presets/runtime.js).
+   ------------------------------------------------------------------------------------------ */
+
+/* =============================================================== ARTWORK ===================== */
+/* Chỉ áp dụng cho ảnh bìa ở thanh phát (.cover-slot) và khu Đang phát (.stage-cover),
+   không đụng tới ảnh nhỏ trong danh sách bài hát. */
+
+.stage-cover .cover {
+  /* kích thước thật do artwork.stageSize; không vượt quá 46% chiều cao cửa sổ */
+  width: min(var(--stage-art, 320px), 46vh) !important;
+  height: min(var(--stage-art, 320px), 46vh) !important;
+  border-radius: calc(var(--radius, 12px) + 4px);
+}
+.stage-cover .cover svg {
+  width: 40%;
+  height: 40%;
+}
+
+html[data-artwork="none"] :is(.cover-slot, .stage-cover) {
+  display: none;
+}
+html[data-artwork="square"] :is(.cover-slot, .stage-cover) .cover {
+  border-radius: 0;
+}
+html[data-artwork="circle"] :is(.cover-slot, .stage-cover) .cover {
+  border-radius: 50%;
+}
+
+/* polaroid: khung trắng, hơi nghiêng */
+html[data-artwork="polaroid"] :is(.cover-slot, .stage-cover) .cover {
+  padding: 6% 6% 18%;
+  border-radius: 3px;
+  background: #f5f3ee;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+}
+html[data-artwork="polaroid"] :is(.cover-slot, .stage-cover) .cover img {
+  border-radius: 2px;
+}
+html[data-artwork="polaroid"] .stage-cover .cover {
+  transform: rotate(-3deg);
+}
+
+/* vinyl: đĩa than, ảnh bìa làm nhãn đĩa */
+html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover {
+  position: relative;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #1a1a1a 0 26%, transparent 26.5%),
+    repeating-radial-gradient(circle, #0a0a0a 0 2px, #171717 2px 3px);
+  box-shadow:
+    0 0 0 2px #050505,
+    0 10px 34px rgb(0 0 0 / 0.55);
+}
+html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover img {
+  position: relative;
+  z-index: 1;
+  width: 42%;
+  height: 42%;
+  border-radius: 50%;
+}
+html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover svg {
+  position: relative;
+  z-index: 1;
+  width: 24%;
+  height: 24%;
+}
+html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover::before {
+  /* lỗ giữa đĩa */
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  width: 4.5%;
+  height: 4.5%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6);
+}
+html[data-artwork="vinyl"] :is(.cover-slot, .stage-cover) .cover::after {
+  /* ánh phản chiếu */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 25deg,
+    transparent 0 18%,
+    rgb(255 255 255 / 0.1) 24%,
+    transparent 30% 68%,
+    rgb(255 255 255 / 0.1) 74%,
+    transparent 80%
+  );
+}
+
+html[data-art-shadow="1"] :is(.cover-slot, .stage-cover) .cover {
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
+}
+
+/* quay khi đang phát (artwork.spin) */
+html[data-art-spin="1"] :is(.cover-slot, .stage-cover) .cover {
+  animation: art-spin var(--spin-speed, 18s) linear infinite;
+  animation-play-state: paused;
+}
+html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
+  animation-play-state: running;
+}
+@keyframes art-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ================================================================== INFO ===================== */
+
+.marquee-inner {
+  display: inline-block;
+}
+.marquee {
+  text-overflow: clip !important;
+}
+.marquee .marquee-inner {
+  animation: marquee var(--marquee-time, 10s) ease-in-out infinite alternate;
+}
+@keyframes marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(var(--marquee-shift, 0));
+  }
+}
+
+/* khu Đang phát */
+.stage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: min(100%, 760px);
+}
+.stage-title {
+  font-size: calc(24px * var(--info-title-scale, 1));
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage-sub {
+  color: var(--muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* stacked: tiêu đề lớn hơn, dòng phụ rõ hơn */
+html[data-info="stacked"] .np-title {
+  font-size: calc(16px * var(--info-title-scale, 1));
+  font-weight: 700;
+}
+html[data-info="stacked"] .stage-title {
+  font-size: calc(32px * var(--info-title-scale, 1));
+}
+html[data-info="stacked"] .stage-sub {
+  font-size: 16px;
+}
+
+/* centered: căn giữa */
+html[data-info="centered"] .np {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+}
+html[data-info="centered"] .np-text {
+  text-align: center;
+}
+html[data-info="centered"] .stage-info {
+  align-items: center;
+  text-align: center;
+}
+html[data-info="centered"] .stage-title {
+  font-size: calc(30px * var(--info-title-scale, 1));
+}
+
+/* huge: chữ rất lớn (poster) */
+html[data-info="huge"] .np-title {
+  font-size: calc(18px * var(--info-title-scale, 1));
+  font-weight: 800;
+}
+html[data-info="huge"] .stage-info {
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+html[data-info="huge"] .stage-title {
+  font-size: calc(clamp(30px, 5.5vw, 60px) * var(--info-title-scale, 1));
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: normal;
+  line-height: 1.05;
+}
+html[data-info="huge"] .stage-sub {
+  font-size: 18px;
+}
+
+/* ============================================================== VISUALIZER =================== */
+
+html[data-viz-player="0"] .viz {
+  display: none;
+}
+.stage-viz {
+  width: min(100%, 720px);
+  height: var(--viz-stage-h, 120px);
+  flex: none;
+}
+.bg-viz {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ================================================================== LYRICS =================== */
+
+html[data-lyrics-time="0"] .lyric-line .line-time {
+  display: none;
+}
+html[data-lyrics-align="center"] .lyric-line {
+  justify-content: center;
+  text-align: center;
+}
+html[data-lyrics-align="right"] .lyric-line {
+  justify-content: flex-end;
+  text-align: right;
+}
+/* căn giữa/phải: mốc thời gian lệch bố cục nên ẩn */
+html:is([data-lyrics-align="center"], [data-lyrics-align="right"])
+  .lyric-line
+  .line-time {
+  display: none;
+}
+
+/* karaoke: dòng hiện tại sáng rõ, các dòng xa mờ và nhòe dần */
+html[data-lyrics-mode="karaoke"] .lyrics-list {
+  gap: 16px;
+}
+html[data-lyrics-mode="karaoke"] .lyric-line {
+  opacity: 0.2;
+  filter: blur(1.4px);
+}
+html[data-lyrics-mode="karaoke"] .lyric-line[data-d="1"] {
+  opacity: 0.5;
+  filter: blur(0.4px);
+}
+html[data-lyrics-mode="karaoke"] .lyric-line[data-d="2"] {
+  opacity: 0.32;
+  filter: blur(0.9px);
+}
+html[data-lyrics-mode="karaoke"] .lyric-line.active {
+  opacity: 1;
+  filter: none;
+  background: none;
+}
+
+/* focus: chỉ dòng hiện tại + vài dòng kế tiếp, đặt giữa khung */
+html[data-lyrics-mode="focus"] .lyrics-list {
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 16px;
+  gap: 18px;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+html[data-lyrics-mode="focus"] .lyric-line {
+  display: none;
+}
+html[data-lyrics-mode="focus"] .lyric-line.active,
+html[data-lyrics-mode="focus"] .lyric-line:not(.past)[data-d="1"],
+html[data-lyrics-mode="focus"] .lyric-line:not(.past)[data-d="2"] {
+  display: flex;
+}
+html[data-lyrics-mode="focus"] .lyric-line:not(.active) {
+  opacity: 0.4;
+}
+html[data-lyrics-mode="focus"] .lyric-line.active {
+  background: none;
+}
+
+/* compact: chữ nhỏ, khít */
+html[data-lyrics-mode="compact"] .lyrics-list {
+  gap: 8px;
+  padding: 16px 8px 60px;
+}
+html[data-lyrics-mode="compact"] .lyric-line {
+  font-size: calc(var(--lyrics-size, 22px) * 0.72);
+  padding: 3px 8px;
+}
+html[data-lyrics-mode="compact"] .lyric-line.active {
+  font-size: calc(var(--lyrics-size, 22px) * 0.72 * var(--lyrics-active-scale, 1.27));
+}
+
+/* lyrics nhúng trong khu Đang phát */
+.stage-lyrics .lyrics-list {
+  flex: 1;
+  padding: 12vh 8px;
+}
+.stage-lyrics .plain-lyrics {
+  flex: 1;
+}
+.stage-lyrics .mascot-state {
+  margin: auto;
+}
+
+/* ============================================================== BACKGROUND =================== */
+/* Lớp #bg-fx nằm giữa ảnh/video nền và lớp phủ tối (#bg-overlay). */
+
+.bg-fx {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.bg-layer[data-effect="gradient"] .bg-fx {
+  opacity: var(--fx-intensity, 0.6);
+  background: linear-gradient(
+    var(--fx-angle, 135deg),
+    var(--fx-1),
+    var(--fx-2) 55%,
+    var(--fx-3)
+  );
+}
+.bg-layer[data-effect="solid"] .bg-fx {
+  opacity: var(--fx-intensity, 0.6);
+  background: var(--fx-1);
+}
+.bg-layer[data-effect="particles"] .bg-fx {
+  opacity: 1;
+}
+
+/* aurora: ba đốm sáng mờ trôi chậm */
+.fx-blob {
+  display: none;
+  position: absolute;
+  width: 62vmax;
+  height: 62vmax;
+  border-radius: 50%;
+  /* quầng sáng bằng radial-gradient thay cho filter: blur() — nhẹ hơn nhiều cho GPU */
+  background: radial-gradient(circle, var(--fx-c, #7c5cff) 0%, transparent 68%);
+  will-change: transform;
+}
+html:not(.is-playing) .fx-blob {
+  animation-play-state: paused;
+}
+.bg-layer[data-effect="aurora"] .bg-fx {
+  opacity: var(--fx-intensity, 0.6);
+}
+.bg-layer[data-effect="aurora"] .fx-blob {
+  display: block;
+}
+.fx-b1 {
+  left: -14vmax;
+  top: -22vmax;
+  --fx-c: var(--fx-1);
+  animation: aurora-1 calc(28s / var(--fx-speed, 1)) ease-in-out infinite alternate;
+}
+.fx-b2 {
+  right: -20vmax;
+  top: 6vmax;
+  --fx-c: var(--fx-2);
+  animation: aurora-2 calc(34s / var(--fx-speed, 1)) ease-in-out infinite alternate;
+}
+.fx-b3 {
+  left: 14vmax;
+  bottom: -34vmax;
+  --fx-c: var(--fx-3);
+  animation: aurora-3 calc(40s / var(--fx-speed, 1)) ease-in-out infinite alternate;
+}
+@keyframes aurora-1 {
+  to {
+    transform: translate(22vmax, 14vmax) scale(1.25);
+  }
+}
+@keyframes aurora-2 {
+  to {
+    transform: translate(-24vmax, 10vmax) scale(0.85);
+  }
+}
+@keyframes aurora-3 {
+  to {
+    transform: translate(18vmax, -16vmax) scale(1.2);
+  }
+}
+/* phản ứng theo nhạc: độ sáng tăng theo năng lượng */
+.bg-layer.fx-react[data-effect="aurora"] .bg-fx {
+  opacity: min(1, calc(var(--fx-intensity, 0.6) * (0.85 + var(--music-energy, 0) * 0.7)));
+  transition: opacity 0.12s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-blob {
+    animation: none !important;
+  }
+  html[data-art-spin="1"] :is(.cover-slot, .stage-cover) .cover {
+    animation: none !important;
+  }
+  .marquee .marquee-inner {
+    animation: none !important;
+  }
+}

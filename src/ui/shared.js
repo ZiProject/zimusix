@@ -1,6 +1,7 @@
 import { SOURCE_LABEL } from "../lib/constants.js";
 import { fmtTime, h } from "../lib/dom.js";
 import { icon } from "../lib/icons.js";
+import { cfg } from "../presets/runtime.js";
 import { app } from "../state.js";
 
 export function trackCover(track, size = 44) {
@@ -52,6 +53,45 @@ export function trackRow(track, { actions }) {
     ),
     h("div", { class: "row-actions" }, actions),
   );
+}
+
+/**
+ * Dòng phụ của thông tin bài hát theo `info.show` của preset (artist · source · duration).
+ * Trả mảng node để nhét vào .np-sub / .stage-sub.
+ */
+export function trackSubParts(track) {
+  const show = cfg().info.show;
+  const parts = [];
+  if (show.includes("source")) parts.push(badge(track.source));
+  if (show.includes("artist") && track.author)
+    parts.push(show.includes("source") ? ` ${track.author}` : track.author);
+  if (show.includes("duration")) {
+    const text = track.isLive ? "LIVE" : track.duration ? fmtTime(track.duration) : "";
+    if (text) parts.push(parts.length ? ` · ${text}` : text);
+  }
+  return parts;
+}
+
+/**
+ * Đặt chữ cho tiêu đề; nếu `enabled` và chữ dài hơn khung thì chạy chữ (marquee).
+ * Chỉ dựng lại khi chữ/chế độ đổi để không làm giật animation mỗi lần render.
+ */
+export function setMarqueeText(el, text, enabled) {
+  if (el.dataset.text === text && el.dataset.marquee === String(enabled)) return;
+  el.dataset.text = text;
+  el.dataset.marquee = String(enabled);
+  el.classList.remove("marquee");
+  el.replaceChildren(h("span", { class: "marquee-inner" }, text));
+  if (!enabled) return;
+  requestAnimationFrame(() => {
+    const inner = el.firstElementChild;
+    if (!inner || !el.isConnected) return;
+    const overflow = inner.scrollWidth - el.clientWidth;
+    if (overflow <= 4) return;
+    el.style.setProperty("--marquee-shift", `-${overflow + 16}px`);
+    el.style.setProperty("--marquee-time", `${Math.max(6, (overflow + 16) / 30)}s`);
+    el.classList.add("marquee");
+  });
 }
 
 export const iconButton = (name, title, onclick, extra = "") =>

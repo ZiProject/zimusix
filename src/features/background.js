@@ -3,9 +3,17 @@ import * as api from "../api.js";
 import { audio } from "./audio.js";
 import { clamp, h } from "../lib/dom.js";
 import { toast } from "../lib/toast.js";
+import { startParticles, stopParticles } from "../presets/bg-fx.js";
+import { cfg } from "../presets/runtime.js";
 import { app } from "../state.js";
 import { renderMain } from "../ui/main-view.js";
 import { currentPosition, renderPlayer } from "../ui/player.js";
+
+/** Preset quyết định có phủ ảnh bìa/video lên nền không (mặc định: chỉ khi hiệu ứng là "media"). */
+function mediaOn() {
+  const { media, effect } = cfg().background;
+  return media === "on" || (media === "auto" && effect === "media");
+}
 
 function saveBgSettings() {
   try {
@@ -95,11 +103,22 @@ function ensureBgLayer() {
       } catch (_) {}
     }
   });
+  // Hiệu ứng nền do preset chọn (aurora / gradient / solid / particles) + canvas visualizer nền.
+  const fx = h(
+    "div",
+    { id: "bg-fx", class: "bg-fx" },
+    h("div", { class: "fx-blob fx-b1" }),
+    h("div", { class: "fx-blob fx-b2" }),
+    h("div", { class: "fx-blob fx-b3" }),
+    h("canvas", { id: "bg-particles", class: "bg-canvas" }),
+  );
   layer = h(
     "div",
     { id: "bg-layer", class: "bg-layer" },
     art,
     video,
+    fx,
+    h("canvas", { id: "bg-viz", class: "bg-canvas bg-viz" }),
     h("div", { id: "bg-overlay", class: "bg-overlay" }),
   );
   document.body.prepend(layer);
@@ -112,9 +131,10 @@ export function updateVideoBg() {
   const bgVideo = document.getElementById("bg-video");
   const bgArt = document.getElementById("bg-art");
   const track = app.state?.currentTrack;
+  const useMedia = mediaOn();
 
   // Ảnh bìa: nền nền tảng, hiện ngay cả khi chưa/không có video
-  if (app.bg.art && track?.thumbnail) {
+  if (useMedia && app.bg.art && track?.thumbnail) {
     if (bgArt.dataset.src !== track.thumbnail) {
       bgArt.classList.remove("loaded");
       bgArt.dataset.src = track.thumbnail;
@@ -125,7 +145,7 @@ export function updateVideoBg() {
     bgArt.classList.remove("on");
   }
 
-  if (!app.videoBg || !track) {
+  if (!useMedia || !app.videoBg || !track) {
     bgVideo.classList.remove("ready");
     layer.classList.remove("has-video");
     bgVideo.pause();
@@ -157,7 +177,7 @@ export function updateVideoBg() {
 async function syncBgVideo(force = false) {
   const video = document.getElementById("bg-video");
   const track = app.state?.currentTrack;
-  if (!video || !track || !app.videoBg) return;
+  if (!video || !track || !app.videoBg || !mediaOn()) return;
   if (video.dataset.currentKey !== track.key || video.dataset.failed) return;
 
   const playing = Boolean(app.state.isPlaying && !app.state.isPaused);
@@ -245,6 +265,33 @@ function bgReactLoop() {
   document.documentElement.style.setProperty("--music-punch", punch.toFixed(3));
 }
 requestAnimationFrame(bgReactLoop);
+
+/** Áp dụng hiệu ứng nền của preset hiện hành (gọi khi đổi preset / tuỳ chỉnh). */
+export function applyBackgroundEffect() {
+  const layer = ensureBgLayer();
+  const bg = cfg().background;
+  layer.dataset.effect = bg.effect;
+  const css = getComputedStyle(document.documentElement);
+  const accent = css.getPropertyValue("--accent").trim() || "#7c5cff";
+  const accent2 = css.getPropertyValue("--accent-2").trim() || "#a78bfa";
+  // màu hiệu ứng: do preset chỉ định, thiếu thì lấy theo accent
+  const fallback = [accent, accent2, "#f0abfc", accent];
+  const palette = [0, 1, 2, 3].map((i) => bg.colors[i] ?? bg.colors[i % Math.max(1, bg.colors.length)] ?? fallback[i]);
+  palette.forEach((color, i) => layer.style.setProperty(`--fx-${i + 1}`, color));
+
+  const canvas = document.getElementById("bg-particles");
+  if (bg.effect === "particles")
+    startParticles(canvas, {
+      count: bg.count,
+      speed: bg.speed,
+      intensity: Math.max(0.15, bg.intensity),
+      react: bg.react,
+      colors: palette,
+    });
+  else stopParticles();
+  layer.classList.toggle("fx-react", bg.react);
+  updateVideoBg();
+}
 
 export function toggleVideoBg() {
   app.videoBg = !app.videoBg;

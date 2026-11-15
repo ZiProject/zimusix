@@ -1,0 +1,128 @@
+/* NEON AFTERLIFE — spectrum refinement */
+:root {
+  --preset-neon-intensity: .9;
+  --preset-scanline-opacity: .09;
+  --na-yellow: var(--accent, #f8f500);
+  --na-pink: var(--accent-2, #ff2bd6);
+  --na-cyan: #00e5ff;
+  --na-violet: #9d4dff;
+}
+
+/* Deep cyberpunk atmosphere, less visual noise behind the spectrum. */
+html[data-preset="neon-afterlife"] {
+  background-color: #070810;
+  background-image:
+    radial-gradient(ellipse at 50% 76%, rgba(255,43,214,.12), transparent 48%),
+    radial-gradient(ellipse at 72% 18%, rgba(0,229,255,.10), transparent 42%),
+    linear-gradient(135deg, #070810 0%, #100d1c 54%, #080a13 100%);
+}
+html[data-preset="neon-afterlife"] body { position: relative; isolation: isolate; }
+html[data-preset="neon-afterlife"] body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  opacity: var(--preset-scanline-opacity);
+  background: repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0,0,0,.7) 4px);
+  mix-blend-mode: multiply;
+}
+html[data-preset="neon-afterlife"] body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 998; pointer-events: none;
+  background: linear-gradient(115deg, transparent 0 47%, rgba(0,229,255,.025) 50%, transparent 53%);
+}
+
+/* Cleaner, luminous spectrum rendering.
+   The renderer still owns the actual bar geometry and audio data. */
+html[data-preset="neon-afterlife"] [data-viz] {
+  filter:
+    drop-shadow(0 0 3px rgba(255,43,214,.48))
+    drop-shadow(0 0 10px rgba(0,229,255,.22));
+}
+html[data-preset="neon-afterlife"] [data-viz] canvas {
+  image-rendering: auto;
+  filter: saturate(1.22) contrast(1.06);
+}
+
+/* Stage visualizer gets breathing room and a soft floor reflection. */
+html[data-preset="neon-afterlife"] [data-shell="stage"] [data-viz] {
+  position: relative;
+}
+html[data-preset="neon-afterlife"] [data-shell="stage"] [data-viz]::after {
+  content: "";
+  position: absolute;
+  left: 5%; right: 5%; bottom: -7px; height: 18px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,43,214,.16), rgba(0,229,255,.18), transparent);
+  filter: blur(13px);
+  opacity: .75;
+}
+
+/* Floating player: compact spectrum strip with a crisp neon edge. */
+html[data-preset="neon-afterlife"] [data-player-pos="floating"] {
+  border: 1px solid rgba(0,229,255,.34);
+  background: linear-gradient(110deg, rgba(13,15,28,.94), rgba(28,13,35,.9));
+  box-shadow: 0 0 0 1px rgba(255,43,214,.08),
+              0 12px 48px rgba(0,0,0,.58),
+              0 0 26px rgba(0,229,255,.10);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+html[data-preset="neon-afterlife"] [data-player-pos="floating"] [data-viz] {
+  filter: drop-shadow(0 0 4px rgba(255,43,214,.42))
+          drop-shadow(0 0 8px rgba(0,229,255,.24));
+}
+
+/* Album art and typography remain the visual focal point. */
+html[data-preset="neon-afterlife"] .stage-cover {
+  border: 1px solid rgba(248,245,0,.68);
+  box-shadow: 8px 8px 0 rgba(255,43,214,.14),
+              -4px -4px 0 rgba(0,229,255,.12),
+              0 0 30px rgba(255,43,214,.20);
+}
+html[data-preset="neon-afterlife"] .stage-title {
+  letter-spacing: -.045em;
+  line-height: .96;
+  text-transform: uppercase;
+  text-shadow: 2px 0 rgba(255,43,214,.38), -2px 0 rgba(0,229,255,.30);
+}
+html[data-preset="neon-afterlife"] .lyric-line {
+  transition: opacity .25s ease, transform .25s ease, text-shadow .25s ease;
+  letter-spacing: -.02em;
+}
+html[data-preset="neon-afterlife"] .lyric-line.is-active,
+html[data-preset="neon-afterlife"] .lyric-line[aria-current="true"] {
+  color: var(--na-yellow);
+  text-shadow: 0 0 8px rgba(248,245,0,.72), 0 0 24px rgba(248,245,0,.28);
+}
+
+/* Industrial controls, restrained glow. */
+html[data-preset="neon-afterlife"] button,
+html[data-preset="neon-afterlife"] [role="button"] {
+  border-radius: 3px;
+  letter-spacing: .035em;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+html[data-preset="neon-afterlife"] button:hover,
+html[data-preset="neon-afterlife"] [role="button"]:hover {
+  border-color: var(--na-cyan);
+  box-shadow: 0 0 0 1px rgba(0,229,255,.16), 0 0 14px rgba(0,229,255,.12);
+}
+html[data-preset="neon-afterlife"] button:active,
+html[data-preset="neon-afterlife"] [role="button"]:active {
+  transform: translateY(1px) scale(.985);
+}
+html[data-preset="neon-afterlife"] [data-nav="bar"] [aria-current="page"],
+html[data-preset="neon-afterlife"] [data-nav="bar"] [data-active="true"] {
+  color: var(--na-yellow);
+  text-shadow: 0 0 10px rgba(248,245,0,.55);
+  box-shadow: inset 3px 0 0 var(--na-yellow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-preset="neon-afterlife"] *,
+  html[data-preset="neon-afterlife"] *::before,
+  html[data-preset="neon-afterlife"] *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

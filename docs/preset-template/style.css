@@ -1,0 +1,8 @@
+/* CSS tuỳ chỉnh thêm (không bắt buộc). Chỉ có hiệu lực khi preset đang dùng.
+   - Dùng biến --preset-* khai báo trong "settings" (bind: "css:--preset-…").
+   - url() chỉ nhận đường dẫn tương đối trong thư mục preset, ví dụ assets/noise.png.
+   - @import và URL http(s) bị chặn. */
+.preset-card,
+.row:hover {
+  box-shadow: 0 0 var(--preset-card-glow, 12px) color-mix(in srgb, var(--accent) 40%, transparent);
+}

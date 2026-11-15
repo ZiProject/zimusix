@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "id": "lyrics-focus",
+  "name": "Lyrics Focus",
+  "version": "1.1.2",
+  "author": "Zimusix",
+  "description": "Không gian tập trung vào từng câu hát với typography lớn, karaoke mượt và nền màu dịu mắt.",
+  "tags": [
+    "lyrics",
+    "focus",
+    "minimal"
+  ],
+  "preview": "preview.png",
+  "theme": {
+    "colorScheme": "dark",
+    "fontFamily": "Inter, ui-sans-serif, sans-serif",
+    "colors": {
+      "accent": "#C4F06A",
+      "accent2": "#F3C969",
+      "bg": "#10150F",
+      "panel": "#1A2118",
+      "panel2": "#242D20",
+      "line": "#35402E",
+      "text": "#F4F6EB",
+      "muted": "#A1AD91"
+    }
+  },
+  "layout": {
+    "shell": "focus",
+    "sidebar": "rail",
+    "player": "floating",
+    "density": "comfortable",
+    "defaultView": "nowplaying",
+    "contentWidth": 1080,
+    "radius": 22
+  },
+  "controls": {
+    "buttons": "ghost",
+    "playButton": "accent",
+    "nav": "bar",
+    "toolbar": "transparent",
+    "panels": "glass",
+    "iconSize": 20
+  },
+  "artwork": {
+    "style": "rounded",
+    "size": 54,
+    "stageSize": 180,
+    "react": false,
+    "reactAmount": 3,
+    "glow": false,
+    "shadow": true
+  },
+  "info": {
+    "style": "centered",
+    "show": [
+      "title",
+      "artist"
+    ],
+    "marquee": true,
+    "titleScale": 1.18
+  },
+  "background": {
+    "effect": "gradient",
+    "media": "off",
+    "colors": [
+      "#26351D",
+      "#151D17",
+      "#302A1A"
+    ],
+    "speed": 0.7,
+    "intensity": 0.58,
+    "angle": 145,
+    "react": true
+  },
+  "visualizer": {
+    "type": "wave",
+    "placement": [
+      "stage"
+    ],
+    "bars": 36,
+    "colorMode": "accent",
+    "thickness": 2,
+    "smoothing": 0.55,
+    "opacity": 0.72,
+    "height": 90
+  },
+  "lyrics": {
+    "mode": "karaoke",
+    "placement": "stage",
+    "align": "center",
+    "showTime": true,
+    "size": 32,
+    "activeScale": 1.32,
+    "glow": true
+  },
+  "settings": [
+    {
+      "key": "lyricsSize",
+      "label": "Cỡ chữ lời bài hát",
+      "type": "range",
+      "bind": "lyrics.size",
+      "min": 18,
+      "max": 48,
+      "unit": "px"
+    },
+    {
+      "key": "mode",
+      "label": "Kiểu hiển thị lời",
+      "type": "select",
+      "bind": "lyrics.mode",
+      "options": [
+        {
+          "value": "karaoke",
+          "label": "Karaoke"
+        },
+        {
+          "value": "focus",
+          "label": "Tập trung"
+        },
+        {
+          "value": "list",
+          "label": "Toàn bài"
+        },
+        {
+          "value": "compact",
+          "label": "Thu gọn"
+        }
+      ]
+    },
+    {
+      "key": "glow",
+      "label": "Phát sáng câu hiện tại",
+      "type": "toggle",
+      "bind": "lyrics.glow"
+    },
+    {
+      "key": "accent",
+      "label": "Màu nhấn",
+      "type": "color",
+      "bind": "theme.colors.accent"
+    }
+  ]
+}

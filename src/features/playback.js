@@ -29,7 +29,7 @@ export function setState(state) {
   }
   if (
     ["queue", "related"].includes(app.view) ||
-    (app.view === "lyrics" && trackChanged)
+    (["lyrics", "nowplaying"].includes(app.view) && trackChanged)
   ) {
     renderMain();
   }
@@ -61,7 +61,7 @@ export async function setTarget(target) {
   renderPlayer();
   updateVideoBg();
   loadLyrics();
-  if (["queue", "related", "lyrics"].includes(app.view))
+  if (["queue", "related", "lyrics", "nowplaying"].includes(app.view))
     renderMain();
   await syncAudio();
 }

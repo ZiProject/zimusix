@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "classic",
+  "name": "Classic",
+  "version": "1.0.0",
+  "author": "Zimusix",
+  "description": "Giao diện gốc của Zimusix: thanh bên trái, thanh phát dưới, ảnh bìa nền mờ.",
+  "tags": ["mặc định", "tối"],
+  "preview": "preview.png"
+}

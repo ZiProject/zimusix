@@ -2,18 +2,20 @@ import "./styles/index.css";
 import "./events.js";
 import * as api from "./api.js";
 import { syncAudio } from "./features/audio.js";
-import { updateVideoBg } from "./features/background.js";
+import { applyBackgroundEffect } from "./features/background.js";
 import { loadDiscord } from "./features/discord.js";
 import { setupDragDrop } from "./features/files.js";
+import { loadLyrics, lyricsOnScreen } from "./features/lyrics.js";
 import { initMediaSession } from "./features/media-session.js";
 import { watch } from "./features/playback.js";
 import { h } from "./lib/dom.js";
 import { setupTray } from "./features/window.js";
 import { toast } from "./lib/toast.js";
+import { initPresets, onPresetChange } from "./presets/runtime.js";
 import { app, refs, root } from "./state.js";
 import { renderMain } from "./ui/main-view.js";
 import { mascotImg } from "./ui/mascot.js";
-import { buildPlayer } from "./ui/player.js";
+import { buildPlayer, renderPlayer } from "./ui/player.js";
 import { renderSidebar } from "./ui/sidebar.js";
 import { drawViz } from "./ui/visualizer.js";
 
@@ -75,6 +77,14 @@ async function boot() {
     return;
   }
 
+  // Preset (bố cục, ảnh bìa, nền, visualizer, lyrics…) phải sẵn sàng trước khi dựng UI.
+  // Lỗi preset không được chặn app: runtime tự rơi về cấu hình mặc định (classic).
+  try {
+    await initPresets();
+  } catch (error) {
+    console.warn("[presets] khởi tạo thất bại, dùng mặc định:", error);
+  }
+
   refs.sidebar = h("aside", { class: "sidebar" });
   refs.main = h("main", { class: "main" });
   refs.player = h("footer", { class: "player" });
@@ -87,7 +97,16 @@ async function boot() {
   buildPlayer();
   renderSidebar();
   renderMain();
-  updateVideoBg();
+  applyBackgroundEffect();
+  onPresetChange((_config, { reason }) => {
+    root.classList.toggle("sidebar-hidden", app.sidebarHidden);
+    applyBackgroundEffect();
+    renderPlayer();
+    renderSidebar();
+    // kéo thanh tuỳ chỉnh thì giữ nguyên trang (không dựng lại giữa lúc đang kéo)
+    if (reason !== "setting") renderMain();
+    if (lyricsOnScreen()) loadLyrics();
+  });
   watch();
   drawViz();
   syncAudio();

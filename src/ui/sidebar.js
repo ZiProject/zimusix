@@ -7,11 +7,13 @@ import { app, refs } from "../state.js";
 
 export function renderSidebar() {
   const nav = [
+    ["nowplaying", "disc", "Đang phát"],
     ["search", "search", "Tìm kiếm"],
     ["library", "folder", "File local"],
     ["queue", "queue", "Hàng đợi"],
     ["related", "sparkles", "Gợi ý"],
     ["lyrics", "mic", "Lời bài hát"],
+    ["presets", "palette", "Giao diện"],
     ["discord", "discord", "Discord"],
   ];
   const targets = [
@@ -39,10 +41,11 @@ export function renderSidebar() {
           "button",
           {
             class: `nav-item ${app.view === view ? "active" : ""}`,
+            title: label,
             onclick: () => switchView(view),
           },
           icon(ic, 18),
-          label,
+          h("span", { class: "nav-label" }, label),
           view === "queue" && app.state?.queue?.length
             ? h("span", { class: "count" }, app.state.queue.length)
             : null,
