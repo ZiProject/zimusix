@@ -30,28 +30,47 @@ export function badge(source) {
   );
 }
 
-export function trackRow(track, { actions }) {
-  return h(
+/**
+ * Track card (grid item): square cover, duration/source overlay, 2-line title, artist.
+ *   primary  — main action when clicking the cover (usually "play")
+ *   actions  — extra icon buttons shown over the cover on hover/focus
+ *   index    — optional position badge (queue)
+ */
+export function trackCard(track, { primary, actions = [], index } = {}) {
+  const meta = track.isLive ? "LIVE" : track.duration ? fmtTime(track.duration) : "";
+  const art = h(
     "div",
-    { class: "row" },
-    trackCover(track),
-    h(
-      "div",
-      { class: "row-main" },
-      h("div", { class: "row-title", title: track.title }, track.title),
-      h(
-        "div",
-        { class: "row-sub" },
-        badge(track.source),
-        track.author ? ` ${track.author}` : "",
-        track.isLive
-          ? " · LIVE"
-          : track.duration
-            ? ` · ${fmtTime(track.duration)}`
-            : "",
-      ),
-    ),
-    h("div", { class: "row-actions" }, actions),
+    {
+      class: "track-art",
+      role: primary ? "button" : null,
+      tabindex: primary ? "0" : null,
+      "aria-label": primary ? `Play ${track.title}` : null,
+      onclick: primary ? () => primary() : null,
+      onkeydown: primary
+        ? (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              primary();
+            }
+          }
+        : null,
+    },
+    track.thumbnail
+      ? h("img", { src: track.thumbnail, alt: "", loading: "lazy", draggable: false })
+      : icon("music", 36),
+    index != null ? h("span", { class: "track-index" }, index) : null,
+    primary ? h("span", { class: "track-play" }, icon("play", 22)) : null,
+    actions.length
+      ? h("div", { class: "track-actions", onclick: (event) => event.stopPropagation() }, actions)
+      : null,
+    h("div", { class: "track-meta" }, badge(track.source), h("span", { class: "track-time" }, meta)),
+  );
+  return h(
+    "article",
+    { class: "track-card" },
+    art,
+    h("div", { class: "track-title", title: track.title }, track.title),
+    track.author ? h("div", { class: "track-author", title: track.author }, track.author) : null,
   );
 }
 

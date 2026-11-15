@@ -16,7 +16,7 @@ fs.rmSync(nodeOut, { recursive: true, force: true });
 fs.mkdirSync(sidecarOut, { recursive: true });
 fs.mkdirSync(nodeOut, { recursive: true });
 
-for (const file of ["server.js", "package.json", "package-lock.json"]) {
+for (const file of ["server.js", "presets.js", "package.json", "package-lock.json"]) {
 	fs.copyFileSync(path.join(root, "sidecar", file), path.join(sidecarOut, file));
 }
 

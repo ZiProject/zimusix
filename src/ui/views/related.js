@@ -4,7 +4,7 @@ import { h } from "../../lib/dom.js";
 import { icon } from "../../lib/icons.js";
 import { app } from "../../state.js";
 import { mascotState } from "../mascot.js";
-import { iconButton, trackRow } from "../shared.js";
+import { iconButton, trackCard } from "../shared.js";
 
 export function viewRelated() {
   const state = app.state;
@@ -50,22 +50,13 @@ export function viewRelated() {
     related.length
       ? h(
           "div",
-          { class: "list" },
+          { class: "track-grid" },
           related.map((track) =>
-            trackRow(track, {
+            trackCard(track, {
+              primary: () => playTrack(track, "now"),
               actions: [
-                iconButton(
-                  "play",
-                  "Play now",
-                  () => playTrack(track, "now"),
-                  "accent",
-                ),
-                iconButton("next", "Play next", () =>
-                  playTrack(track, "next"),
-                ),
-                iconButton("plus", "Add to queue", () =>
-                  playTrack(track, "end"),
-                ),
+                iconButton("next", "Play next", () => playTrack(track, "next")),
+                iconButton("plus", "Add to queue", () => playTrack(track, "end")),
               ],
             }),
           ),

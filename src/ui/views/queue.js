@@ -4,7 +4,7 @@ import { h } from "../../lib/dom.js";
 import { icon } from "../../lib/icons.js";
 import { app } from "../../state.js";
 import { mascotState } from "../mascot.js";
-import { iconButton, trackRow } from "../shared.js";
+import { iconButton, trackCard } from "../shared.js";
 
 export function viewQueue() {
   const state = app.state;
@@ -36,35 +36,31 @@ export function viewQueue() {
           "div",
           { class: "now-playing-card" },
           h("small", null, "Now Playing"),
-          trackRow(state.currentTrack, { actions: [] }),
+          h("div", { class: "track-grid" }, trackCard(state.currentTrack)),
         )
       : null,
     queue.length
       ? h(
           "div",
-          { class: "list" },
+          { class: "track-grid" },
           queue.map((track, index) =>
-            trackRow(track, {
+            trackCard(track, {
+              index: index + 1,
+              primary: () => control("skip", { index }),
               actions: [
                 iconButton(
-                  "play",
-                  "Play this track",
-                  () => control("skip", { index }),
-                  "accent",
-                ),
-                iconButton(
                   "up",
-                  "Move up",
-                  () =>
-                    index > 0 &&
-                    control("move", { from: index, to: index - 1 }),
+                  "Move earlier",
+                  () => index > 0 && control("move", { from: index, to: index - 1 }),
+                  "rot-l",
                 ),
                 iconButton(
                   "down",
-                  "Move down",
+                  "Move later",
                   () =>
                     index < queue.length - 1 &&
                     control("move", { from: index, to: index + 1 }),
+                  "rot-l",
                 ),
                 iconButton("x", "Remove", () => control("remove", { index })),
               ],
@@ -91,19 +87,12 @@ export function viewQueue() {
           ),
           h(
             "div",
-            { class: "list" },
-            state.related.slice(0, 5).map((track) =>
-              trackRow(track, {
+            { class: "track-grid" },
+            state.related.slice(0, 6).map((track) =>
+              trackCard(track, {
+                primary: () => playTrack(track, "now"),
                 actions: [
-                  iconButton(
-                    "play",
-                    "Play now",
-                    () => playTrack(track, "now"),
-                    "accent",
-                  ),
-                  iconButton("plus", "Add to queue", () =>
-                    playTrack(track, "end"),
-                  ),
+                  iconButton("plus", "Add to queue", () => playTrack(track, "end")),
                 ],
               }),
             ),

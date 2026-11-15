@@ -150,11 +150,12 @@ html[data-density="compact"] .sidebar {
 html[data-density="compact"] .nav-item {
   padding: 6px 10px;
 }
-html[data-density="compact"] .row {
-  padding: 4px 8px;
+html[data-density="compact"] .track-grid {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px 10px;
 }
-html[data-density="compact"] .list {
-  gap: 1px;
+html[data-density="compact"] .track-title {
+  font-size: 12.5px;
 }
 html[data-density="compact"] .view h2 {
   font-size: 19px;

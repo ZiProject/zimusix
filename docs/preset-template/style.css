@@ -3,6 +3,6 @@
    - url() only accepts relative paths within the preset folder, e.g. assets/noise.png.
    - @import and external http(s) URLs are blocked. */
 .preset-card,
-.row:hover {
+.track-card:hover .track-art {
   box-shadow: 0 0 var(--preset-card-glow, 12px) color-mix(in srgb, var(--accent) 40%, transparent);
 }
