@@ -117,23 +117,57 @@ html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
 
 /* ================================================================== INFO ===================== */
 
-.marquee-inner {
-  display: inline-block;
+/* Chữ chạy: hai bản chữ nối nhau trong .marquee-track, trượt đúng một bản thì lặp lại (liền mạch).
+   Hai đầu khung mờ dần; phần mờ bên trái chỉ hiện lúc chữ đang trượt để đầu chữ không bị mờ khi đứng yên. */
+@property --mq-left {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  vertical-align: top;
+}
+.marquee-item {
+  flex: none;
 }
 .marquee {
+  --mq-left: 0px;
+  text-align: left !important;
   text-overflow: clip !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--mq-left), #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 var(--mq-left), #000 calc(100% - 28px), transparent);
+  animation: marquee-fade var(--marquee-time, 10s) linear infinite;
 }
-.marquee .marquee-inner {
-  animation: marquee var(--marquee-time, 10s) ease-in-out infinite alternate;
+.marquee .marquee-item {
+  padding-right: 56px;
 }
-@keyframes marquee {
+.marquee .marquee-track {
+  animation: marquee-loop var(--marquee-time, 10s) linear infinite;
+  will-change: transform;
+}
+.marquee:hover,
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee-loop {
   0%,
-  15% {
+  14% {
     transform: translateX(0);
   }
-  85%,
   100% {
     transform: translateX(var(--marquee-shift, 0));
+  }
+}
+@keyframes marquee-fade {
+  0%,
+  14% {
+    --mq-left: 0px;
+  }
+  18%,
+  100% {
+    --mq-left: 22px;
   }
 }
 
@@ -143,12 +177,20 @@ html[data-art-spin="1"].is-playing :is(.cover-slot, .stage-cover) .cover {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  width: 100%;
   max-width: min(100%, 760px);
+}
+/* width: 100% là điểm mấu chốt: trong cột flex căn giữa, phần tử không có width sẽ nở theo độ dài chữ,
+   nên chữ không bao giờ "tràn khung" và không chạy chữ được. */
+.stage-title,
+.stage-sub {
+  width: 100%;
+  min-width: 0;
 }
 .stage-title {
   font-size: calc(24px * var(--info-title-scale, 1));
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -174,13 +216,17 @@ html[data-info="stacked"] .stage-sub {
 }
 
 /* centered: căn giữa */
+/* Thanh phát luôn xếp ảnh | chữ theo hàng (xếp cột làm ảnh + 2 dòng chữ cao hơn thanh phát và đè lên nút);
+   "căn giữa" nghĩa là chữ nằm giữa phần còn lại. */
 html[data-info="centered"] .np {
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-  gap: 4px;
+  justify-content: flex-start;
 }
 html[data-info="centered"] .np-text {
+  flex: 1 1 0;
+  text-align: center;
+}
+html[data-info="centered"] .np-sub,
+html[data-info="centered"] .stage-sub {
   text-align: center;
 }
 html[data-info="centered"] .stage-info {
@@ -201,15 +247,31 @@ html[data-info="huge"] .stage-info {
   text-align: center;
   gap: 10px;
 }
+html[data-info="huge"] .stage-info {
+  max-width: min(100%, 1100px);
+}
 html[data-info="huge"] .stage-title {
   font-size: calc(clamp(30px, 5.5vw, 60px) * var(--info-title-scale, 1));
   font-weight: 900;
   letter-spacing: -0.02em;
+  line-height: 1.12;
+  /* tắt chạy chữ: cho xuống dòng, tối đa 2 dòng */
   white-space: normal;
-  line-height: 1.05;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-wrap: balance;
+}
+/* bật chạy chữ: một dòng và chạy khi dài hơn khung */
+html[data-info="huge"][data-info-marquee="1"] .stage-title {
+  display: block;
+  white-space: nowrap;
+  text-wrap: nowrap;
 }
 html[data-info="huge"] .stage-sub {
   font-size: 18px;
+  text-align: center;
 }
 
 /* ============================================================== VISUALIZER =================== */
@@ -221,12 +283,25 @@ html[data-viz-player="0"] .viz {
   width: min(100%, 720px);
   height: var(--viz-stage-h, 120px);
   flex: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
 }
 .bg-viz {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  /* visualizer làm nền: mờ dần để không át lyrics/chữ phía trên */
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(0deg, #000, transparent 85%);
+  mask-image: linear-gradient(0deg, #000, transparent 85%);
+}
+html[data-viz="mirror"] .bg-viz,
+html[data-viz="circle"] .bg-viz,
+html[data-viz="dots"] .bg-viz {
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
 }
 
 /* ================================================================== LYRICS =================== */
@@ -422,7 +497,45 @@ html:not(.is-playing) .fx-blob {
   html[data-art-spin="1"] :is(.cover-slot, .stage-cover) .cover {
     animation: none !important;
   }
-  .marquee .marquee-inner {
+  .marquee,
+  .marquee .marquee-track {
     animation: none !important;
   }
+  .marquee {
+    --mq-left: 0px;
+  }
+}
+
+/* ============================================ VÒNG VISUALIZER ÔM ẢNH BÌA (circle + stage) ====== */
+/* --cover-d: đường kính ảnh; vòng lớn gấp ~1,6 lần nên chừa lề quanh ảnh để vòng không đè lên chữ. */
+.stage-main.has-ring {
+  --cover-d: min(var(--stage-art, 320px), 33vh);
+  gap: 0;
+}
+.has-ring .stage-cover {
+  position: relative;
+  margin: calc(var(--cover-d) * 0.3) calc(var(--cover-d) * 0.3) calc(var(--cover-d) * 0.3);
+}
+.has-ring .stage-cover .cover {
+  position: relative;
+  z-index: 1;
+  width: var(--cover-d) !important;
+  height: var(--cover-d) !important;
+}
+.stage-viz-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: calc(var(--cover-d) * 1.61);
+  height: calc(var(--cover-d) * 1.61);
+  max-width: none;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+/* tiêu đề dời xuống sát lyrics */
+.has-ring .stage-info {
+  margin-top: clamp(0px, 6vh, 64px);
 }

@@ -24,9 +24,19 @@ export function viewNowPlaying() {
   const { artwork, info, visualizer, lyrics } = cfg();
   const main = h("div", { class: "stage-main" });
 
+  const wantsViz = visualizer.type !== "none" && visualizer.placement.includes("stage");
+  // Visualizer dạng vòng thì ôm quanh ảnh bìa (ảnh nằm trong vòng) thay vì nằm riêng bên dưới.
+  const ring = wantsViz && visualizer.type === "circle" && artwork.style !== "none";
+  if (ring) main.classList.add("has-ring");
+
   if (artwork.style !== "none")
     main.append(
-      h("div", { class: "stage-cover" }, trackCover(track, artwork.stageSize)),
+      h(
+        "div",
+        { class: "stage-cover" },
+        ring ? h("canvas", { class: "stage-viz stage-viz-ring" }) : null,
+        trackCover(track, artwork.stageSize),
+      ),
     );
 
   const title = h("div", { class: "stage-title" });
@@ -36,8 +46,7 @@ export function viewNowPlaying() {
     h("div", { class: "stage-info" }, title, h("div", { class: "stage-sub" }, ...trackSubParts(track))),
   );
 
-  if (visualizer.type !== "none" && visualizer.placement.includes("stage"))
-    main.append(h("canvas", { class: "stage-viz" }));
+  if (wantsViz && !ring) main.append(h("canvas", { class: "stage-viz" }));
 
   const section = h("section", { class: "view np-stage" }, main);
   if (lyrics.placement === "stage")

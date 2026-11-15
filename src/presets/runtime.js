@@ -115,6 +115,7 @@ function applyAttributes(config) {
   d.artSpin = artwork.spin ? "1" : "0";
   d.artShadow = artwork.shadow ? "1" : "0";
   d.info = info.style;
+  d.infoMarquee = info.marquee ? "1" : "0";
   d.bgEffect = background.effect;
   d.viz = visualizer.type;
   d.vizPlayer = visualizer.placement.includes("player") && visualizer.type !== "none" ? "1" : "0";

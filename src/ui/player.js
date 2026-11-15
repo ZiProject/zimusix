@@ -15,6 +15,13 @@ import { drawWires, finishWireDrag, moveWireDrag, renderWiringPanel } from "./wi
 
 export let dragging = false;
 
+/** Tô phần đã chạy của thanh trượt (CSS dùng biến --fill). */
+function paintRange(input) {
+  const max = Number(input.max) || 1;
+  const pct = Math.min(100, Math.max(0, (Number(input.value) / max) * 100));
+  input.style.setProperty("--fill", `${pct}%`);
+}
+
 export function buildPlayer() {
   document.addEventListener("pointermove", moveWireDrag);
   document.addEventListener("pointerup", finishWireDrag);
@@ -100,6 +107,7 @@ export function buildPlayer() {
     class: "seek",
     oninput: () => {
       dragging = true;
+      paintRange(refs.seek);
       refs.cur.textContent = fmtTime(
         (refs.seek.value / 1000) * (app.state?.duration ?? 0),
       );
@@ -120,8 +128,12 @@ export function buildPlayer() {
     max: 100,
     value: 80,
     class: "volume",
-    oninput: (e) => control("volume", { volume: Number(e.target.value) }),
+    oninput: (e) => {
+      paintRange(refs.volume);
+      control("volume", { volume: Number(e.target.value) });
+    },
   });
+  paintRange(refs.volume);
   refs.viz = h("canvas", { class: "viz", width: 160, height: 44 });
 
   refs.player.replaceChildren(
@@ -255,6 +267,7 @@ export function renderPlayer() {
   if (app.wiringOpen) requestAnimationFrame(drawWires);
   if (s && document.activeElement !== refs.volume)
     refs.volume.value = Math.min(100, s.volume ?? 80);
+  paintRange(refs.volume);
   refs.seek.disabled = !track || track.isLive || !s.duration;
   refs.player.classList.toggle("pinned", app.wiringOpen);
   updateProgress();
@@ -276,6 +289,7 @@ function updateProgress() {
   refs.cur.textContent = s.currentTrack.isLive ? "LIVE" : fmtTime(pos);
   refs.dur.textContent = s.currentTrack.isLive ? "" : fmtTime(s.duration);
   refs.seek.value = s.duration ? Math.round((pos / s.duration) * 1000) : 0;
+  paintRange(refs.seek);
   updateLyricsSync();
 }
 setInterval(updateProgress, 250);

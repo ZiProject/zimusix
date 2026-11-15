@@ -72,27 +72,7 @@ export function trackSubParts(track) {
   return parts;
 }
 
-/**
- * Đặt chữ cho tiêu đề; nếu `enabled` và chữ dài hơn khung thì chạy chữ (marquee).
- * Chỉ dựng lại khi chữ/chế độ đổi để không làm giật animation mỗi lần render.
- */
-export function setMarqueeText(el, text, enabled) {
-  if (el.dataset.text === text && el.dataset.marquee === String(enabled)) return;
-  el.dataset.text = text;
-  el.dataset.marquee = String(enabled);
-  el.classList.remove("marquee");
-  el.replaceChildren(h("span", { class: "marquee-inner" }, text));
-  if (!enabled) return;
-  requestAnimationFrame(() => {
-    const inner = el.firstElementChild;
-    if (!inner || !el.isConnected) return;
-    const overflow = inner.scrollWidth - el.clientWidth;
-    if (overflow <= 4) return;
-    el.style.setProperty("--marquee-shift", `-${overflow + 16}px`);
-    el.style.setProperty("--marquee-time", `${Math.max(6, (overflow + 16) / 30)}s`);
-    el.classList.add("marquee");
-  });
-}
+export { setMarqueeText } from "../lib/marquee.js";
 
 export const iconButton = (name, title, onclick, extra = "") =>
   h(

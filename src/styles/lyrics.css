@@ -76,11 +76,13 @@
     transform 0.3s,
     font-size 0.3s;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 14px;
   display: flex;
   align-items: baseline;
   gap: 12px;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 
 .lyric-line:hover {
@@ -105,7 +107,8 @@
   transform: scale(1.02);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--accent) 15%, transparent),
+    color-mix(in srgb, var(--accent) 18%, transparent),
+    color-mix(in srgb, var(--accent) 4%, transparent) 70%,
     transparent
   );
 }

@@ -90,14 +90,16 @@
 }
 .badge {
   display: inline-block;
+  flex: none;
   font-size: 10px;
   font-weight: 700;
+  line-height: 16px;
   text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: 5px;
-  background: var(--panel-2);
+  padding: 0 7px;
+  border-radius: 99px;
+  background: color-mix(in srgb, currentColor 14%, var(--panel-2));
   color: var(--muted);
-  margin-right: 4px;
+  margin-right: 6px;
 }
 .badge.youtube {
   color: #ff6b6b;
@@ -139,10 +141,14 @@
   border-color: transparent;
   color: var(--muted);
   position: relative;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    transform 0.08s;
 }
 .icon-btn:hover:not(:disabled) {
   color: var(--text);
-  background: var(--panel-2);
+  background: color-mix(in srgb, var(--text) 9%, transparent);
   border-color: transparent;
 }
 .icon-btn.accent {

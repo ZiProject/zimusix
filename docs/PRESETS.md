@@ -130,7 +130,7 @@ Cách hiển thị thông tin bài hát.
 | --- | --- | --- | --- |
 | `style` | `inline` · `stacked` · `centered` · `huge` | `inline` | inline: gọn \| stacked: tiêu đề lớn \| centered: căn giữa \| huge: chữ rất lớn |
 | `show` | mảng ⊂ {`title`, `artist`, `source`, `duration`} | `["title","artist","source"]` |  |
-| `marquee` | `true` / `false` | `true` | Tiêu đề dài tự chạy chữ |
+| `marquee` | `true` / `false` | `true` | Tiêu đề dài hơn khung thì chạy chữ vòng liền mạch (rê chuột để dừng). Tắt thì cắt bằng "…" (kiểu `huge` thì xuống dòng, tối đa 2 dòng). CSS preset có thể bám vào `html[data-info-marquee]` |
 | `titleScale` | số 0.7–2 | `1` | Hệ số phóng chữ tiêu đề |
 
 ### `background`

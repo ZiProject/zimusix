@@ -5,24 +5,45 @@
 
 export const VIZ_TYPES = ["bars", "mirror", "wave", "circle", "dots"];
 
-function bars(ctx, bands, w, h, { thickness }) {
-  const n = bands.length;
-  const gap = Math.min(thickness, w / n / 2);
-  const bw = (w - gap * (n - 1)) / n;
-  for (let i = 0; i < n; i++) {
-    const bh = Math.max(2, bands[i] * h);
-    ctx.fillRect(i * (bw + gap), h - bh, bw, bh);
-  }
+/** Một cột bo tròn; roundRect có sẵn trên WebView2/Chromium, thiếu thì rơi về fillRect. */
+function pill(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
+  else ctx.rect(x, y, w, h);
 }
 
-function mirror(ctx, bands, w, h, { thickness }) {
+/** Canvas lớn (khu Đang phát, nền) thì thêm quầng sáng; canvas nhỏ trên thanh phát giữ nguyên cho nhẹ. */
+function glow(ctx, w, style) {
+  if (w < 240 || style.glow === false) return;
+  ctx.shadowColor = style.colorMode === "solid" ? style.color : style.accent;
+  ctx.shadowBlur = 12;
+}
+
+function bars(ctx, bands, w, h, style) {
   const n = bands.length;
-  const gap = Math.min(thickness, w / n / 2);
+  const gap = Math.min(Math.max(style.thickness, 2), w / n / 2);
   const bw = (w - gap * (n - 1)) / n;
+  const r = Math.min(bw / 2, 6);
+  glow(ctx, w, style);
+  ctx.beginPath(); // một path cho cả dải: quầng sáng chỉ tính một lần
   for (let i = 0; i < n; i++) {
-    const bh = Math.max(2, bands[i] * h);
-    ctx.fillRect(i * (bw + gap), (h - bh) / 2, bw, bh);
+    const bh = Math.max(Math.min(bw, 4), bands[i] * h);
+    pill(ctx, i * (bw + gap), h - bh, bw, bh, r);
   }
+  ctx.fill();
+}
+
+function mirror(ctx, bands, w, h, style) {
+  const n = bands.length;
+  const gap = Math.min(Math.max(style.thickness, 2), w / n / 2);
+  const bw = (w - gap * (n - 1)) / n;
+  const r = Math.min(bw / 2, 6);
+  glow(ctx, w, style);
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const bh = Math.max(Math.min(bw, 4), bands[i] * h);
+    pill(ctx, i * (bw + gap), (h - bh) / 2, bw, bh, r);
+  }
+  ctx.fill();
 }
 
 function wave(ctx, bands, w, h, { thickness }) {
@@ -53,13 +74,14 @@ function wave(ctx, bands, w, h, { thickness }) {
   ctx.globalAlpha = alpha;
 }
 
-function circle(ctx, bands, w, h, { thickness }) {
+function circle(ctx, bands, w, h, { thickness, ring }) {
   const n = bands.length;
   const cx = w / 2;
   const cy = h / 2;
   const base = Math.min(w, h);
-  const r0 = base * 0.26;
-  const maxLen = base * 0.24;
+  // ring: vòng ôm ảnh bìa — để trống phần giữa cho ảnh, vạch mọc ra ngoài
+  const r0 = base * (ring ? 0.33 : 0.26);
+  const maxLen = base * (ring ? 0.15 : 0.24);
   ctx.lineCap = "round";
   ctx.lineWidth = Math.max(2, thickness);
   // đối xứng trái/phải cho cân đối

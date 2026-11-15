@@ -44,7 +44,7 @@
   "artwork": {
     "style": "circle",
     "size": 56,
-    "stageSize": 300,
+    "stageSize": 380,
     "react": true,
     "reactAmount": 7,
     "glow": true,

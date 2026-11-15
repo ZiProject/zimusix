@@ -3,27 +3,41 @@
 .player {
   grid-area: player;
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) minmax(320px, 1.4fr) minmax(
-      220px,
-      1fr
-    );
+  /* minmax(0, …): cột được phép co lại, để tiêu đề dài bị cắt/chạy chữ thay vì đẩy tràn sang cột bên cạnh */
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 1.4fr) minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
-  padding: 0 20px;
+  gap: 20px;
+  padding: 0 22px;
+  min-width: 0;
   background: var(--panel);
   border-top: 1px solid var(--line);
 }
 .np {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
+.np .cover-slot {
+  flex: none;
+}
+.np .cover-slot .cover {
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+}
 .np-text {
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
+}
+.np-title,
+.np-sub {
+  min-width: 0;
+  max-width: 100%;
 }
 .np-title {
   font-weight: 600;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -34,13 +48,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .transport {
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: center;
+  min-width: 0;
 }
 .buttons {
   display: flex;
@@ -53,15 +68,25 @@
   width: 44px;
   height: 44px;
   padding: 0;
+  margin: 0 4px;
   border-radius: 50%;
   background: var(--text);
   border-color: var(--text);
   color: #111;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+  transition:
+    transform 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 .play-btn:hover:not(:disabled) {
   background: #fff;
   border-color: #fff;
-  transform: scale(1.06);
+  transform: scale(1.07);
+  box-shadow: 0 6px 22px rgb(0 0 0 / 0.45);
+}
+.play-btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 .progress {
   display: flex;
@@ -72,48 +97,104 @@
 .time {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
-  font-size: 12px;
-  min-width: 38px;
+  font-size: 11.5px;
+  min-width: 40px;
   text-align: center;
 }
 .extras {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
   color: var(--muted);
+}
+.extras > svg {
+  flex: none;
+  margin-left: 4px;
 }
 .viz {
   width: 90px;
   height: 28px;
   margin-right: 6px;
+  flex: none;
 }
 
+/* Cửa sổ hẹp: bớt thứ phụ trước, giữ nguyên các nút chính */
+@media (max-width: 1100px) {
+  .viz {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .volume {
+    width: 64px !important;
+  }
+  .player {
+    gap: 12px;
+    padding: 0 14px;
+  }
+}
+
+/* ---- thanh trượt (tua nhạc, âm lượng): phần đã chạy được tô màu, nút tròn hiện khi rê chuột ---- */
+
 input[type="range"] {
+  --fill: 0%;
+  --track-h: 4px;
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
-  height: 4px;
-  border-radius: 4px;
-  background: var(--line);
+  min-width: 0;
+  height: var(--track-h);
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    var(--accent-2) 0,
+    var(--accent) var(--fill),
+    color-mix(in srgb, var(--text) 16%, transparent) var(--fill)
+  );
   outline: none;
   padding: 0;
   border: none;
   cursor: pointer;
+  transition: height 0.12s;
+}
+input[type="range"]:hover:not(:disabled),
+input[type="range"]:focus-visible {
+  --track-h: 6px;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  background: var(--text);
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.5);
+  transform: scale(0);
+  transition: transform 0.12s;
 }
 input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border: none;
   border-radius: 50%;
-  background: var(--text);
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.5);
+  transform: scale(0);
+  transition: transform 0.12s;
+}
+input[type="range"]:hover::-webkit-slider-thumb,
+input[type="range"]:focus-visible::-webkit-slider-thumb,
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1);
+}
+input[type="range"]:hover::-moz-range-thumb,
+input[type="range"]:focus-visible::-moz-range-thumb,
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1);
+}
+input[type="range"]:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 input[type="range"]:disabled {
   opacity: 0.4;

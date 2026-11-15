@@ -175,7 +175,7 @@ export function drawViz() {
     const fit = fitCanvas(canvas);
     if (!fit) continue;
     ctx.setTransform(fit.dpr, 0, 0, fit.dpr, 0, 0);
-    drawVisualizer(ctx, viz.type, shown, fit.w, fit.h, style);
+    drawVisualizer(ctx, viz.type, shown, fit.w, fit.h, canvas.classList.contains("stage-viz-ring") ? { ...style, ring: true } : style);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 }
