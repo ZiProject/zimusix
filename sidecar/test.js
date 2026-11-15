@@ -106,6 +106,22 @@ test("từ chối request không có token", async () => {
   assert.equal(r.status, 401);
 });
 
+test("thumbnail proxy chỉ nhận URL ảnh từ Bilibili", async () => {
+  const url = new URL(base + "/thumbnail");
+  url.searchParams.set("url", "https://example.com/bfs/archive/image.jpg");
+  url.searchParams.set("token", TOKEN);
+  const r = await fetch(url);
+  assert.equal(r.status, 400);
+
+  url.searchParams.set(
+    "url",
+    "https://i2.hdslb.com/bfs/archive/a6a4cebdf722e1146afc0f0da92f529c95fbed46.jpg",
+  );
+  url.searchParams.delete("token");
+  const unauthorized = await fetch(url);
+  assert.equal(unauthorized.status, 401);
+});
+
 test("health liệt kê đủ plugin", async () => {
   const r = await api("GET", "/health");
   assert.equal(r.status, 200);

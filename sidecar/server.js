@@ -19,6 +19,7 @@ const {
   SoundCloudPlugin,
   SpotifyPlugin,
   AttachmentsPlugin,
+  BilibiliPlugin,
 } = require("@ziplayer/plugin");
 
 const HOST = "127.0.0.1";
@@ -153,6 +154,7 @@ const manager = new PlayerManager({
   plugins: [
     new YouTubePlugin({ preferYoutubei: true }),
     new SoundCloudPlugin(),
+    new BilibiliPlugin(),
     new SpotifyPlugin(),
     new AttachmentsPlugin(),
   ],
@@ -179,6 +181,29 @@ function trackKey(track) {
   return `${track.source}|${track.id ?? ""}|${track.url ?? ""}`;
 }
 
+function thumbnailUrl(thumbnail) {
+  if (typeof thumbnail !== "string") return thumbnail;
+  let image;
+  try {
+    image = new URL(thumbnail);
+  } catch {
+    return thumbnail;
+  }
+  if (
+    image.protocol !== "https:" ||
+    !image.hostname.endsWith(".hdslb.com") ||
+    !image.pathname.startsWith("/bfs/")
+  )
+    return thumbnail;
+
+  const address = server.address();
+  if (!address || typeof address === "string") return thumbnail;
+  const proxy = new URL(`http://${HOST}:${address.port}/thumbnail`);
+  proxy.searchParams.set("url", image.href);
+  proxy.searchParams.set("token", TOKEN);
+  return proxy.href;
+}
+
 function remember(track) {
   const key = trackKey(track);
   trackCache.delete(key);
@@ -195,7 +220,7 @@ function serializeTrack(track) {
     title: track.title ?? "Không có tiêu đề",
     author: track.author ?? null,
     url: track.url ?? null,
-    thumbnail: track.thumbnail ?? null,
+    thumbnail: thumbnailUrl(track.thumbnail) ?? null,
     source: track.source ?? null,
     duration: durationMs(track),
     isLive: Boolean(track.isLive),
@@ -1235,6 +1260,85 @@ function httpError(statusCode, message) {
   return Object.assign(new Error(message), { statusCode });
 }
 
+async function handleThumbnail(req, res, url) {
+  let image;
+  try {
+    image = new URL(url.searchParams.get("url") || "");
+  } catch {
+    return sendJson(req, res, 400, { error: "URL ảnh không hợp lệ" });
+  }
+  if (
+    image.protocol !== "https:" ||
+    !image.hostname.endsWith(".hdslb.com") ||
+    !image.pathname.startsWith("/bfs/") ||
+    image.username ||
+    image.password ||
+    (image.port && image.port !== "443")
+  )
+    return sendJson(req, res, 400, { error: "Nguồn ảnh không được hỗ trợ" });
+
+  try {
+    const upstream = await fetch(image, {
+      headers: {
+        referer: "https://www.bilibili.com/",
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      },
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!upstream.ok) {
+      res.writeHead(upstream.status, {
+        "content-type": "text/plain; charset=utf-8",
+        ...corsHeaders(req),
+      });
+      return res.end(`Image host responded with ${upstream.status}`);
+    }
+
+    const contentType = upstream.headers.get("content-type") || "";
+    if (!contentType.startsWith("image/") || !upstream.body) {
+      return sendJson(req, res, 502, {
+        error: "Nguồn ảnh trả về nội dung không hợp lệ",
+      });
+    }
+
+    const maxBytes = 8 * 1024 * 1024;
+    const contentLength = Number(upstream.headers.get("content-length"));
+    if (contentLength > maxBytes) {
+      await upstream.body.cancel();
+      return sendJson(req, res, 502, {
+        error: "Ảnh vượt quá kích thước cho phép",
+      });
+    }
+    const reader = upstream.body.getReader();
+    const chunks = [];
+    let size = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        return sendJson(req, res, 502, {
+          error: "Ảnh vượt quá kích thước cho phép",
+        });
+      }
+      chunks.push(Buffer.from(value));
+    }
+
+    res.writeHead(200, {
+      "content-type": contentType,
+      "cache-control": "public, max-age=86400",
+      ...corsHeaders(req),
+    });
+    res.end(Buffer.concat(chunks, size));
+  } catch (error) {
+    console.warn("[thumbnail] Không tải được ảnh Bilibili:", error.message);
+    if (!res.headersSent)
+      sendJson(req, res, 502, { error: "Không tải được ảnh Bilibili" });
+  }
+}
+
 function corsHeaders(req) {
   const origin = req.headers.origin;
   if (!origin || !ALLOWED_ORIGIN.test(origin)) return {};
@@ -1457,6 +1561,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/thumbnail") {
+    return handleThumbnail(req, res, url);
+  }
   if (req.method === "GET" && url.pathname === "/video/stream") {
     return handleVideoStream(req, res, url);
   }
