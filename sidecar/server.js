@@ -14,6 +14,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { WebSocketServer } = require("ws");
 const { createPresetStore } = require("./presets");
+const { createDiscordRpc, DEFAULT_CLIENT_ID } = require("./discord-rpc");
 const { PlayerManager, WebAudioConnection } = require("ziplayer");
 const {
   YouTubePlugin,
@@ -49,7 +50,18 @@ const ALLOWED_ORIGIN =
 /* ------------------------------------------------------------------ settings */
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
-let settings = { discordToken: "", volume: 80 };
+let settings = {
+  discordToken: "",
+  volume: 80,
+  discordRpc: true,
+  discordRpcClientId: "",
+  discordRpcActivityType: "Listening",
+  discordRpcShowTimeline: true,
+  discordRpcShowThumbnail: true,
+  discordRpcShowIdle: true,
+  discordRpcIdleDetails: "Chờ phát nhạc",
+  discordRpcIdleState: "Zimusix",
+};
 try {
   settings = {
     ...settings,
@@ -65,6 +77,29 @@ function saveSettings() {
     console.error("Failed to save settings:", error.message);
   }
 }
+
+/* ------------------------------------------------------------- discord rpc */
+
+const rpc = createDiscordRpc({
+  enabled: settings.discordRpc !== false,
+  clientId: settings.discordRpcClientId || undefined,
+  activityType: settings.discordRpcActivityType || "Listening",
+  showTimeline: settings.discordRpcShowTimeline !== false,
+  showThumbnail: settings.discordRpcShowThumbnail !== false,
+  showIdle: settings.discordRpcShowIdle !== false,
+  idleDetails: settings.discordRpcIdleDetails || "Chờ phát nhạc",
+  idleState: settings.discordRpcIdleState || "Zimusix",
+});
+
+rpc.on("ready", (user) => {
+  console.log(
+    `[discord-rpc] Connected to Discord as ${user.username} (${user.id})`,
+  );
+  sendEvent(LOCAL_TARGET, "rpc-status", rpc.getStatus());
+});
+rpc.on("statusChange", (status) => {
+  sendEvent(LOCAL_TARGET, "rpc-status", status);
+});
 
 /* ------------------------------------------------------------------ presets */
 
@@ -414,7 +449,42 @@ function sendEvent(target, event, data) {
     if (client.target === target) client.res.write(payload);
 }
 
+function syncDiscordRpc() {
+  if (!rpc.enabled) return;
+  let activePlayer = manager.get(LOCAL_TARGET);
+  if (
+    !activePlayer?.currentTrack ||
+    (!activePlayer.isPlaying && !activePlayer.isPaused)
+  ) {
+    for (const player of manager.getAll()) {
+      if (player.currentTrack && (player.isPlaying || player.isPaused)) {
+        activePlayer = player;
+        break;
+      }
+    }
+  }
+
+  if (
+    !activePlayer ||
+    !activePlayer.currentTrack ||
+    (!activePlayer.isPlaying && !activePlayer.isPaused)
+  ) {
+    rpc.setIdleActivity();
+    return;
+  }
+
+  const track = activePlayer.currentTrack;
+  const time = activePlayer.getTime();
+  rpc.updateActivity(track, {
+    positionMs: time.current,
+    durationMs: time.total,
+    isPaused: activePlayer.isPaused,
+    isLive: Boolean(track.isLive),
+  });
+}
+
 function publishState(target, followUp = true) {
+  syncDiscordRpc();
   if (!target || sseClients.size === 0) return;
   setImmediate(() => {
     const payload = `event: state\ndata: ${JSON.stringify(playerState(target))}\n\n`;
@@ -594,8 +664,7 @@ async function resolveTracks({ trackKey: key, trackKeys, query, paths }) {
  * mode = "end"  → append to end of queue (default)
  */
 async function enqueue(player, tracks, mode) {
-  if (!tracks.length)
-    throw httpError(422, "No playable tracks found");
+  if (!tracks.length) throw httpError(422, "No playable tracks found");
   const busy = Boolean(player.currentTrack) && !player.isIdle;
 
   if (!busy) {
@@ -708,6 +777,9 @@ async function discordLogin(token) {
     tag: client.user.tag,
     avatar: client.user.displayAvatarURL({ size: 64 }),
   };
+  if (!settings.discordRpcClientId) {
+    rpc.setOptions({ clientId: client.user.id });
+  }
 }
 
 async function discordLogout() {
@@ -727,6 +799,9 @@ async function discordLogout() {
   discord.client = null;
   discord.status = "logged-out";
   discord.user = null;
+  if (!settings.discordRpcClientId) {
+    rpc.setOptions({ clientId: DEFAULT_CLIENT_ID });
+  }
 }
 
 function requireDiscord() {
@@ -872,7 +947,10 @@ async function linkVoice(target, guildId, channelId) {
     );
   }
   if (target !== LOCAL_TARGET && !sourcePlayer.connection) {
-    throw httpError(409, "Audio source is not connected to a Discord voice channel");
+    throw httpError(
+      409,
+      "Audio source is not connected to a Discord voice channel",
+    );
   }
   if (
     target === LOCAL_TARGET &&
@@ -955,7 +1033,9 @@ async function unlinkVoice(target, guildId) {
 
 /** Bot kicked / voice channel lost: clean up link so UI no longer shows "linked". Source continues playing normally. */
 async function handleVoiceLost(guildId, link) {
-  console.warn(`[voice] lost voice connection in guild=${guildId}, auto-unlinking`);
+  console.warn(
+    `[voice] lost voice connection in guild=${guildId}, auto-unlinking`,
+  );
   const message = `Lost connection to #${link.channelName || "Voice"}, link was automatically disconnected`;
   await detachDestination(guildId, { leave: false });
   for (const target of new Set([guildId, link.sourceTarget]))
@@ -1213,7 +1293,10 @@ async function handleVideoStream(req, res, url) {
       };
       videoStream.once("end", () => out.end(() => finish(true)));
       videoStream.once("error", (e) => {
-        console.warn(`[video] Video stream error for "${track.title}":`, e.message);
+        console.warn(
+          `[video] Video stream error for "${track.title}":`,
+          e.message,
+        );
         out.destroy();
         finish(false);
       });
@@ -1339,9 +1422,14 @@ async function handleThumbnail(req, res, url) {
     });
     res.end(Buffer.concat(chunks, size));
   } catch (error) {
-    console.warn("[thumbnail] Failed to download Bilibili thumbnail:", error.message);
+    console.warn(
+      "[thumbnail] Failed to download Bilibili thumbnail:",
+      error.message,
+    );
     if (!res.headersSent)
-      sendJson(req, res, 502, { error: "Failed to download Bilibili thumbnail" });
+      sendJson(req, res, 502, {
+        error: "Failed to download Bilibili thumbnail",
+      });
   }
 }
 
@@ -1449,10 +1537,7 @@ const routes = {
     if (!player) throw httpError(404, "Player not initialized");
     const result = await control(player, body.action, body);
     if (result === false)
-      throw httpError(
-        409,
-        `Cannot perform "${body.action}" in current state`,
-      );
+      throw httpError(409, `Cannot perform "${body.action}" in current state`);
     return playerState(target);
   },
 
@@ -1462,6 +1547,44 @@ const routes = {
     user: discord.user,
     hasSavedToken: Boolean(settings.discordToken),
   }),
+
+  "GET /discord/rpc": async () => {
+    return rpc.getStatus();
+  },
+
+  "POST /discord/rpc": async (_req, _url, body) => {
+    if (typeof body.enabled === "boolean") settings.discordRpc = body.enabled;
+    if (typeof body.clientId === "string")
+      settings.discordRpcClientId = body.clientId.trim();
+    if (typeof body.activityType === "string")
+      settings.discordRpcActivityType = body.activityType;
+    if (typeof body.showTimeline === "boolean")
+      settings.discordRpcShowTimeline = body.showTimeline;
+    if (typeof body.showThumbnail === "boolean")
+      settings.discordRpcShowThumbnail = body.showThumbnail;
+    if (typeof body.showIdle === "boolean")
+      settings.discordRpcShowIdle = body.showIdle;
+    if (typeof body.idleDetails === "string")
+      settings.discordRpcIdleDetails = body.idleDetails.trim();
+    if (typeof body.idleState === "string")
+      settings.discordRpcIdleState = body.idleState.trim();
+    saveSettings();
+
+    const effectiveClientId =
+      settings.discordRpcClientId || discord.user?.id || undefined;
+    rpc.setOptions({
+      enabled: settings.discordRpc !== false,
+      clientId: effectiveClientId,
+      activityType: settings.discordRpcActivityType || "Listening",
+      showTimeline: settings.discordRpcShowTimeline !== false,
+      showThumbnail: settings.discordRpcShowThumbnail !== false,
+      showIdle: settings.discordRpcShowIdle !== false,
+      idleDetails: settings.discordRpcIdleDetails || "Chờ phát nhạc",
+      idleState: settings.discordRpcIdleState || "Zimusix",
+    });
+    syncDiscordRpc();
+    return rpc.getStatus();
+  },
 
   "POST /discord/login": async (_req, _url, body) => {
     const token = String(body.token || settings.discordToken || "").trim();
@@ -1663,6 +1786,9 @@ async function main() {
 
 async function shutdown() {
   try {
+    try {
+      rpc.destroy();
+    } catch {}
     await discordLogout();
     await manager.dispose?.();
   } finally {

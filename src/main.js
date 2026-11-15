@@ -3,7 +3,7 @@ import "./events.js";
 import * as api from "./api.js";
 import { syncAudio } from "./features/audio.js";
 import { applyBackgroundEffect } from "./features/background.js";
-import { loadDiscord } from "./features/discord.js";
+import { loadDiscord, loadRpc } from "./features/discord.js";
 import { setupDragDrop } from "./features/files.js";
 import { loadLyrics, lyricsOnScreen } from "./features/lyrics.js";
 import { initMediaSession } from "./features/media-session.js";
@@ -114,6 +114,7 @@ async function boot() {
 
   checkFfmpeg(health);
   await loadDiscord();
+  await loadRpc();
   // Bot auto-login using saved token: poll until done.
   for (let i = 0; i < 20 && app.discord.status === "connecting"; i++) {
     await new Promise((resolve) => setTimeout(resolve, 1500));

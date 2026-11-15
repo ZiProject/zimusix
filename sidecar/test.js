@@ -250,6 +250,31 @@ test("lyrics endpoint returns results or valid error", async () => {
   assert.equal(typeof r.json.ok, "boolean");
 });
 
+test("discord RPC endpoint returns status and accepts configuration", async () => {
+  const s = await api("GET", "/discord/rpc");
+  assert.equal(s.status, 200);
+  assert.equal(typeof s.json.enabled, "boolean");
+  assert.equal(typeof s.json.clientId, "string");
+  assert.equal(typeof s.json.activityType, "string");
+  assert.equal(typeof s.json.showTimeline, "boolean");
+  assert.equal(typeof s.json.showThumbnail, "boolean");
+  assert.equal(typeof s.json.showIdle, "boolean");
+
+  const update = await api("POST", "/discord/rpc", {
+    enabled: true,
+    showTimeline: true,
+    showThumbnail: true,
+    showIdle: true,
+    activityType: "Listening",
+  });
+  assert.equal(update.status, 200);
+  assert.equal(update.json.enabled, true);
+  assert.equal(update.json.showTimeline, true);
+  assert.equal(update.json.showThumbnail, true);
+  assert.equal(update.json.showIdle, true);
+  assert.equal(update.json.activityType, "Listening");
+});
+
 test("video stream endpoint handles request correctly", async () => {
   const r = await fetch(base + "/video/stream?target=local&token=" + TOKEN);
   // Returns 404 when track has no video

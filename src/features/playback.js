@@ -42,13 +42,12 @@ export function watch() {
     app.target,
     setState,
     ({ message, track }) =>
-      toast(
-        track ? `${track}: ${message}` : message,
-        "error",
-        10_000,
-        "angry",
-      ),
+      toast(track ? `${track}: ${message}` : message, "error", 10_000, "angry"),
     onVoiceUnlinked,
+    (rpc) => {
+      app.rpc = rpc;
+      if (app.view === "discord") renderMain();
+    },
   );
 }
 
@@ -80,11 +79,7 @@ export const control = (action, extra = {}) =>
 export async function playTrack(track, mode) {
   await ensureAudio();
   const okMessage =
-    mode === "now"
-      ? null
-      : mode === "next"
-        ? "Playing next"
-        : "Added to queue";
+    mode === "now" ? null : mode === "next" ? "Playing next" : "Added to queue";
   const state = await act(
     () => api.post("/play", { target: app.target, trackKey: track.key, mode }),
     okMessage,

@@ -9,9 +9,29 @@ export async function loadDiscord() {
   try {
     app.discord = await api.get("/discord/status");
   } catch {}
+  try {
+    app.rpc = await api.get("/discord/rpc");
+  } catch {}
   if (app.discord.status === "ready") await loadGuilds();
   renderSidebar();
   if (app.view === "discord") renderMain();
+}
+
+export async function loadRpc() {
+  try {
+    app.rpc = await api.get("/discord/rpc");
+    if (app.view === "discord") renderMain();
+  } catch {}
+}
+
+export async function updateRpc(options) {
+  try {
+    app.rpc = await api.post("/discord/rpc", options);
+    toast("Rich Presence updated", "ok");
+    if (app.view === "discord") renderMain();
+  } catch (error) {
+    toast(error.message, "error");
+  }
 }
 
 async function loadGuilds() {
@@ -21,12 +41,10 @@ async function loadGuilds() {
     const states = await Promise.all(
       guilds.map((g) => api.get(`/state?target=${g.id}`).catch(() => null)),
     );
-    states.forEach(
-      (s, i) => {
-        app.voiceByGuild[guilds[i].id] = s?.voice ?? undefined;
-        if (s) app.stateByTarget[guilds[i].id] = s;
-      },
-    );
+    states.forEach((s, i) => {
+      app.voiceByGuild[guilds[i].id] = s?.voice ?? undefined;
+      if (s) app.stateByTarget[guilds[i].id] = s;
+    });
   } catch (error) {
     app.guilds = [];
     toast(error.message, "error");
