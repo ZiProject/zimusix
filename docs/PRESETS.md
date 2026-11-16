@@ -216,7 +216,7 @@ Audio visualizer.
 | `type` | `bars` · `mirror` · `wave` · `circle` · `dots` · `none` | `bars` | Visualizer rendering type. `circle` wraps around the artwork when placed on `stage` and artwork is not `none` |
 | `placement` | array ⊂ {`player`, `stage`, `background`} | `["player"]` | Where to render (can target multiple placements). `stage` requires the Now Playing view |
 | `bars` | number 8–96 | `32` | Number of frequency bars/points |
-| `colorMode` | `gradient` · `accent` · `solid` | `gradient` | Color mode (gradient = `accent` → `accent2`) |
+| `colorMode` | `gradient` · `accent` · `solid` · `spectrum` | `gradient` | Color mode (gradient = `accent` → `accent2`; spectrum = cyan → lime with pink peak caps, like the web MusicPlayerView) |
 | `color` | hex color | `#a78bfa` | Color when colorMode = solid |
 | `thickness` | number 1–10 | `2` | Bar gap / line width (px). Ignored by `dots` |
 | `smoothing` | number 0–0.95 | `0` | Temporal frame smoothing factor |

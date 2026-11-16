@@ -9,6 +9,13 @@ const reactBuffer = new Float32Array(REACT_BANDS);
 let drawBuffer = new Float32Array(REACT_BANDS);
 let smoothBuffer = new Float32Array(REACT_BANDS);
 
+// Same dynamics as MusicPlayerView: fast attack, exponential fall-off, peak-hold with gravity.
+const ATTACK = 0.75;
+const FALL = 0.86;
+const PEAK_GRAVITY = 1.5 / (128 * 0.82); // 1.5px per frame on a ~128px canvas, in normalized units
+let peakBuffer = new Float32Array(REACT_BANDS);
+let bassSmooth = 0;
+
 const rootStyle = document.documentElement.style;
 
 // Only write CSS variables when values change significantly (each write forces reflow/restyle).
@@ -88,6 +95,9 @@ export function drawViz() {
 
   if (!isAudioActive) {
     reactive.active = false;
+    bassSmooth = 0;
+    smoothBuffer.fill(0);
+    peakBuffer.fill(0);
     reactive.bass = 0;
     reactive.energy = 0;
     setVar("--music-bass", 0);
@@ -100,15 +110,17 @@ export function drawViz() {
   // Fixed bands to calculate bass/energy - runs even when visualizer is off so cover/bg/lyrics still react
   const reactBands = audio.getFrequencyBands?.({
     bands: REACT_BANDS,
-    minHz: 30,
+    minHz: 28,
     maxHz: 16000,
     outputBuffer: reactBuffer,
   });
   if (!reactBands) return;
 
-  let bassSum = 0;
-  for (let i = 0; i < 5; i++) bassSum += reactBands[i];
-  const bass = Math.min(1, bassSum / 5);
+  // Sub-bass / kick energy straight from @ziplayer/client (same smoothing as MusicPlayerView).
+  const bassRaw = audio.getBassEnergy?.({ minHz: 45, maxHz: 120 }) ?? 0;
+  bassSmooth =
+    bassRaw > bassSmooth ? bassSmooth * 0.2 + bassRaw * 0.8 : bassSmooth * 0.92;
+  const bass = Math.min(1, Math.pow(bassSmooth, 1.5));
   let totalSum = 0;
   for (let i = 0; i < reactBands.length; i++) totalSum += reactBands[i];
   const energy = Math.min(1, totalSum / reactBands.length);
@@ -126,7 +138,8 @@ export function drawViz() {
       const glow = Math.round(bass * 16);
       const glow2 = Math.round(energy * 24);
       const shadow = `0 0 ${glow}px var(--accent-2), 0 0 ${glow2}px var(--accent)`;
-      if (activeLyric.style.textShadow !== shadow) activeLyric.style.textShadow = shadow;
+      if (activeLyric.style.textShadow !== shadow)
+        activeLyric.style.textShadow = shadow;
     } else activeLyric.style.textShadow = "";
   }
 
@@ -140,19 +153,32 @@ export function drawViz() {
     if (drawBuffer.length !== viz.bars) drawBuffer = new Float32Array(viz.bars);
     bands = audio.getFrequencyBands?.({
       bands: viz.bars,
-      minHz: 30,
+      minHz: 28,
       maxHz: 16000,
       outputBuffer: drawBuffer,
     });
     if (!bands) return;
   }
-  if (smoothBuffer.length !== bands.length)
+  if (smoothBuffer.length !== bands.length) {
     smoothBuffer = new Float32Array(bands.length);
+    peakBuffer = new Float32Array(bands.length);
+  }
+  const bar = viz.type === "bars" || viz.type === "mirror";
   const k = viz.smoothing;
-  if (k > 0)
-    for (let i = 0; i < bands.length; i++)
-      smoothBuffer[i] = smoothBuffer[i] * k + bands[i] * (1 - k);
-  const shown = k > 0 ? smoothBuffer : bands;
+  for (let i = 0; i < bands.length; i++) {
+    const cur = smoothBuffer[i];
+    const target = bands[i];
+    if (bar) {
+      // fast attack, exponential fall-off (MusicPlayerView)
+      smoothBuffer[i] =
+        target > cur ? cur * (1 - ATTACK) + target * ATTACK : cur * FALL;
+      peakBuffer[i] =
+        smoothBuffer[i] >= peakBuffer[i]
+          ? smoothBuffer[i]
+          : Math.max(0, peakBuffer[i] - PEAK_GRAVITY);
+    } else smoothBuffer[i] = k > 0 ? cur * k + target * (1 - k) : target;
+  }
+  const shown = smoothBuffer;
 
   const { accent, accent2 } = accentColors();
   const style = {
@@ -162,6 +188,7 @@ export function drawViz() {
     accent2,
     thickness: viz.thickness,
     opacity: viz.opacity,
+    peaks: viz.type === "bars" ? peakBuffer : null,
   };
 
   drewLastFrame = true;
@@ -175,7 +202,16 @@ export function drawViz() {
     const fit = fitCanvas(canvas);
     if (!fit) continue;
     ctx.setTransform(fit.dpr, 0, 0, fit.dpr, 0, 0);
-    drawVisualizer(ctx, viz.type, shown, fit.w, fit.h, canvas.classList.contains("stage-viz-ring") ? { ...style, ring: true } : style);
+    drawVisualizer(
+      ctx,
+      viz.type,
+      shown,
+      fit.w,
+      fit.h,
+      canvas.classList.contains("stage-viz-ring")
+        ? { ...style, ring: true }
+        : style,
+    );
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 }

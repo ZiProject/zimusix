@@ -23,7 +23,14 @@ export async function syncAudio() {
       await old.disconnect().catch(() => {});
     }
     if (!want) return;
-    const client = new WebAudioClient({ analyserOptions: { fftSize: 1024 } });
+    const client = new WebAudioClient({
+      analyserOptions: {
+        fftSize: 2048,
+        smoothingTimeConstant: 0.65,
+        minDecibels: -85,
+        maxDecibels: -10,
+      },
+    });
     client.addEventListener("error", ({ detail }) =>
       console.warn("[audio]", detail?.error),
     );

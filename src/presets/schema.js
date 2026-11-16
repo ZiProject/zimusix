@@ -172,7 +172,7 @@ export const MODULES = {
       ),
       placement: list(["player", "stage", "background"], ["player"], 3, "Where to render (can specify multiple placements)"),
       bars: num(32, 8, 96, "Bar / point count"),
-      colorMode: enumOf(["gradient", "accent", "solid"], "gradient", "Coloring mode"),
+      colorMode: enumOf(["gradient", "accent", "solid", "spectrum"], "gradient", "Coloring mode"),
       color: color("#a78bfa", "Color when colorMode = solid"),
       thickness: num(2, 1, 10, "Bar thickness / spacing (px)"),
       smoothing: num(0, 0, 0.95, "Smoothing factor between frames", 0.05),
