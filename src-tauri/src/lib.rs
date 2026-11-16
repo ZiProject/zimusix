@@ -30,6 +30,68 @@ struct Backend {
     log_path: Option<PathBuf>,
 }
 
+struct NativeMediaControls {
+    #[cfg(windows)]
+    controls: Mutex<Option<souvlaki::MediaControls>>,
+}
+
+#[derive(serde::Deserialize)]
+struct MediaMetadataPayload {
+    title: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
+    artwork: Option<String>,
+    duration_ms: Option<u64>,
+    position_ms: Option<u64>,
+    playing: bool,
+}
+
+#[tauri::command]
+fn update_native_media(
+    _state: State<'_, NativeMediaControls>,
+    _payload: MediaMetadataPayload,
+) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        if let Ok(mut guard) = _state.controls.lock() {
+            if let Some(controls) = guard.as_mut() {
+                let duration = _payload.duration_ms.map(std::time::Duration::from_millis);
+                let cover_url = _payload.artwork.filter(|url| {
+                    url.starts_with("http://") || url.starts_with("https://") || url.starts_with("file://")
+                });
+
+                let res = controls.set_metadata(souvlaki::MediaMetadata {
+                    title: _payload.title.as_deref(),
+                    artist: _payload.artist.as_deref(),
+                    album: _payload.album.as_deref(),
+                    cover_url: cover_url.as_deref(),
+                    duration,
+                });
+                if res.is_err() && cover_url.is_some() {
+                    let _ = controls.set_metadata(souvlaki::MediaMetadata {
+                        title: _payload.title.as_deref(),
+                        artist: _payload.artist.as_deref(),
+                        album: _payload.album.as_deref(),
+                        cover_url: None,
+                        duration,
+                    });
+                }
+
+                let progress = _payload
+                    .position_ms
+                    .map(|ms| souvlaki::MediaPosition(std::time::Duration::from_millis(ms)));
+                let playback = if _payload.playing {
+                    souvlaki::MediaPlayback::Playing { progress }
+                } else {
+                    souvlaki::MediaPlayback::Paused { progress }
+                };
+                let _ = controls.set_playback(playback);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Windows returns paths formatted like `\\?\C:\...`; some programs (including Node as cwd) handle this poorly.
 fn clean_path(path: PathBuf) -> PathBuf {
     let text = path.to_string_lossy();
@@ -281,7 +343,11 @@ fn spawn_backend(app: &AppHandle, log_path: &Path) -> Result<(BackendInfo, Child
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![backend_info, set_tray_tooltip])
+        .invoke_handler(tauri::generate_handler![
+            backend_info,
+            set_tray_tooltip,
+            update_native_media
+        ])
         // Clicking X hides window to tray; music keeps playing. Quit via tray menu -> "Quit".
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -292,6 +358,60 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            #[cfg(windows)]
+            {
+                let mut media_ctrls: Option<souvlaki::MediaControls> = None;
+                if let Some(window) = app.get_webview_window("main") {
+                    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+                    if let Ok(handle) = window.window_handle() {
+                        if let RawWindowHandle::Win32(win32) = handle.as_raw() {
+                            let hwnd = win32.hwnd.get() as *mut std::ffi::c_void;
+                            let config = souvlaki::PlatformConfig {
+                                dbus_name: "app.zimusix.desktop",
+                                display_name: "Zimusix",
+                                hwnd: Some(hwnd),
+                            };
+                            if let Ok(mut controls) = souvlaki::MediaControls::new(config) {
+                                let app_handle = app.handle().clone();
+                                let _ = controls.attach(move |event| match event {
+                                    souvlaki::MediaControlEvent::Play => {
+                                        let _ = app_handle.emit("native-media-play", ());
+                                    }
+                                    souvlaki::MediaControlEvent::Pause => {
+                                        let _ = app_handle.emit("native-media-pause", ());
+                                    }
+                                    souvlaki::MediaControlEvent::Toggle => {
+                                        let _ = app_handle.emit("native-media-toggle", ());
+                                    }
+                                    souvlaki::MediaControlEvent::Next => {
+                                        let _ = app_handle.emit("native-media-next", ());
+                                    }
+                                    souvlaki::MediaControlEvent::Previous => {
+                                        let _ = app_handle.emit("native-media-previous", ());
+                                    }
+                                    souvlaki::MediaControlEvent::Stop => {
+                                        let _ = app_handle.emit("native-media-pause", ());
+                                    }
+                                    souvlaki::MediaControlEvent::SetPosition(pos) => {
+                                        let _ = app_handle
+                                            .emit("native-media-seek", pos.0.as_millis() as u64);
+                                    }
+                                    _ => {}
+                                });
+                                media_ctrls = Some(controls);
+                            }
+                        }
+                    }
+                }
+                app.manage(NativeMediaControls {
+                    controls: Mutex::new(media_ctrls),
+                });
+            }
+            #[cfg(not(windows))]
+            {
+                app.manage(NativeMediaControls {});
+            }
+
             let log_path = app
                 .path()
                 .app_data_dir()

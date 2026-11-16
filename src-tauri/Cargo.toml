@@ -1,6 +1,6 @@
 [package]
 name = "zimusix"
-version = "0.1.0"
+version = "0.1.1"
 description = "Zimusix - desktop music player with Discord voice bot integration"
 edition = "2021"
 
@@ -16,8 +16,11 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }
+souvlaki = "0.9.3"
+raw-window-handle = "0.6"
 
 [profile.release]
 lto = true
 opt-level = "s"
 strip = true
+ 

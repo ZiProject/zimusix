@@ -1,6 +1,7 @@
-// Media Session API: displays current track + playback controls on media keys, Windows SMTC, macOS Control Center...
-// App audio routes through Web Audio (no <audio> element), so browsers do not create a media session automatically.
-// Workaround: play an inaudible, looping silent <audio> element so WebView registers active media playback.
+// Media Session & Native SMTC integration:
+// In browser mode: HTML5 Media Session API (using silent keepAlive audio to register playback).
+// In Tauri desktop: native OS SMTC via Rust backend (souvlaki) bound to the app's HWND,
+// preventing WebView2 from showing "Unknown app".
 import * as api from "../api.js";
 import { app } from "../state.js";
 import { ensureAudio } from "./audio.js";
@@ -11,6 +12,7 @@ const SEEK_STEP_MS = 10_000;
 let keepAlive = null;
 let lastTrackKey = null;
 let lastTooltip = null;
+let nativeInitialized = false;
 
 /** Silent 8-bit mono WAV (value 128 = 0 for unsigned 8-bit PCM). */
 function silentWavUrl(seconds = 10, sampleRate = 8000) {
@@ -52,7 +54,43 @@ function setHandler(action, handler) {
   }
 }
 
+async function initNativeEvents() {
+  if (nativeInitialized) return;
+  nativeInitialized = true;
+  try {
+    const { listen } = await import("@tauri-apps/api/event");
+    await listen("native-media-play", async () => {
+      await ensureAudio();
+      control("resume");
+    });
+    await listen("native-media-pause", () => control("pause"));
+    await listen("native-media-toggle", async () => {
+      const s = app.state;
+      if (s?.isPlaying && !s?.isPaused) {
+        control("pause");
+      } else {
+        await ensureAudio();
+        control("resume");
+      }
+    });
+    await listen("native-media-next", () => control("skip"));
+    await listen("native-media-previous", () => control("previous"));
+    await listen("native-media-seek", (event) => {
+      if (typeof event.payload === "number") {
+        control("seek", { positionMs: event.payload });
+      }
+    });
+  } catch (err) {
+    console.warn("native media events:", err);
+  }
+}
+
 export function initMediaSession() {
+  if (api.isTauri()) {
+    initNativeEvents();
+    return;
+  }
+
   if (!("mediaSession" in navigator)) return;
 
   keepAlive = new Audio(silentWavUrl());
@@ -73,13 +111,19 @@ export function initMediaSession() {
   });
   setHandler("seekbackward", (details) =>
     control("seek", {
-      positionMs: Math.max(0, position() - (details.seekOffset ?? SEEK_STEP_MS / 1000) * 1000),
+      positionMs: Math.max(
+        0,
+        position() - (details.seekOffset ?? SEEK_STEP_MS / 1000) * 1000,
+      ),
     }),
   );
   setHandler("seekforward", (details) => {
     const duration = app.state?.duration ?? Infinity;
     control("seek", {
-      positionMs: Math.min(duration, position() + (details.seekOffset ?? SEEK_STEP_MS / 1000) * 1000),
+      positionMs: Math.min(
+        duration,
+        position() + (details.seekOffset ?? SEEK_STEP_MS / 1000) * 1000,
+      ),
     });
   });
 }
@@ -89,19 +133,48 @@ function artworkFor(track) {
   return [{ src: track?.thumbnail || fallback }];
 }
 
+async function syncNativeMedia(track, playing, posMs, durationMs) {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const payload = {
+      title: track?.title || "Zimusix",
+      artist: track?.author || "Zimusix",
+      album: "Zimusix",
+      artwork: track?.thumbnail || null,
+      duration_ms:
+        track && !track.isLive && durationMs > 0
+          ? Math.round(durationMs)
+          : null,
+      position_ms: track ? Math.round(posMs) : null,
+      playing,
+    };
+    await invoke("update_native_media", { payload });
+  } catch {
+    // non-critical
+  }
+}
+
 /** Called whenever player state updates (renderPlayer). Cheap: only updates metadata when track changes. */
 export function syncMediaSession() {
-  if (!("mediaSession" in navigator)) return;
   const s = app.state;
   const track = s?.currentTrack;
   const playing = Boolean(track && s.isPlaying && !s.isPaused);
+  const pos = position();
+
+  if (api.isTauri()) {
+    syncNativeMedia(track, playing, pos, s?.duration);
+    syncTrayTooltip(track, playing);
+    return;
+  }
+
+  if (!("mediaSession" in navigator)) return;
 
   if ((track?.key ?? null) !== lastTrackKey) {
     lastTrackKey = track?.key ?? null;
     navigator.mediaSession.metadata = track
       ? new MediaMetadata({
-          title: track.title ?? "Unknown Title",
-          artist: track.author ?? "",
+          title: track.title || "Zimusix",
+          artist: track.author || "Zimusix",
           album: "Zimusix",
           artwork: artworkFor(track),
         })
@@ -118,7 +191,7 @@ export function syncMediaSession() {
     if (track && !track.isLive && s.duration > 0) {
       navigator.mediaSession.setPositionState({
         duration: s.duration / 1000,
-        position: Math.min(position(), s.duration) / 1000,
+        position: Math.min(pos, s.duration) / 1000,
         playbackRate: 1,
       });
     } else {
