@@ -1,0 +1,96 @@
+/* DYNAMIC SCENES
+ *
+ * The Scene setting (background.effect) is exposed on <html data-bg-effect="…">.
+ * Each scene re-tints the whole interface, so switching scenes feels like switching worlds
+ * rather than just swapping a canvas. `!important` is needed because the runtime writes the
+ * theme colours as inline custom properties.
+ */
+
+/* --------------------------------------------------------------- sakura (default) */
+html[data-preset="dynamic-scenes"][data-bg-effect="sakura"] {
+  --accent: #ff9fc0 !important;
+  --accent-2: #ffd1e1 !important;
+  --bg: #160a14 !important;
+  --bg-rgb: 22 10 20 !important;
+  --panel: #221120 !important;
+  --panel-rgb: 34 17 32 !important;
+  --panel-2: #2e1a2c !important;
+  --line: #5a3454 !important;
+  --text: #fff2f7 !important;
+  --muted: #c9a3b8 !important;
+}
+
+/* --------------------------------------------------------------- rainy season */
+html[data-preset="dynamic-scenes"][data-bg-effect="rain"] {
+  --accent: #7fc4ff !important;
+  --accent-2: #b9e1ff !important;
+  --bg: #0b1722 !important;
+  --bg-rgb: 11 23 34 !important;
+  --panel: #122433 !important;
+  --panel-rgb: 18 36 51 !important;
+  --panel-2: #1a3246 !important;
+  --line: #2f5069 !important;
+  --text: #eaf5ff !important;
+  --muted: #8fb0c8 !important;
+}
+
+/* --------------------------------------------------------------- fireworks */
+html[data-preset="dynamic-scenes"][data-bg-effect="fireworks"] {
+  --accent: #ffc44d !important;
+  --accent-2: #ff6b8a !important;
+  --bg: #03040d !important;
+  --bg-rgb: 3 4 13 !important;
+  --panel: #0b0e1f !important;
+  --panel-rgb: 11 14 31 !important;
+  --panel-2: #121730 !important;
+  --line: #2b3157 !important;
+  --text: #fff7e6 !important;
+  --muted: #a2a8c7 !important;
+}
+
+/* --------------------------------------------------------------- love hearts */
+html[data-preset="dynamic-scenes"][data-bg-effect="hearts"] {
+  --accent: #ff4f9a !important;
+  --accent-2: #c77dff !important;
+  --bg: #14061a !important;
+  --bg-rgb: 20 6 26 !important;
+  --panel: #1e0b27 !important;
+  --panel-rgb: 30 11 39 !important;
+  --panel-2: #2a1036 !important;
+  --line: #5b2a6e !important;
+  --text: #fff0f8 !important;
+  --muted: #c79bd3 !important;
+}
+
+/* --------------------------------------------------------------- note rain */
+html[data-preset="dynamic-scenes"][data-bg-effect="glyphs"] {
+  --accent: #6ee7ff !important;
+  --accent-2: #c3a6ff !important;
+  --bg: #070a18 !important;
+  --bg-rgb: 7 10 24 !important;
+  --panel: #0e1230 !important;
+  --panel-rgb: 14 18 48 !important;
+  --panel-2: #161b42 !important;
+  --line: #2f3a78 !important;
+  --text: #eef2ff !important;
+  --muted: #9aa4d6 !important;
+}
+
+/* The default app overlay darkens the whole background and adds a heavy gradient at the bottom,
+   which would bury the scene (city lights, sparks…). Keep a lighter veil + a soft floor for the player. */
+html[data-preset="dynamic-scenes"] .bg-overlay {
+  background:
+    linear-gradient(to top, rgb(var(--bg-rgb) / 0.5), transparent 26%),
+    rgb(var(--bg-rgb) / calc(var(--bg-dim, 0.45) * 0.4));
+}
+html[data-preset="dynamic-scenes"] .bg-layer {
+  transition: background-color 0.6s ease;
+}
+
+/* Title breathes with the bass, in the colour of the current scene (artwork glow already comes from the app). */
+html[data-preset="dynamic-scenes"] .stage-title {
+  text-shadow: 0 0 calc(var(--music-bass, 0) * 26px) var(--accent);
+}
+html[data-preset="dynamic-scenes"] .player {
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.35);
+}

@@ -114,3 +114,32 @@ test("built-in presets are valid and index matches directory", () => {
     assert.ok(fs.existsSync(new URL(`${id}/${r.manifest.preview}`, dir)), `${id} missing preview`);
   }
 });
+
+test("background: music-reactive scene effects + sensitivity", () => {
+  for (const effect of ["glyphs", "hearts", "fireworks", "rain", "sakura"]) {
+    const r = normalizeManifest({ ...base, background: { effect, sensitivity: 1.4 } });
+    assert.deepEqual(r.warnings, [], effect);
+    assert.equal(r.manifest.background.effect, effect);
+    assert.equal(r.manifest.background.sensitivity, 1.4);
+  }
+  const bad = normalizeManifest({ ...base, background: { effect: "snow", sensitivity: 99 } });
+  assert.equal(bad.manifest.background.effect, "media"); // unknown effect → default + warning
+  assert.equal(bad.manifest.background.sensitivity, 2); // clamped
+  assert.ok(bad.warnings.length >= 1);
+  assert.equal(normalizeManifest(base).manifest.background.sensitivity, 1);
+});
+
+test("dynamic-scenes preset: scene selector switches background.effect", () => {
+  const dir = new URL("../public/presets/dynamic-scenes/", import.meta.url);
+  const { manifest, warnings } = normalizeManifest(JSON.parse(fs.readFileSync(new URL("preset.json", dir), "utf8")));
+  assert.deepEqual(warnings, []);
+  const scene = manifest.settings.find((s) => s.key === "scene");
+  assert.deepEqual(scene.options.map((o) => o.value).sort(), ["fireworks", "glyphs", "hearts", "rain", "sakura"]);
+  assert.equal(resolveConfig(manifest).background.effect, "sakura");
+  for (const o of scene.options) assert.equal(resolveConfig(manifest, { scene: o.value }).background.effect, o.value);
+  assert.equal(resolveConfig(manifest, { scene: "nope" }).background.effect, "sakura"); // invalid user value ignored
+  assert.equal(resolveConfig(manifest, { react: false }).background.react, false);
+  // every scene has a matching tint block in style.css
+  const css = fs.readFileSync(new URL("style.css", dir), "utf8");
+  for (const o of scene.options) assert.match(css, new RegExp(`data-bg-effect="${o.value}"`), o.value);
+});

@@ -4,6 +4,7 @@ import { audio } from "./audio.js";
 import { clamp, h } from "../lib/dom.js";
 import { toast } from "../lib/toast.js";
 import { startParticles, stopParticles } from "../presets/bg-fx.js";
+import { isScene, startScene, stopScene } from "../presets/bg-scenes.js";
 import { cfg } from "../presets/runtime.js";
 import { app } from "../state.js";
 import { renderMain } from "../ui/main-view.js";
@@ -279,8 +280,10 @@ export function applyBackgroundEffect() {
   const palette = [0, 1, 2, 3].map((i) => bg.colors[i] ?? bg.colors[i % Math.max(1, bg.colors.length)] ?? fallback[i]);
   palette.forEach((color, i) => layer.style.setProperty(`--fx-${i + 1}`, color));
 
+  // Both canvas effects share #bg-particles: only one of them runs at a time.
   const canvas = document.getElementById("bg-particles");
-  if (bg.effect === "particles")
+  if (bg.effect === "particles") {
+    stopScene();
     startParticles(canvas, {
       count: bg.count,
       speed: bg.speed,
@@ -288,7 +291,21 @@ export function applyBackgroundEffect() {
       react: bg.react,
       colors: palette,
     });
-  else stopParticles();
+  } else if (isScene(bg.effect)) {
+    stopParticles();
+    // `colors` stays raw here: empty means "use the scene's own palette"
+    startScene(canvas, bg.effect, {
+      count: bg.count,
+      speed: bg.speed,
+      intensity: bg.intensity,
+      react: bg.react,
+      sensitivity: bg.sensitivity,
+      colors: bg.colors,
+    });
+  } else {
+    stopParticles();
+    stopScene();
+  }
   layer.classList.toggle("fx-react", bg.react);
   updateVideoBg();
 }

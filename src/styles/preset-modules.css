@@ -430,6 +430,11 @@ html[data-lyrics-mode="compact"] .lyric-line.active {
 .bg-layer[data-effect="particles"] .bg-fx {
   opacity: 1;
 }
+/* music-reactive scenes (glyphs · hearts · fireworks · rain · sakura): drawn on the canvas by presets/bg-scenes.js,
+   which paints its own backdrop and applies the intensity internally */
+.bg-layer:is([data-effect="glyphs"], [data-effect="hearts"], [data-effect="fireworks"], [data-effect="rain"], [data-effect="sakura"]) .bg-fx {
+  opacity: 1;
+}
 
 /* aurora: three blurred light blobs moving slowly */
 .fx-blob {

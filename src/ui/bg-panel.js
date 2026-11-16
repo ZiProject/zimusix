@@ -1,6 +1,8 @@
 import { resetBgSettings, setBgSetting } from "../features/background.js";
 import { h } from "../lib/dom.js";
 import { app } from "../state.js";
+import { renderMain } from "./main-view.js";
+import { presetSettingsSection } from "./preset-settings.js";
 
 export function renderBgPanel() {
   const slider = (label, key, min, max, unit) => {
@@ -48,5 +50,7 @@ export function renderBgPanel() {
       { class: "small", onclick: () => resetBgSettings() },
       "Reset to defaults",
     ),
+    // every customizable setting of the active preset (scene, density, speed, visualizer…) lives here too
+    presetSettingsSection(() => renderMain()),
   );
 }

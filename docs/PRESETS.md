@@ -32,6 +32,10 @@ Located in `public/presets/<id>/`, listed in `public/presets/index.json`.
 | `split-studio` | split · right · top | polaroid | media | mirror (background) | list · stage | – | radius, density, viz opacity, button style |
 | `vinyl-night` | split · rail · floating | vinyl, spinning | aurora | wave (stage) | karaoke · stage | – | spin speed, accent, aurora intensity, lyrics size, panels |
 | `neon-afterlife` | stage · rail · floating | polaroid | aurora | bars (stage + player) | focus · stage | ✔ (scanlines, neon edges) | neon intensity, scanlines (`css:` vars), accent, bass reactivity |
+| `dynamic-scenes` | stage · rail · floating | circle, spinning | **5 switchable scenes**: sakura · rainy city · fireworks · hearts · note rain | circle ring (stage) | karaoke · stage | ✔ (re-tints the UI per scene) | scene, brightness, density, speed, react, reaction strength, cover behind scene, viz type, spin, lyrics size |
+
+`dynamic-scenes` is the reference example for the **music-reactive scene** backgrounds (see [`background`](#background)): a `select` setting bound to
+`background.effect` lets the user switch the animated world live, and its `style.css` re-tints the interface for each scene through `html[data-bg-effect="…"]`.
 
 `neon-afterlife` is the reference example for a preset that combines declarative modules with `style.css`, `css:--preset-*` settings,
 a custom `README.md` and an SVG preview.
@@ -171,14 +175,32 @@ Background visual effects, rendered in a fixed layer behind the UI (`#bg-layer`)
 
 | Parameter | Values | Default | Description |
 | --- | --- | --- | --- |
-| `effect` | `media` · `aurora` · `gradient` · `solid` · `particles` | `media` | media: cover art/video \| aurora \| gradient \| solid \| particles |
+| `effect` | `media` · `aurora` · `gradient` · `solid` · `particles` · `glyphs` · `hearts` · `fireworks` · `rain` · `sakura` | `media` | media: cover art/video \| aurora \| gradient \| solid \| particles \| **music-reactive scenes** (see below): glyphs = rain of music notes, hearts, fireworks, rainy city, sakura |
 | `media` | `auto` · `on` · `off` | `auto` | Whether to overlay cover art/video (auto: only when effect = media) |
-| `colors` | array of ≤ 4 hex colors | `[]` | Effect palette; empty = derived from accent colors. **aurora** and **gradient** use the first **3** colors; the 4th is only used by **particles** |
+| `colors` | array of ≤ 4 hex colors | `[]` | Effect palette; empty = derived from accent colors. **aurora** and **gradient** use the first **3** colors; the 4th is only used by **particles**. For the **scenes** an empty list means "the scene's own palette"; if set, glyphs blends the colors across the screen, hearts / fireworks / sakura draw from the list |
 | `speed` | number 0.2–3 | `1` | Animation speed multiplier |
 | `intensity` | number 0–1 | `0.6` | Opacity/intensity of the **effect** layer (does not affect cover/video — see below) |
 | `angle` | number 0–360 | `135` | Gradient angle (degrees) |
-| `count` | number 10–200 | `70` | Particle count (particles effect) |
+| `count` | number 10–200 | `70` | Particle count (particles effect); for scenes the density of notes / hearts / sparks / drops / petals |
 | `react` | `true` / `false` | `true` | Effect reacts dynamically to music energy |
+| `sensitivity` | number 0.2–2 | `1` | Multiplier for how strongly the **scenes** respond to bass/energy (`react` must be on) |
+
+#### Music-reactive scenes
+
+`glyphs`, `hearts`, `fireworks`, `rain` and `sakura` are original canvas animations drawn by `src/presets/bg-scenes.js` on the `#bg-particles` canvas
+(they share it with `particles`, so only one runs at a time). They paint their own backdrop, so `background.intensity` controls the opacity of both
+backdrop and elements; `speed`, `count`, `colors`, `react` and `sensitivity` work as described above.
+
+| Scene | Ambient (nothing playing) | Reaction to the music |
+| --- | --- | --- |
+| `glyphs` | music notes fall in depth layers over a gently waving five-line staff | left lanes follow the bass, right lanes the energy; each beat sends a shock-wave from the bottom that swells the notes it passes; bass makes the staff tremble |
+| `hearts` | glossy hearts rise like bubbles and pop into sparkles | a lub-dub heartbeat pulse + expanding ring on each beat, a few new hearts per beat, energy speeds up the rise |
+| `fireworks` | a shell every 1–2.5 s over a skyline and water; bursts: peony · tilted ring · spiral · willow · crackle, with reflections | each beat launches a shell (two on the hardest hits), energy raises launch rate and brightness, bass glows the horizon and ripples the reflections |
+| `rain` | layered rain, perspective puddle ripples, glowing city bokeh | energy slants and thickens the rain, lamps swell with the bass, the hardest hits call a lightning bolt |
+| `sakura` | a blossoming branch under a dusk sky and moon; petals swirl in a wind field | each beat pulses the blossoms and sheds a burst of petals, energy strengthens wind and flutter, the moon glow breathes with the bass |
+
+Beat detection: a hit is a bass value clearly above its own slow average (≥ 190 ms apart). With `react: false`, in `prefers-reduced-motion`, or when nothing plays,
+scenes fall back to calm ambient motion (reduced-motion also slows them to 35 %).
 
 **Interplay with the user's own Background panel.** The toolbar's *Background* panel (blur, opacity, overlay dimming, bass bounce, cover-art fallback)
 is an **app-level user preference**, stored in `localStorage["zimusix-bg"]` and independent of presets. Those sliders affect the cover-art / video layer
@@ -233,7 +255,7 @@ declared with `@font-face` in `style.css`.
 
 ## `settings` — User Configurable Options
 
-Each item registers an interactive control in **Themes → Customize** that binds to a parameter via `bind`.
+Each item registers an interactive control that binds to a parameter via `bind`. The controls appear in **Themes → Customize** and, for quick access while listening, at the bottom of the **Background panel** (sliders icon in the top-right toolbar).
 Users can only modify options you explicitly declare; values are clamped to specified ranges and persisted per preset.
 
 | Field | Description |
@@ -314,7 +336,7 @@ npm run test:presets                        # schema + sidecar preset store unit
 ```
 
 The CLI runner uses the exact same schema validator as the app and verifies real assets on disk (preview, style.css, file extensions, file sizes).
-Current status: all six built-in presets and the template pass (the template reports one expected directory-name warning); 16/16 tests pass.
+Current status: all seven built-in presets and the template pass (the template reports one expected directory-name warning); 22/22 tests pass.
 
 ## Runtime Architecture (For Contributors)
 
@@ -327,9 +349,10 @@ src/presets/
 ├─ runtime.js      applyPreset / setPresetSetting; sets data-* attributes and CSS vars on <html>; fires onPresetChange
 ├─ visualizers.js  bars · mirror · wave · circle · dots canvas visualizers
 ├─ bg-fx.js        particles background effect (aurora/gradient/solid implemented in CSS)
-└─ reactive.js     shared bass/energy state read by the particles effect
+├─ bg-scenes.js    music-reactive scenes: glyphs · hearts · fireworks · rain · sakura (+ beat detector)
+└─ reactive.js     shared bass/energy state read by the particles effect and the scenes
 src/ui/visualizer.js          per-frame audio analysis → --music-* vars, draws visualizer onto player/stage/background canvases
-src/features/background.js    background layer: cover/video, effect palette (--fx-*), particles start/stop
+src/features/background.js    background layer: cover/video, effect palette (--fx-*), particles / scene start-stop
 src/ui/views/presets.js       Themes view: gallery cards + generated settings controls
 src/styles/preset-layout.css   shell / sidebar / player / density
 src/styles/preset-modules.css  artwork / info / visualizer / lyrics / background
@@ -352,7 +375,7 @@ Sidecar API endpoints: `GET /presets` · `POST /presets/import {path}` · `POST 
 - **Minimal view toggle (`H` key / eye icon)**: when hidden, selecting any sidebar tab (Search, Queue, Lyrics…) or clicking the Lyrics button in the player bar automatically restores the view. The state is persisted.
 - The **Now Playing** item is always pinned at the top of the sidebar.
 - The **Background panel** (blur / opacity / dimming / bass bounce / cover fallback) is a user-level setting that applies on top of any preset (see `background`).
-- `prefers-reduced-motion` is honored for the aurora blobs, spinning artwork and title marquee. The **particles** canvas and the audio-reactive pulses do not check it yet.
+- `prefers-reduced-motion` is honored for the aurora blobs, spinning artwork, title marquee and the music-reactive **scenes** (slowed to 35 %, no beat reactions). The **particles** canvas and the other audio-reactive pulses do not check it yet.
 
 ## Known Limitations (Current State)
 

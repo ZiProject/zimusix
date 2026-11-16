@@ -143,21 +143,22 @@ export const MODULES = {
     doc: "Background visual effect.",
     params: {
       effect: enumOf(
-        ["media", "aurora", "gradient", "solid", "particles"],
+        ["media", "aurora", "gradient", "solid", "particles", "glyphs", "hearts", "fireworks", "rain", "sakura"],
         "media",
-        "media: artwork/video | aurora | gradient | solid | particles",
+        "media: artwork/video | aurora | gradient | solid | particles | music-reactive scenes: glyphs (note rain) · hearts · fireworks · rain · sakura",
       ),
       media: enumOf(
         ["auto", "on", "off"],
         "auto",
         "Overlay cover art/video (auto: only when effect = media)",
       ),
-      colors: colors(4, "Up to 4 hex colors; leave empty to use accent color"),
+      colors: colors(4, "Up to 4 hex colors; leave empty to use accent color (scenes: empty = the scene's own palette)"),
       speed: num(1, 0.2, 3, "Effect animation speed", 0.1),
       intensity: num(0.6, 0, 1, "Effect intensity/opacity", 0.05),
       angle: num(135, 0, 360, "Gradient angle (degrees)"),
-      count: num(70, 10, 200, "Particle count"),
+      count: num(70, 10, 200, "Particle count (scenes: density of notes / hearts / sparks / drops / petals)"),
       react: bool(true, "Background reacts to audio bass/energy"),
+      sensitivity: num(1, 0.2, 2, "How strongly scene effects react to the music (multiplier)", 0.05),
     },
   },
 

@@ -1,6 +1,7 @@
 {
   "presets": [
     "classic",
+    "dynamic-scenes",
     "lyrics-focus",
     "neon-afterlife",
     "neon-stage",

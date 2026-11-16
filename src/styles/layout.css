@@ -254,7 +254,10 @@ nav {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 270px;
+  width: 290px;
+  max-height: min(74vh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -263,6 +266,17 @@ nav {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   font-size: 12px;
+}
+.bg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.bg-panel small.muted {
+  line-height: 1.35;
 }
 .bg-row {
   display: flex;

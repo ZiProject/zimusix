@@ -82,7 +82,7 @@ src/
 │   ├─ mascot.js      mascot states (images in public/mascot/): loading, empty, error, no-results…
 │   └─ views/         search, library, queue, related, lyrics, discord
 ├─ presets/           Preset Runtime: schema.js (modules + parameters + validation), loader.js, runtime.js,
-│                     store.js, css.js (style.css sanitizer), visualizers.js, bg-fx.js
+│                     store.js, css.js (style.css sanitizer), visualizers.js, bg-fx.js, bg-scenes.js (music-reactive scenes)
 └─ styles/            index.css imports base, layout, search, library, player,
                       toast, background, wiring, lyrics, related, effects,
                       preset-layout, preset-modules, preset-gallery

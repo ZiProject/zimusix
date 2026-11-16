@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "id": "dynamic-scenes",
+  "name": "Dynamic Scenes",
+  "version": "1.0.0",
+  "author": "Zimusix",
+  "description": "Five living backgrounds that dance to your music — a blossoming sakura branch, a rainy city night, fireworks over the skyline, glossy love hearts and a rain of music notes. Switch scene in Customize; the whole interface re-tints to match.",
+  "tags": ["dynamic", "reactive", "sakura", "rain", "fireworks", "hearts", "notes", "glass"],
+  "preview": "preview.svg",
+  "style": "style.css",
+
+  "layout": {
+    "shell": "stage",
+    "sidebar": "rail",
+    "player": "floating",
+    "density": "comfortable",
+    "defaultView": "nowplaying",
+    "contentWidth": 1120,
+    "radius": 16
+  },
+
+  "controls": {
+    "buttons": "pill",
+    "playButton": "accent",
+    "nav": "pill",
+    "toolbar": "transparent",
+    "panels": "glass",
+    "iconSize": 19
+  },
+
+  "artwork": {
+    "style": "circle",
+    "size": 58,
+    "stageSize": 300,
+    "react": true,
+    "reactAmount": 7,
+    "glow": true,
+    "spin": true,
+    "spinSpeed": 28,
+    "shadow": true
+  },
+
+  "info": {
+    "style": "centered",
+    "show": ["title", "artist", "source"],
+    "marquee": true,
+    "titleScale": 1.3
+  },
+
+  "background": {
+    "effect": "sakura",
+    "media": "off",
+    "colors": [],
+    "speed": 1,
+    "intensity": 0.75,
+    "count": 70,
+    "react": true,
+    "sensitivity": 1
+  },
+
+  "visualizer": {
+    "type": "circle",
+    "placement": ["stage"],
+    "bars": 64,
+    "colorMode": "gradient",
+    "thickness": 3,
+    "smoothing": 0.7,
+    "opacity": 0.95,
+    "height": 170
+  },
+
+  "lyrics": {
+    "mode": "karaoke",
+    "placement": "stage",
+    "align": "center",
+    "showTime": false,
+    "size": 24,
+    "activeScale": 1.4,
+    "glow": true
+  },
+
+  "theme": {
+    "colorScheme": "dark",
+    "fontFamily": "'Segoe UI', 'Noto Sans', system-ui, sans-serif",
+    "colors": {
+      "accent": "#ff9fc0",
+      "accent2": "#ffd1e1",
+      "bg": "#160a14",
+      "panel": "#221120",
+      "panel2": "#2e1a2c",
+      "line": "#5a3454",
+      "text": "#fff2f7",
+      "muted": "#c9a3b8"
+    }
+  },
+
+  "settings": [
+    {
+      "key": "scene",
+      "label": "Scene",
+      "description": "Pick the animated background. The interface colours follow the scene.",
+      "type": "select",
+      "bind": "background.effect",
+      "options": [
+        { "value": "sakura", "label": "Sakura petals" },
+        { "value": "rain", "label": "Rainy season" },
+        { "value": "fireworks", "label": "Fireworks" },
+        { "value": "hearts", "label": "Love hearts" },
+        { "value": "glyphs", "label": "Note rain" }
+      ],
+      "default": "sakura"
+    },
+    {
+      "key": "intensity",
+      "label": "Brightness",
+      "description": "Opacity of the scene and its backdrop.",
+      "type": "range",
+      "bind": "background.intensity",
+      "min": 0.2,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.75
+    },
+    {
+      "key": "density",
+      "label": "Density",
+      "description": "Petals, drops, sparks, hearts or columns on screen.",
+      "type": "range",
+      "bind": "background.count",
+      "min": 20,
+      "max": 200,
+      "step": 5,
+      "default": 70
+    },
+    {
+      "key": "speed",
+      "label": "Speed",
+      "description": "Animation speed multiplier.",
+      "type": "range",
+      "bind": "background.speed",
+      "min": 0.4,
+      "max": 2.5,
+      "step": 0.1,
+      "default": 1
+    },
+    {
+      "key": "react",
+      "label": "React to music",
+      "description": "Gusts, bursts, flashes and speed-ups follow the beat. Off = calm ambient motion.",
+      "type": "toggle",
+      "bind": "background.react",
+      "default": true
+    },
+    {
+      "key": "sensitivity",
+      "label": "Reaction strength",
+      "description": "How strongly the scene responds to bass and energy.",
+      "type": "range",
+      "bind": "background.sensitivity",
+      "min": 0.4,
+      "max": 2,
+      "step": 0.05,
+      "default": 1
+    },
+    {
+      "key": "coverBackdrop",
+      "label": "Cover art behind scene",
+      "description": "Blend the blurred cover art / video under the animation.",
+      "type": "select",
+      "bind": "background.media",
+      "options": [
+        { "value": "off", "label": "Off" },
+        { "value": "on", "label": "On" }
+      ],
+      "default": "off"
+    },
+    {
+      "key": "vizType",
+      "label": "Visualizer",
+      "description": "Spectrum drawn around the artwork.",
+      "type": "select",
+      "bind": "visualizer.type",
+      "options": [
+        { "value": "circle", "label": "Ring" },
+        { "value": "bars", "label": "Bars" },
+        { "value": "mirror", "label": "Mirror" },
+        { "value": "wave", "label": "Wave" },
+        { "value": "dots", "label": "Dots" },
+        { "value": "none", "label": "Off" }
+      ],
+      "default": "circle"
+    },
+    {
+      "key": "spin",
+      "label": "Spinning artwork",
+      "type": "toggle",
+      "bind": "artwork.spin",
+      "default": true
+    },
+    {
+      "key": "lyricsSize",
+      "label": "Lyrics size",
+      "type": "range",
+      "bind": "lyrics.size",
+      "min": 16,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 24
+    }
+  ]
+}
