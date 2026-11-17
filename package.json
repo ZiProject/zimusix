@@ -20,7 +20,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
-    "@ziplayer/client": "file:../ZiPlayer/client"
+    "@ziplayer/client": "^1.0.5"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.0",
