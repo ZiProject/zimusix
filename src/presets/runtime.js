@@ -1,42 +1,49 @@
 /**
- * Preset Runtime — select presets, merge user settings, and "apply":
+ * Preset Runtime — select presets, merge user choices, and "apply":
  *
- *   • sets data-* attributes on <html> (styles of each module attach to these)
- *   • sets CSS variables (cover dimensions, lyrics font size, theme colors, --preset-*)
- *   • injects sanitized preset style.css
+ *   • emits the preset's configuration to <html> (data-* attributes, CSS variables, x-* classes) through the
+ *     PRESET'S OWN schema (modules.json `emit` rules) — the runtime itself knows no module or parameter names
+ *   • injects sanitized style.css (+ @font-face for `fonts`)
+ *   • layers: schema default < manifest < setting default < rules (hooks.json) < user setting < user override
  *   • notifies UI components to re-render (onPresetChange)
  *
- * Runtime does not import UI to avoid circular dependencies; main.js wires events.
+ * Runtime does not import UI to avoid circular dependencies; main.js wires events. hooks.js (live signals,
+ * bindings, rules) subscribes to this module and calls back through `setRuleSets`.
  */
 import { app } from "../state.js";
-import { loadBuiltinEntries, loadPresetCss, loadUserEntries } from "./loader.js";
-import {
-  COLOR_VARS,
-  coerceSetting,
-  defaultManifest,
-  resolveConfig,
-} from "./schema.js";
+import { loadBuiltinEntries, loadCore, loadPresetCss, loadUserEntries } from "./loader.js";
+import { coerceSetting, emitConfig, fallbackConfig, resolveConfig, resolveBind, coerceParam, isHexColor } from "./schema.js";
 import { DEFAULT_PRESET_KEY, loadPrefs, savePrefs } from "./store.js";
 
 /** @type {import("./loader.js").PresetEntry[]} */
 let entries = [];
 let userDir = "";
 let prefs = loadPrefs();
-let current = { entry: null, config: resolveConfig(defaultManifest()) };
+let current = { entry: null, config: fallbackConfig(), ruleSets: [], ruleKey: "" };
 
 const listeners = new Set();
-let appliedVars = new Set();
+let applied = { attrs: new Set(), css: new Set(), classes: new Set() };
 let applyToken = 0;
 
 /* --------------------------------------------------------------- access */
 
-/** Current active configuration (always complete thanks to default values). */
+/** Current active configuration (always complete: contract fallbacks fill anything a schema omits). */
 export const cfg = () => current.config;
 export const activeEntry = () => current.entry;
 export const activeKey = () => current.entry?.key ?? DEFAULT_PRESET_KEY;
 export const listEntries = () => entries;
 export const presetsDir = () => userDir;
 export const userValuesOf = (key) => ({ ...(prefs.values[key] ?? {}) });
+export const overridesOf = (key) => ({ ...(prefs.overrides[key] ?? {}) });
+
+/** URL of a file inside the ACTIVE preset's folder (for `asset` parameters such as background.image). */
+export const assetUrl = (rel) => (rel && current.entry ? current.entry.fileUrl(rel) : "");
+
+/** Compiled draw program of the ACTIVE preset (`kind`: "visualizers" | "backgrounds"), or null. */
+export function programFor(kind, id) {
+  const programs = current.entry?.draw?.[kind];
+  return programs && Object.prototype.hasOwnProperty.call(programs, id) ? programs[id] : null;
+}
 
 /** Call `fn(config, {reason})` whenever configuration changes. Returns unsubscribe function. */
 export function onPresetChange(fn) {
@@ -54,76 +61,27 @@ const emit = (reason) => {
 
 /* ---------------------------------------------------------------- apply */
 
-function hexToRgbTriplet(hex) {
-  let h = hex.slice(1);
-  if (h.length === 3 || h.length === 4) h = [...h].map((c) => c + c).join("");
-  const n = parseInt(h.slice(0, 6), 16);
-  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
-}
+/** Write what the schema emits, removing whatever the previous state set but the new one doesn't. */
+function applyEmit() {
+  const html = document.documentElement;
+  const out = current.entry
+    ? emitConfig(current.config, current.entry.manifest.modules, { fileUrl: current.entry.fileUrl })
+    : { attrs: {}, css: {}, classes: [] };
 
-function setVars(vars) {
-  const style = document.documentElement.style;
-  for (const name of appliedVars) if (!(name in vars)) style.removeProperty(name);
-  for (const [name, value] of Object.entries(vars)) style.setProperty(name, value);
-  appliedVars = new Set(Object.keys(vars));
-}
+  for (const name of applied.attrs) if (!(name in out.attrs)) html.removeAttribute(`data-${name}`);
+  for (const [name, value] of Object.entries(out.attrs)) html.setAttribute(`data-${name}`, value);
+  applied.attrs = new Set(Object.keys(out.attrs));
 
-function collectVars(config) {
-  const { layout, artwork, lyrics, visualizer, theme, background } = config;
-  const vars = {
-    "--content-width": `${layout.contentWidth}px`,
-    "--radius": `${layout.radius}px`,
-    "--icon-size": `${config.controls.iconSize}px`,
-    "--art-size": `${artwork.size}px`,
-    "--stage-art": `${artwork.stageSize}px`,
-    "--art-react": artwork.react ? String(artwork.reactAmount / 100) : "0",
-    "--art-glow": artwork.glow ? "1" : "0",
-    "--spin-speed": `${artwork.spinSpeed}s`,
-    "--lyrics-size": `${lyrics.size}px`,
-    "--lyrics-active-scale": String(lyrics.activeScale),
-    "--viz-stage-h": `${visualizer.height}px`,
-    "--info-title-scale": String(config.info.titleScale),
-    "--fx-speed": String(background.speed),
-    "--fx-intensity": String(background.intensity),
-    "--fx-angle": `${background.angle}deg`,
-  };
-  for (const [token, value] of Object.entries(theme.colors)) {
-    const name = COLOR_VARS[token];
-    if (!name) continue;
-    vars[name] = value;
-    if (token === "bg") vars["--bg-rgb"] = hexToRgbTriplet(value);
-    if (token === "panel") vars["--panel-rgb"] = hexToRgbTriplet(value);
-  }
-  if (theme.fontFamily) vars["font-family"] = theme.fontFamily;
-  for (const [name, value] of Object.entries(config.cssVars)) vars[name] = value;
-  return vars;
-}
+  for (const name of applied.css) if (!(name in out.css)) html.style.removeProperty(name);
+  for (const [name, value] of Object.entries(out.css)) html.style.setProperty(name, value);
+  applied.css = new Set(Object.keys(out.css));
 
-function applyAttributes(config) {
-  const d = document.documentElement.dataset;
-  const { layout, artwork, info, background, visualizer, lyrics, theme, controls } = config;
-  d.btn = controls.buttons;
-  d.playBtn = controls.playButton;
-  d.nav = controls.nav;
-  d.toolbar = controls.toolbar;
-  d.panels = controls.panels;
-  d.shell = layout.shell;
-  d.sidebar = layout.sidebar;
-  d.playerPos = layout.player;
-  d.density = layout.density;
-  d.artwork = artwork.style;
-  d.artSpin = artwork.spin ? "1" : "0";
-  d.artShadow = artwork.shadow ? "1" : "0";
-  d.info = info.style;
-  d.infoMarquee = info.marquee ? "1" : "0";
-  d.bgEffect = background.effect;
-  d.viz = visualizer.type;
-  d.vizPlayer = visualizer.placement.includes("player") && visualizer.type !== "none" ? "1" : "0";
-  d.lyricsMode = lyrics.mode;
-  d.lyricsAlign = lyrics.align;
-  d.lyricsTime = lyrics.showTime ? "1" : "0";
-  d.scheme = theme.colorScheme;
-  document.documentElement.style.colorScheme = theme.colorScheme;
+  const classes = new Set(out.classes);
+  for (const c of applied.classes) if (!classes.has(c)) html.classList.remove(c);
+  for (const c of classes) html.classList.add(c);
+  applied.classes = classes;
+
+  html.dataset.preset = current.entry?.id ?? "classic";
 }
 
 function setPresetStyle(css) {
@@ -141,19 +99,22 @@ function setPresetStyle(css) {
 }
 
 function applyConfig(reason, prevSidebar) {
-  const { config, entry } = current;
-  if (prevSidebar !== undefined && prevSidebar !== config.layout.sidebar)
-    app.sidebarHidden = config.layout.sidebar === "hidden";
-  applyAttributes(config);
-  document.documentElement.dataset.preset = entry?.id ?? "classic";
-  setVars(collectVars(config));
+  const { config } = current;
+  if (prevSidebar !== undefined && prevSidebar !== config.layout.sidebar) app.sidebarHidden = config.layout.sidebar === "hidden";
+  applyEmit();
   emit(reason);
 }
 
 function reresolve() {
   const entry = current.entry;
-  const manifest = entry?.manifest ?? defaultManifest();
-  current.config = resolveConfig(manifest, prefs.values[entry?.key ?? DEFAULT_PRESET_KEY]);
+  if (!entry) {
+    current.config = fallbackConfig();
+    return;
+  }
+  current.config = resolveConfig(entry.manifest, prefs.values[entry.key], {
+    overrides: prefs.overrides[entry.key],
+    ruleSets: current.ruleSets,
+  });
 }
 
 /* ------------------------------------------------------------- actions */
@@ -166,6 +127,8 @@ export async function applyPreset(key, { persist = true } = {}) {
   const { css } = await loadPresetCss(entry);
   if (token !== applyToken) return true; // newer selection in flight
   current.entry = entry;
+  current.ruleSets = [];
+  current.ruleKey = "";
   reresolve();
   setPresetStyle(css);
 
@@ -181,6 +144,12 @@ export async function applyPreset(key, { persist = true } = {}) {
   return true;
 }
 
+function change(reason) {
+  const prevSidebar = current.config.layout.sidebar;
+  reresolve();
+  applyConfig(reason, prevSidebar);
+}
+
 /** Change a single setting of current preset (applies immediately, no CSS reload). */
 export function setPresetSetting(settingKey, rawValue) {
   const entry = current.entry;
@@ -190,19 +159,54 @@ export function setPresetSetting(settingKey, rawValue) {
   if (!coerced.ok) return;
   prefs.values[entry.key] = { ...(prefs.values[entry.key] ?? {}), [settingKey]: coerced.value };
   savePrefs(prefs);
-  const prevSidebar = current.config.layout.sidebar;
-  reresolve();
-  applyConfig("setting", prevSidebar);
+  change("setting");
 }
 
+/** Advanced editor: override ANY parameter of the preset's schema (`"section.param"` or `"section.colormap.key"`). */
+export function setPresetOverride(path, rawValue) {
+  const entry = current.entry;
+  if (!entry) return false;
+  const bind = resolveBind(path, entry.manifest.modules);
+  if (!bind || bind.kind === "cssVar") return false;
+  let value = rawValue;
+  if (bind.kind === "colorKey") {
+    if (!isHexColor(rawValue)) return false;
+  } else {
+    const res = coerceParam(bind.spec, rawValue);
+    if (!res.ok) return false;
+    value = res.value;
+  }
+  prefs.overrides[entry.key] = { ...(prefs.overrides[entry.key] ?? {}), [path]: value };
+  savePrefs(prefs);
+  change("setting");
+  return true;
+}
+
+export function clearPresetOverride(path) {
+  const entry = current.entry;
+  if (!entry || !prefs.overrides[entry.key]) return;
+  delete prefs.overrides[entry.key][path];
+  if (!Object.keys(prefs.overrides[entry.key]).length) delete prefs.overrides[entry.key];
+  savePrefs(prefs);
+  change("setting");
+}
+
+/** Reset everything the user customised for the current preset (settings + advanced overrides). */
 export function resetPresetSettings() {
   const entry = current.entry;
   if (!entry) return;
   delete prefs.values[entry.key];
+  delete prefs.overrides[entry.key];
   savePrefs(prefs);
-  const prevSidebar = current.config.layout.sidebar;
-  reresolve();
-  applyConfig("setting", prevSidebar);
+  change("setting");
+}
+
+/** Called by hooks.js when the set of matching `rules` changes. */
+export function setRuleSets(key, sets) {
+  if (key === current.ruleKey) return;
+  current.ruleKey = key;
+  current.ruleSets = sets;
+  change("rule");
 }
 
 /** Reload preset list (after adding/removing folders). */
@@ -214,7 +218,7 @@ export async function reloadEntries() {
   if (current.entry && !entries.some((e) => e.key === current.entry.key && e.valid)) {
     await applyPreset(DEFAULT_PRESET_KEY, { persist: true });
   } else if (current.entry) {
-    // Manifest may have changed (overwrite import): refresh reference
+    // Files may have changed (overwrite import): refresh reference
     const fresh = entries.find((e) => e.key === current.entry.key);
     if (fresh) {
       current.entry = fresh;
@@ -229,12 +233,13 @@ export async function reloadEntries() {
 /** Startup: load entries + apply saved preset (falls back to `classic`, then hard default). */
 export async function initPresets() {
   prefs = loadPrefs();
+  await loadCore();
   const [builtin, user] = await Promise.all([loadBuiltinEntries(), loadUserEntries()]);
   userDir = user.dir;
   entries = [...builtin, ...user.entries];
   const order = [prefs.active, DEFAULT_PRESET_KEY];
   for (const key of order) if (await applyPreset(key, { persist: false })) return;
-  // No usable presets: use hardcoded default config (equivalent to classic)
-  current = { entry: null, config: resolveConfig(defaultManifest()) };
+  // No usable presets: contract defaults only (CSS defaults apply)
+  current = { entry: null, config: fallbackConfig(), ruleSets: [], ruleKey: "" };
   applyConfig("init");
 }

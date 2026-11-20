@@ -64,6 +64,36 @@ test("every scene renders 10 s of music (kick @120 bpm) without errors, at sever
   }
 });
 
+test("rain lightning appears on each beat, independent of hit strength or cooldown", () => {
+  const W = 800;
+  const H = 450;
+  const lightningFlashes = [];
+  const ctx = new Proxy(fakeCtx(), {
+    get: (target, prop) => {
+      if (prop === "fillRect") {
+        return (x, y, w, h) => {
+          if (typeof target.fillStyle === "string" && target.fillStyle.startsWith("rgba(190,212,255,")) {
+            const alpha = Number(target.fillStyle.slice(target.fillStyle.lastIndexOf(",") + 1, -1));
+            if (alpha > 0.14) lightningFlashes.push({ x, y, w, h });
+          }
+        };
+      }
+      return target[prop];
+    },
+  });
+  const scene = createScene("rain");
+  scene.resize(W, H, 1);
+  const options = { count: 70, intensity: 0.6, colors: [], ia: 0.7, ba: 0.7 };
+  for (const strength of [0.5, 0.7, 1]) {
+    scene.frame(ctx, W, H, 1 / 60, options, { hit: true, strength, energy: 0, bass: 0, beat: 0 });
+    for (let frame = 1; frame < 30; frame++) {
+      scene.frame(ctx, W, H, 1 / 60, options, { hit: false, strength: 0, energy: 0, bass: 0, beat: 0 });
+    }
+  }
+  assert.equal(lightningFlashes.length, 3);
+  assert.ok(lightningFlashes.every(({ x, y, w, h }) => x === 0 && y === 0 && w === W && h === H));
+});
+
 test("beat detector: ~1 hit per kick, none when silent or when reaction is off", () => {
   let t = 9_000_000;
   const run = (secs, { active, react, level }) => {

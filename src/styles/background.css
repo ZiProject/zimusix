@@ -8,6 +8,21 @@
   pointer-events: none;
   background: var(--bg);
 }
+.bg-wall {
+  position: absolute;
+  /* oversize by the blur radius so blurred edges never show */
+  left: calc(var(--wall-blur, 0px) * -2);
+  top: calc(var(--wall-blur, 0px) * -2);
+  width: calc(100% + var(--wall-blur, 0px) * 4);
+  height: calc(100% + var(--wall-blur, 0px) * 4);
+  object-fit: var(--wall-fit, cover);
+  opacity: 0;
+  filter: blur(var(--wall-blur, 0px));
+  transition: opacity 1s ease;
+}
+.bg-wall.on {
+  opacity: 1;
+}
 .bg-art,
 .bg-video {
   position: absolute;

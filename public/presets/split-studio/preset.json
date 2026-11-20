@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "id": "split-studio",
   "name": "Split Studio",
   "version": "1.1.2",
@@ -11,6 +11,7 @@
     "polaroid"
   ],
   "preview": "preview.png",
+  "modules": "modules.json",
   "theme": {
     "colorScheme": "dark",
     "colors": {

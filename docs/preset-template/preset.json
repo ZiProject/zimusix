@@ -1,6 +1,6 @@
 {
-  "$schema": "https://zimusix.app/schema/preset-1.json",
-  "schema": 1,
+  "$schema": "https://zimusix.app/schema/preset-2.json",
+  "schema": 2,
   "id": "my-preset",
   "name": "My Preset",
   "version": "1.0.0",
@@ -9,6 +9,8 @@
   "tags": ["template"],
   "preview": "preview.png",
   "style": "style.css",
+  "modules": "modules.json",
+  "hooks": "hooks.json",
 
   "theme": { "colors": { "accent": "#7c5cff", "accent2": "#a78bfa" } },
   "layout": { "shell": "classic", "sidebar": "left", "player": "bottom", "density": "comfortable", "defaultView": "keep" },
@@ -17,9 +19,11 @@
   "info": { "style": "inline", "show": ["title", "artist", "source"], "marquee": true },
   "background": { "effect": "media" },
   "visualizer": { "type": "bars", "placement": ["player"], "bars": 32 },
+  "mood": { "strength": 0.6 },
   "lyrics": { "mode": "list", "placement": "view", "align": "left", "showTime": true },
 
   "settings": [
+    { "key": "moodStrength", "label": "Mood strength", "type": "range", "bind": "mood.strength", "group": "My module" },
     { "key": "accent", "label": "Accent color", "type": "color", "bind": "theme.colors.accent" },
     { "key": "buttons", "label": "Button style", "type": "select", "bind": "controls.buttons",
       "options": [ { "value": "soft", "label": "Soft" }, { "value": "pill", "label": "Pill" }, { "value": "ghost", "label": "Ghost" } ] },

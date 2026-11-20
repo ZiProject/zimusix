@@ -116,3 +116,26 @@ test("broken installed preset is still listed with error for deletion", () => {
   store.remove("broken");
   assert.equal(store.list().length, 0);
 });
+
+test("schema-2 companion files (modules/hooks/draw) must exist, be small and valid JSON", () => {
+  const store = createPresetStore(tmp());
+  const src = tmp();
+  const good = makePreset(src, "with-logic", { schema: 2, modules: "modules.json", hooks: "hooks.json", draw: "draw.json" }, {
+    "modules.json": "{}",
+    "hooks.json": "{}",
+    "draw.json": "{}",
+  });
+  assert.equal(store.importFrom(good).imported.length, 1);
+
+  const missing = makePreset(tmp(), "no-modules", { schema: 2, modules: "modules.json" });
+  assert.throws(() => store.importFrom(missing), /not found/i);
+
+  const broken = makePreset(tmp(), "bad-hooks", { schema: 2, hooks: "hooks.json" }, { "hooks.json": "{nope" });
+  assert.throws(() => store.importFrom(broken), /invalid JSON/i);
+
+  const escape = makePreset(tmp(), "escape", { schema: 2, modules: "../modules.json" });
+  assert.throws(() => store.importFrom(escape), /relative path/i);
+
+  const big = makePreset(tmp(), "too-big", { schema: 2, draw: "draw.json" }, { "draw.json": JSON.stringify({ pad: "x".repeat(300 * 1024) }) });
+  assert.throws(() => store.importFrom(big), /too large/i);
+});

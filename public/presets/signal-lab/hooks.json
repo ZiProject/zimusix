@@ -1,0 +1,24 @@
+{
+  "doc": "Live logic of Signal Lab: signals are derived values, bind pushes them to <html>, rules adapt parameters to the situation.",
+  "signals": {
+    "kick": "smooth(audio.bass, 0.85, 0.1)",
+    "heat": "lag(audio.energy, 0.8)",
+    "hue": "mod(p.pulse.hueShift + track.seed * 360 + time * 4, 360)",
+    "glow": "mix(4, 40, s.kick) * p.pulse.intensity * (p.pulse.mode == 'calm' ? 0.25 : 1)",
+    "flash": "pulse(audio.hit, 0.35) * p.pulse.intensity"
+  },
+  "bind": [
+    { "css": "--preset-glow", "expr": "s.glow", "unit": "px", "round": 1 },
+    { "css": "--preset-hue", "expr": "s.hue", "round": 0 },
+    { "css": "--preset-flash", "expr": "p.pulse.mode == 'calm' ? 0 : s.flash", "round": 2 },
+    { "css": "--preset-progress", "expr": "player.progress * 100", "unit": "%", "round": 1 },
+    { "attr": "mood", "expr": "s.heat > 0.45 ? 'hot' : 'calm'" },
+    { "class": "lyrics-live", "expr": "lyrics.has && lyrics.index >= 0" },
+    { "class": "late-night", "expr": "clock.hour >= 22 || clock.hour < 5" }
+  ],
+  "rules": [
+    { "when": "viewport.w < 900", "set": { "layout.sidebar": "rail", "layout.density": "compact", "artwork.stageSize": 240 } },
+    { "when": "viewport.aspect < 0.9", "set": { "layout.shell": "focus" } },
+    { "when": "system.lowPower || system.reducedMotion", "set": { "background.effect": "gradient", "visualizer.type": "bars", "artwork.react": false } }
+  ]
+}

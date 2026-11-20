@@ -1,0 +1,39 @@
+/* Signal Lab — reads values written by hooks.json (--preset-*), data-mood, x-* classes, and `pulse` module attrs. */
+html[data-preset="signal-lab"] {
+  --accent: hsl(var(--preset-hue, 200) 85% 62%);
+  --accent-2: hsl(calc(var(--preset-hue, 200) + 70) 90% 70%);
+}
+html[data-preset="signal-lab"].x-tinted {
+  --panel: hsl(var(--preset-hue, 200) 35% 9%);
+  --line: hsl(var(--preset-hue, 200) 30% 20%);
+}
+html[data-preset="signal-lab"] .stage-cover img,
+html[data-preset="signal-lab"] .cover {
+  box-shadow: 0 0 var(--preset-glow, 8px) hsl(var(--preset-hue, 200) 90% 60% / 0.7);
+}
+html[data-preset="signal-lab"] .player::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  width: var(--preset-progress, 0%);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  opacity: 0.9;
+}
+html[data-preset="signal-lab"][data-mood="hot"] .stage-title {
+  text-shadow: 0 0 calc(var(--preset-glow, 8px) * 0.6) var(--accent);
+}
+html[data-preset="signal-lab"].x-lyrics-live .lyric-line.active {
+  color: var(--accent-2);
+}
+html[data-preset="signal-lab"][data-pulse-mode="reactive"] .app-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%, hsl(var(--preset-hue, 200) 90% 60% / calc(var(--preset-flash, 0) * 0.22)), transparent 62%);
+}
+html[data-preset="signal-lab"].x-late-night {
+  --bg: #04060b;
+}

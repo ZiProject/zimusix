@@ -1,0 +1,32 @@
+{
+  "schema": 2,
+  "id": "signal-lab",
+  "name": "Signal Lab",
+  "version": "1.0.0",
+  "author": "Zimusix",
+  "description": "Showcase of preset hooks: its own `pulse` module, live signals that colour the UI per track, rules that adapt to the window, plus custom visualizers and a starfield background drawn from data.",
+  "tags": ["hooks", "showcase", "dark"],
+  "preview": "preview.svg",
+  "modules": "modules.json",
+  "hooks": "hooks.json",
+  "draw": "draw.json",
+  "style": "style.css",
+  "layout": { "shell": "stage", "sidebar": "rail", "player": "floating", "contentWidth": 1180 },
+  "artwork": { "style": "circle", "stageSize": 340, "spin": true, "react": true, "reactAmount": 14, "glow": true },
+  "info": { "style": "centered" },
+  "background": { "effect": "starfield", "count": 110, "intensity": 0.8, "image": "assets/nebula.svg", "wallpaper": "fallback" },
+  "visualizer": { "type": "halo", "placement": ["stage", "player"], "bars": 48, "height": 150 },
+  "lyrics": { "mode": "focus", "align": "center" },
+  "theme": { "colorScheme": "dark", "colors": { "bg": "#07090f", "panel": "#0f1320", "line": "#252c44" } },
+  "pulse": { "intensity": 0.8, "hueShift": 200 },
+  "settings": [
+    { "key": "intensity", "label": "Reaction strength", "type": "range", "bind": "pulse.intensity", "group": "Pulse" },
+    { "key": "mode", "label": "Mode", "type": "select", "bind": "pulse.mode", "group": "Pulse", "options": [{ "value": "reactive", "label": "Reactive" }, { "value": "calm", "label": "Calm" }] },
+    { "key": "hue", "label": "Base hue", "type": "range", "bind": "pulse.hueShift", "unit": "°", "group": "Pulse" },
+    { "key": "tint", "label": "Tint panels with live hue", "type": "toggle", "bind": "pulse.tint", "group": "Pulse" },
+    { "key": "viz", "label": "Visualizer", "type": "select", "bind": "visualizer.type", "group": "Visuals", "options": ["halo", "ember", "bars", "wave", "none"] },
+    { "key": "bg", "label": "Background", "type": "select", "bind": "background.effect", "group": "Visuals", "options": ["starfield", "aurora", "gradient", "media"] },
+    { "key": "stars", "label": "Star count", "type": "range", "bind": "background.count", "group": "Visuals", "visibleIf": "p.background.effect == 'starfield'" },
+    { "key": "spin", "label": "Spin artwork", "type": "toggle", "bind": "artwork.spin", "group": "Visuals" }
+  ]
+}

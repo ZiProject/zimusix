@@ -158,3 +158,52 @@
   background: transparent;
   cursor: pointer;
 }
+
+/* Customize: groups, chips, palette, advanced editor (schema-driven) */
+.preset-group {
+  margin: 12px 0;
+  padding: 4px 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.preset-group legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.preset-setting[hidden] {
+  display: none;
+}
+.preset-setting.overridden {
+  box-shadow: -3px 0 0 var(--accent);
+  padding-left: 8px;
+}
+.preset-multi,
+.preset-palette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.preset-palette input[type="color"] {
+  width: 36px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.preset-advanced-wrap {
+  margin: 14px 0;
+}
+.preset-advanced-wrap > summary,
+.preset-adv-section > summary {
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 0;
+}
+.preset-adv-section {
+  margin: 4px 0 4px 10px;
+}

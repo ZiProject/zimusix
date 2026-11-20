@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "id": "dynamic-scenes",
   "name": "Dynamic Scenes",
   "version": "1.0.0",
@@ -7,6 +7,7 @@
   "description": "Five living backgrounds that dance to your music — a blossoming sakura branch, a rainy city night, fireworks over the skyline, glossy love hearts and a rain of music notes. Switch scene in Customize; the whole interface re-tints to match.",
   "tags": ["dynamic", "reactive", "sakura", "rain", "fireworks", "hearts", "notes", "glass"],
   "preview": "preview.svg",
+  "modules": "modules.json",
   "style": "style.css",
 
   "layout": {

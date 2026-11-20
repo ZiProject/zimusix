@@ -6,3 +6,8 @@
 .track-card:hover .track-art {
   box-shadow: 0 0 var(--preset-card-glow, 12px) color-mix(in srgb, var(--accent) 40%, transparent);
 }
+
+/* Values written by hooks.json */
+html[data-playing="yes"] .cover {
+  box-shadow: 0 0 calc(var(--preset-kick, 0) * 30px) var(--accent);
+}

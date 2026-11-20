@@ -1,0 +1,26 @@
+{
+  "extends": "core",
+  "pack": "signal-lab",
+  "doc": "Core schema + a custom `pulse` module + two extra visualizers and one extra background (implemented in draw.json).",
+  "sections": {
+    "pulse": {
+      "doc": "Signal Lab's own module: how strongly the interface reacts to the music.",
+      "params": {
+        "intensity": { "type": "number", "min": 0, "max": 1, "step": 0.05, "default": 0.8, "doc": "Glow / reaction strength", "emit": { "css": "--pulse-intensity" } },
+        "hueShift": { "type": "number", "min": 0, "max": 360, "step": 1, "default": 200, "doc": "Base hue of the generated colours", "emit": { "css": "--pulse-hue-shift" } },
+        "mode": { "type": "enum", "values": ["reactive", "calm"], "default": "reactive", "doc": "calm = static colours, no beat flashes", "emit": { "attr": "pulse-mode" } },
+        "tint": { "type": "boolean", "default": true, "doc": "Tint panels with the live hue", "emit": { "class": "tinted" } }
+      }
+    },
+    "visualizer": {
+      "params": {
+        "type": { "values": ["bars", "mirror", "wave", "circle", "dots", "none", "ember", "halo"] }
+      }
+    },
+    "background": {
+      "params": {
+        "effect": { "values": ["media", "aurora", "gradient", "solid", "particles", "glyphs", "hearts", "fireworks", "rain", "sakura", "starfield"] }
+      }
+    }
+  }
+}

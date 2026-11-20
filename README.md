@@ -81,13 +81,14 @@ src/
 │   ├─ sidebar.js  player.js  wiring.js  visualizer.js  bg-panel.js  shared.js
 │   ├─ mascot.js      mascot states (images in public/mascot/): loading, empty, error, no-results…
 │   └─ views/         search, library, queue, related, lyrics, discord
-├─ presets/           Preset Runtime: schema.js (modules + parameters + validation), loader.js, runtime.js,
+├─ presets/           Preset Runtime: schema.js (schema engine; the schema itself lives in each preset's modules.json), expr.js / logic.js / hooks.js (hooks), draw.js / programs.js (custom visualizers), loader.js, runtime.js,
 │                     store.js, css.js (style.css sanitizer), visualizers.js, bg-fx.js, bg-scenes.js (music-reactive scenes)
 └─ styles/            index.css imports base, layout, search, library, player,
                       toast, background, wiring, lyrics, related, effects,
                       preset-layout, preset-modules, preset-gallery
 
-public/presets/<id>/  built-in presets (preset.json, preview.png, style.css…) + index.json
+public/presets/<id>/  built-in presets (preset.json, modules.json, hooks.json, draw.json, style.css, preview…) + index.json
+public/schema/core.json  base schema pack
 docs/PRESETS.md       preset specification, module options, authoring guide
 docs/preset-template/ starter template for creating new presets
 ```

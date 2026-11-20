@@ -497,7 +497,6 @@ function createFireworks() {
   let sky = null;
   let water = null;
   let idle = 0.5;
-  let cooldown = 0;
   let glowHue = 40;
   let time = 0;
   const MAX = 2200;
@@ -648,15 +647,12 @@ function createFireworks() {
 
       // launches
       idle -= dt * (1 + a.energy * 1.8);
-      cooldown -= dt;
       if (idle <= 0) {
         launch(o, rand(0.35, 0.8));
         idle = rand(1.1, 2.6);
       }
-      if (a.hit && cooldown <= 0) {
+      if (a.hit) {
         launch(o, clamp(0.45 + a.strength * 0.5, 0.4, 1));
-        if (a.strength > 0.9) launch(o, 0.8);
-        cooldown = 0.4;
       }
 
       ctx.globalCompositeOperation = "lighter";
@@ -791,7 +787,6 @@ function createRain() {
   let acc = [0, 0, 0];
   let sky = null;
   let time = 0;
-  let lastBolt = -10;
   let flash = 0;
   const LAYERS = [
     { speed: 520, len: 11, alpha: 0.2, width: 0.8, land: 0.1, rate: 260 },
@@ -855,9 +850,8 @@ function createRain() {
       ctx.fillStyle = fog;
       ctx.fillRect(0, HZ - h * 0.12, w, h * 0.18);
 
-      // lightning on the hardest hits
-      if (a.hit && a.strength > 0.9 && time - lastBolt > 2.4) {
-        lastBolt = time;
+      // lightning follows each detected beat, like the heartbeat rings
+      if (a.hit) {
         const x0 = rand(0.15, 0.85) * w;
         const main = makeBolt(x0, 0, x0 + rand(-0.12, 0.12) * w, HZ * 0.92, 0.09 * w);
         const bolt = { age: 0, max: 0.26, paths: [main] };

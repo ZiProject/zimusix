@@ -1,5 +1,5 @@
 import { h } from "../../lib/dom.js";
-import { cfg } from "../../presets/runtime.js";
+import { cfg, programFor } from "../../presets/runtime.js";
 import { app } from "../../state.js";
 import { mascotState } from "../mascot.js";
 import { setMarqueeText, trackCover, trackSubParts } from "../shared.js";
@@ -26,7 +26,7 @@ export function viewNowPlaying() {
 
   const wantsViz = visualizer.type !== "none" && visualizer.placement.includes("stage");
   // Circle visualizer wraps around artwork instead of rendering below.
-  const ring = wantsViz && visualizer.type === "circle" && artwork.style !== "none";
+  const ring = wantsViz && (visualizer.type === "circle" || Boolean(programFor("visualizers", visualizer.type)?.ring)) && artwork.style !== "none";
   if (ring) main.classList.add("has-ring");
 
   if (artwork.style !== "none")

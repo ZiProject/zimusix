@@ -15,7 +15,7 @@ const path = require("node:path");
 
 const MANIFEST_FILE = "preset.json";
 const ID_RE = /^[a-z0-9][a-z0-9_-]{1,47}$/;
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const LIMITS = {
   files: 200,
@@ -112,6 +112,32 @@ function readManifest(dir) {
   return manifest;
 }
 
+const COMPANION_BYTES = 256 * 1024;
+
+/** `modules`, `hooks`, `draw` name JSON files in the preset folder: they must exist, be small and parse. */
+function checkCompanions(src, manifest) {
+  for (const field of ["modules", "hooks", "draw"]) {
+    const rel = manifest[field];
+    if (rel === undefined) continue;
+    if (
+      typeof rel !== "string" ||
+      !rel.endsWith(".json") ||
+      path.isAbsolute(rel) ||
+      rel.split(/[\\/]/).includes("..")
+    )
+      throw new PresetError(`Field "${field}" must be a relative path to a .json file`, 422);
+    const file = path.join(src, rel);
+    if (!fs.existsSync(file)) throw new PresetError(`"${field}" file not found: ${rel}`, 422);
+    if (fs.statSync(file).size > COMPANION_BYTES)
+      throw new PresetError(`${rel} is too large (> ${COMPANION_BYTES / 1024} KB)`, 422);
+    try {
+      JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+    } catch (error) {
+      throw new PresetError(`${rel} has invalid JSON syntax: ${error.message}`, 422);
+    }
+  }
+}
+
 /** Traverse directory, check limits and file extensions. Returns list of files to copy. */
 function collectFiles(root) {
   const files = [];
@@ -178,6 +204,7 @@ function createPresetStore(dataDir) {
 
   function installOne(src) {
     const manifest = readManifest(src);
+    checkCompanions(src, manifest);
     const files = collectFiles(src);
     const id = manifest.id;
     const target = dirOf(id);

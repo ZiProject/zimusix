@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "id": "lyrics-focus",
   "name": "Lyrics Focus",
   "version": "1.1.2",
@@ -11,6 +11,7 @@
     "minimal"
   ],
   "preview": "preview.png",
+  "modules": "modules.json",
   "theme": {
     "colorScheme": "dark",
     "fontFamily": "Inter, ui-sans-serif, sans-serif",

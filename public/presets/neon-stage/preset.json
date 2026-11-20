@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "id": "neon-stage",
   "name": "Neon Stage",
   "version": "1.1.2",
@@ -11,6 +11,7 @@
     "visualizer"
   ],
   "preview": "preview.png",
+  "modules": "modules.json",
   "theme": {
     "colorScheme": "dark",
     "colors": {

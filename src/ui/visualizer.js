@@ -1,7 +1,8 @@
 import { audio } from "../features/audio.js";
 import { drawVisualizer } from "../presets/visualizers.js";
 import { reactive } from "../presets/reactive.js";
-import { cfg, onPresetChange } from "../presets/runtime.js";
+import { drawProgramViz } from "../presets/programs.js";
+import { cfg, onPresetChange, programFor } from "../presets/runtime.js";
 import { app, refs } from "../state.js";
 
 const REACT_BANDS = 32; // bands used to compute bass/energy (independent of display bars)
@@ -128,6 +129,7 @@ export function drawViz() {
   reactive.active = true;
   reactive.bass = bass;
   reactive.energy = energy;
+  reactive.bands = reactBands;
   setVar("--music-bass", bass.toFixed(3), 0.004);
   setVar("--music-energy", energy.toFixed(3), 0.004);
 
@@ -147,12 +149,16 @@ export function drawViz() {
   const list = targets(viz.placement);
   if (!list.length) return;
 
+  // Presets can provide their own visualizer (draw.json); it may ask for its own band count
+  const program = programFor("visualizers", viz.type);
+  const barCount = program?.bands || viz.bars;
+
   // Bar count defined by preset
   let bands = reactBands;
-  if (viz.bars !== REACT_BANDS) {
-    if (drawBuffer.length !== viz.bars) drawBuffer = new Float32Array(viz.bars);
+  if (barCount !== REACT_BANDS) {
+    if (drawBuffer.length !== barCount) drawBuffer = new Float32Array(barCount);
     bands = audio.getFrequencyBands?.({
-      bands: viz.bars,
+      bands: barCount,
       minHz: 28,
       maxHz: 16000,
       outputBuffer: drawBuffer,
@@ -163,7 +169,7 @@ export function drawViz() {
     smoothBuffer = new Float32Array(bands.length);
     peakBuffer = new Float32Array(bands.length);
   }
-  const bar = viz.type === "bars" || viz.type === "mirror";
+  const bar = viz.type === "bars" || viz.type === "mirror" || Boolean(program);
   const k = viz.smoothing;
   for (let i = 0; i < bands.length; i++) {
     const cur = smoothBuffer[i];
@@ -196,22 +202,16 @@ export function drawViz() {
     const ctx = canvas.getContext("2d");
     if (fixed) {
       // player bar canvas has fixed dimensions (width/height attributes)
-      drawVisualizer(ctx, viz.type, shown, canvas.width, canvas.height, style);
+      if (program) drawProgramViz(ctx, program, shown, canvas.width, canvas.height, style);
+      else drawVisualizer(ctx, viz.type, shown, canvas.width, canvas.height, style);
       continue;
     }
     const fit = fitCanvas(canvas);
     if (!fit) continue;
     ctx.setTransform(fit.dpr, 0, 0, fit.dpr, 0, 0);
-    drawVisualizer(
-      ctx,
-      viz.type,
-      shown,
-      fit.w,
-      fit.h,
-      canvas.classList.contains("stage-viz-ring")
-        ? { ...style, ring: true }
-        : style,
-    );
+    const styled = canvas.classList.contains("stage-viz-ring") ? { ...style, ring: true } : style;
+    if (program) drawProgramViz(ctx, program, shown, fit.w, fit.h, styled);
+    else drawVisualizer(ctx, viz.type, shown, fit.w, fit.h, styled);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 }

@@ -11,6 +11,7 @@ import { watch } from "./features/playback.js";
 import { h } from "./lib/dom.js";
 import { setupTray } from "./features/window.js";
 import { toast } from "./lib/toast.js";
+import { startHooks } from "./presets/hooks.js";
 import { initPresets, onPresetChange } from "./presets/runtime.js";
 import { app, refs, root } from "./state.js";
 import { renderMain } from "./ui/main-view.js";
@@ -109,6 +110,7 @@ async function boot() {
   });
   watch();
   drawViz();
+  startHooks(); // after drawViz: its rAF callback runs after the visualizer's, so audio values are fresh
   syncAudio();
   setupDragDrop().catch((error) => console.warn("drag-drop:", error));
 

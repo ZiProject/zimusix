@@ -1,0 +1,719 @@
+{
+  "pack": "lyrics-focus",
+  "version": 2,
+  "doc": "Full schema of this preset (copied from the core pack). Edit freely: add sections/parameters, change ranges or enum values, add emit rules.",
+  "sections": {
+    "layout": {
+      "doc": "Overall layout of the web interface (sidebar, player bar, content width).",
+      "params": {
+        "shell": {
+          "type": "enum",
+          "values": [
+            "classic",
+            "stage",
+            "focus",
+            "split"
+          ],
+          "default": "classic",
+          "doc": "classic: list | stage: center stage | focus: lyrics focus | split: split stage + content",
+          "emit": {
+            "attr": "shell"
+          }
+        },
+        "sidebar": {
+          "type": "enum",
+          "values": [
+            "left",
+            "right",
+            "rail",
+            "hidden"
+          ],
+          "default": "left",
+          "doc": "Sidebar position: left, right, rail (icons only), or hidden",
+          "emit": {
+            "attr": "sidebar"
+          }
+        },
+        "player": {
+          "type": "enum",
+          "values": [
+            "bottom",
+            "floating",
+            "top",
+            "minimal"
+          ],
+          "default": "bottom",
+          "doc": "Player bar: bottom, floating, top, or minimal",
+          "emit": {
+            "attr": "player-pos"
+          }
+        },
+        "density": {
+          "type": "enum",
+          "values": [
+            "comfortable",
+            "compact"
+          ],
+          "default": "comfortable",
+          "doc": "Spacing density",
+          "emit": {
+            "attr": "density"
+          }
+        },
+        "defaultView": {
+          "type": "enum",
+          "values": [
+            "keep",
+            "search",
+            "library",
+            "queue",
+            "related",
+            "lyrics",
+            "nowplaying",
+            "presets",
+            "discord"
+          ],
+          "default": "keep",
+          "doc": "Default tab when preset is selected (\"keep\" = keep current tab)"
+        },
+        "contentWidth": {
+          "type": "number",
+          "min": 560,
+          "max": 1400,
+          "step": 1,
+          "default": 880,
+          "doc": "Maximum content width (px)",
+          "emit": {
+            "css": "--content-width",
+            "unit": "px"
+          }
+        },
+        "radius": {
+          "type": "number",
+          "min": 0,
+          "max": 28,
+          "step": 1,
+          "default": 12,
+          "doc": "Panel corner radius (px)",
+          "emit": {
+            "css": "--radius",
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "controls": {
+      "doc": "Appearance of buttons, toolbars, navigation, and panels.",
+      "params": {
+        "buttons": {
+          "type": "enum",
+          "values": [
+            "soft",
+            "pill",
+            "square",
+            "ghost",
+            "outline"
+          ],
+          "default": "soft",
+          "doc": "Button style: soft (default) | pill | square | ghost | outline",
+          "emit": {
+            "attr": "btn"
+          }
+        },
+        "playButton": {
+          "type": "enum",
+          "values": [
+            "circle",
+            "square",
+            "accent"
+          ],
+          "default": "circle",
+          "doc": "Play/Pause button: circle | square | accent",
+          "emit": {
+            "attr": "play-btn"
+          }
+        },
+        "nav": {
+          "type": "enum",
+          "values": [
+            "soft",
+            "pill",
+            "bar"
+          ],
+          "default": "soft",
+          "doc": "Sidebar navigation item: soft | pill | bar",
+          "emit": {
+            "attr": "nav"
+          }
+        },
+        "toolbar": {
+          "type": "enum",
+          "values": [
+            "docked",
+            "floating",
+            "transparent",
+            "autohide"
+          ],
+          "default": "docked",
+          "doc": "Top toolbar: docked | floating | transparent | autohide",
+          "emit": {
+            "attr": "toolbar"
+          }
+        },
+        "panels": {
+          "type": "enum",
+          "values": [
+            "solid",
+            "glass",
+            "flat"
+          ],
+          "default": "solid",
+          "doc": "Panel background: solid | glass | flat (transparent)",
+          "emit": {
+            "attr": "panels"
+          }
+        },
+        "iconSize": {
+          "type": "number",
+          "min": 14,
+          "max": 26,
+          "step": 1,
+          "default": 18,
+          "doc": "Button and navigation icon size (px)",
+          "emit": {
+            "css": "--icon-size",
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "artwork": {
+      "doc": "Artwork presentation (player bar + Now Playing stage).",
+      "params": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "square",
+            "rounded",
+            "circle",
+            "vinyl",
+            "polaroid",
+            "none"
+          ],
+          "default": "rounded",
+          "doc": "Artwork frame style",
+          "emit": {
+            "attr": "artwork"
+          }
+        },
+        "size": {
+          "type": "number",
+          "min": 32,
+          "max": 96,
+          "step": 1,
+          "default": 56,
+          "doc": "Artwork size in player bar (px)",
+          "emit": {
+            "css": "--art-size",
+            "unit": "px"
+          }
+        },
+        "stageSize": {
+          "type": "number",
+          "min": 160,
+          "max": 560,
+          "step": 1,
+          "default": 320,
+          "doc": "Artwork size in Now Playing stage (px)",
+          "emit": {
+            "css": "--stage-art",
+            "unit": "px"
+          }
+        },
+        "react": {
+          "type": "boolean",
+          "default": true,
+          "doc": "Artwork bounces with bass"
+        },
+        "reactAmount": {
+          "type": "number",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "default": 8,
+          "doc": "Bounce amount (%)"
+        },
+        "glow": {
+          "type": "boolean",
+          "default": true,
+          "doc": "Glow ring pulses with bass"
+        },
+        "spin": {
+          "type": "boolean",
+          "default": false,
+          "doc": "Spin while playing (best with circle/vinyl)",
+          "emit": {
+            "attr": "art-spin"
+          }
+        },
+        "spinSpeed": {
+          "type": "number",
+          "min": 4,
+          "max": 60,
+          "step": 1,
+          "default": 18,
+          "doc": "Seconds per full revolution",
+          "emit": {
+            "css": "--spin-speed",
+            "unit": "s"
+          }
+        },
+        "shadow": {
+          "type": "boolean",
+          "default": false,
+          "doc": "Fixed shadow beneath artwork",
+          "emit": {
+            "attr": "art-shadow"
+          }
+        }
+      }
+    },
+    "info": {
+      "doc": "Track info display style.",
+      "params": {
+        "style": {
+          "type": "enum",
+          "values": [
+            "inline",
+            "stacked",
+            "centered",
+            "huge"
+          ],
+          "default": "inline",
+          "doc": "inline: compact | stacked: large title | centered: center aligned | huge: extra large text",
+          "emit": {
+            "attr": "info"
+          }
+        },
+        "show": {
+          "type": "list",
+          "values": [
+            "title",
+            "artist",
+            "source",
+            "duration"
+          ],
+          "max": 4,
+          "default": [
+            "title",
+            "artist",
+            "source"
+          ]
+        },
+        "marquee": {
+          "type": "boolean",
+          "default": true,
+          "doc": "Automatically scroll long titles",
+          "emit": {
+            "attr": "info-marquee"
+          }
+        },
+        "titleScale": {
+          "type": "number",
+          "min": 0.7,
+          "max": 2,
+          "step": 0.05,
+          "default": 1,
+          "doc": "Title font size scale factor",
+          "emit": {
+            "css": "--info-title-scale"
+          }
+        }
+      }
+    },
+    "background": {
+      "doc": "Background visual effect.",
+      "params": {
+        "effect": {
+          "type": "enum",
+          "values": [
+            "media",
+            "aurora",
+            "gradient",
+            "solid",
+            "particles",
+            "glyphs",
+            "hearts",
+            "fireworks",
+            "rain",
+            "sakura"
+          ],
+          "default": "media",
+          "doc": "media: artwork/video | aurora | gradient | solid | particles | music-reactive scenes: glyphs (note rain) \u00b7 hearts \u00b7 fireworks \u00b7 rain \u00b7 sakura",
+          "emit": {
+            "attr": "bg-effect"
+          }
+        },
+        "media": {
+          "type": "enum",
+          "values": [
+            "auto",
+            "on",
+            "off"
+          ],
+          "default": "auto",
+          "doc": "Overlay cover art/video (auto: only when effect = media)"
+        },
+        "image": {
+          "type": "asset",
+          "accept": [
+            "png",
+            "jpg",
+            "jpeg",
+            "webp",
+            "gif",
+            "avif",
+            "svg"
+          ],
+          "default": "",
+          "doc": "Preset wallpaper image: a file inside this preset's folder (e.g. assets/wall.jpg)."
+        },
+        "video": {
+          "type": "asset",
+          "accept": [
+            "mp4",
+            "webm"
+          ],
+          "default": "",
+          "doc": "Preset wallpaper video (muted, looped, not synced to the music). Wins over `image`, which becomes its poster."
+        },
+        "wallpaper": {
+          "type": "enum",
+          "values": [
+            "fallback",
+            "always"
+          ],
+          "default": "fallback",
+          "doc": "fallback: show the preset wallpaper only when the playing track brings no cover/video of its own \u00b7 always: always show it (below the track media)."
+        },
+        "fit": {
+          "type": "enum",
+          "values": [
+            "cover",
+            "contain"
+          ],
+          "default": "cover",
+          "doc": "How the wallpaper fills the screen.",
+          "emit": {
+            "css": "--wall-fit"
+          }
+        },
+        "wallBlur": {
+          "type": "number",
+          "min": 0,
+          "max": 40,
+          "step": 1,
+          "default": 0,
+          "doc": "Blur of the wallpaper in px.",
+          "emit": {
+            "css": "--wall-blur",
+            "unit": "px"
+          }
+        },
+        "colors": {
+          "type": "colors",
+          "max": 4,
+          "default": [],
+          "doc": "Up to 4 hex colors; leave empty to use accent color (scenes: empty = the scene's own palette)"
+        },
+        "speed": {
+          "type": "number",
+          "min": 0.2,
+          "max": 3,
+          "step": 0.1,
+          "default": 1,
+          "doc": "Effect animation speed",
+          "emit": {
+            "css": "--fx-speed"
+          }
+        },
+        "intensity": {
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "default": 0.6,
+          "doc": "Effect intensity/opacity",
+          "emit": {
+            "css": "--fx-intensity"
+          }
+        },
+        "angle": {
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "default": 135,
+          "doc": "Gradient angle (degrees)",
+          "emit": {
+            "css": "--fx-angle",
+            "unit": "deg"
+          }
+        },
+        "count": {
+          "type": "number",
+          "min": 10,
+          "max": 200,
+          "step": 1,
+          "default": 70,
+          "doc": "Particle count (scenes: density of notes / hearts / sparks / drops / petals)"
+        },
+        "react": {
+          "type": "boolean",
+          "default": true,
+          "doc": "Background reacts to audio bass/energy"
+        },
+        "sensitivity": {
+          "type": "number",
+          "min": 0.2,
+          "max": 2,
+          "step": 0.05,
+          "default": 1,
+          "doc": "How strongly scene effects react to the music (multiplier)"
+        }
+      }
+    },
+    "visualizer": {
+      "doc": "Audio visualizer.",
+      "params": {
+        "type": {
+          "type": "enum",
+          "values": [
+            "bars",
+            "mirror",
+            "wave",
+            "circle",
+            "dots",
+            "none"
+          ],
+          "default": "bars",
+          "doc": "Visualizer draw style",
+          "emit": {
+            "attr": "viz"
+          }
+        },
+        "placement": {
+          "type": "list",
+          "values": [
+            "player",
+            "stage",
+            "background"
+          ],
+          "max": 3,
+          "default": [
+            "player"
+          ],
+          "doc": "Where to render (can specify multiple placements)"
+        },
+        "bars": {
+          "type": "number",
+          "min": 8,
+          "max": 96,
+          "step": 1,
+          "default": 32,
+          "doc": "Bar / point count"
+        },
+        "colorMode": {
+          "type": "enum",
+          "values": [
+            "gradient",
+            "accent",
+            "solid",
+            "spectrum"
+          ],
+          "default": "gradient",
+          "doc": "Coloring mode"
+        },
+        "color": {
+          "type": "color",
+          "default": "#a78bfa",
+          "doc": "Color when colorMode = solid"
+        },
+        "thickness": {
+          "type": "number",
+          "min": 1,
+          "max": 10,
+          "step": 1,
+          "default": 2,
+          "doc": "Bar thickness / spacing (px)"
+        },
+        "smoothing": {
+          "type": "number",
+          "min": 0,
+          "max": 0.95,
+          "step": 0.05,
+          "default": 0,
+          "doc": "Smoothing factor between frames"
+        },
+        "opacity": {
+          "type": "number",
+          "min": 0.1,
+          "max": 1,
+          "step": 0.05,
+          "default": 1,
+          "doc": "Visualizer opacity"
+        },
+        "height": {
+          "type": "number",
+          "min": 60,
+          "max": 420,
+          "step": 1,
+          "default": 120,
+          "doc": "Draw height in Now Playing stage (px)",
+          "emit": {
+            "css": "--viz-stage-h",
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "lyrics": {
+      "doc": "Lyrics display style.",
+      "params": {
+        "mode": {
+          "type": "enum",
+          "values": [
+            "list",
+            "karaoke",
+            "focus",
+            "compact"
+          ],
+          "default": "list",
+          "doc": "list: full lyrics | karaoke: active line large, fading | focus: nearby lines only | compact: compact",
+          "emit": {
+            "attr": "lyrics-mode"
+          }
+        },
+        "placement": {
+          "type": "enum",
+          "values": [
+            "view",
+            "stage"
+          ],
+          "default": "view",
+          "doc": "view: Lyrics tab | stage: embedded in Now Playing stage"
+        },
+        "align": {
+          "type": "enum",
+          "values": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "left",
+          "doc": "Text alignment",
+          "emit": {
+            "attr": "lyrics-align"
+          }
+        },
+        "showTime": {
+          "type": "boolean",
+          "default": true,
+          "doc": "Show timestamp per line",
+          "emit": {
+            "attr": "lyrics-time"
+          }
+        },
+        "size": {
+          "type": "number",
+          "min": 14,
+          "max": 48,
+          "step": 1,
+          "default": 22,
+          "doc": "Regular line font size (px)",
+          "emit": {
+            "css": "--lyrics-size",
+            "unit": "px"
+          }
+        },
+        "activeScale": {
+          "type": "number",
+          "min": 1,
+          "max": 1.8,
+          "step": 0.01,
+          "default": 1.27,
+          "doc": "Active line scale factor",
+          "emit": {
+            "css": "--lyrics-active-scale"
+          }
+        },
+        "glow": {
+          "type": "boolean",
+          "default": true,
+          "doc": "Active line glows with audio energy"
+        }
+      }
+    },
+    "theme": {
+      "doc": "Colors & fonts. `colors` accepts hex color codes.",
+      "params": {
+        "colorScheme": {
+          "type": "enum",
+          "values": [
+            "dark",
+            "light"
+          ],
+          "default": "dark",
+          "doc": "Base controls color scheme (scrollbar, inputs)",
+          "emit": {
+            "attr": "scheme",
+            "css": "color-scheme"
+          }
+        },
+        "fontFamily": {
+          "type": "font",
+          "default": "",
+          "doc": "CSS font family list (safe, no special characters)",
+          "emit": {
+            "css": "font-family"
+          }
+        },
+        "colors": {
+          "type": "colormap",
+          "default": {},
+          "doc": "Color tokens \u2192 CSS variables (hex values).",
+          "keys": {
+            "accent": "--accent",
+            "accent2": "--accent-2",
+            "bg": "--bg",
+            "panel": "--panel",
+            "panel2": "--panel-2",
+            "line": "--line",
+            "text": "--text",
+            "muted": "--muted",
+            "ok": "--ok",
+            "danger": "--danger"
+          },
+          "rgb": {
+            "bg": "--bg-rgb",
+            "panel": "--panel-rgb"
+          }
+        }
+      }
+    }
+  },
+  "emit": [
+    {
+      "css": "--art-react",
+      "expr": "p.artwork.react ? p.artwork.reactAmount / 100 : 0"
+    },
+    {
+      "css": "--art-glow",
+      "expr": "p.artwork.glow ? 1 : 0"
+    },
+    {
+      "attr": "viz-player",
+      "expr": "has(p.visualizer.placement, 'player') && p.visualizer.type != 'none' ? '1' : '0'"
+    }
+  ]
+}

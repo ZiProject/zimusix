@@ -1,0 +1,13 @@
+{
+  "doc": "Live logic. `signals` are derived values (s.<name>); `bind` writes them to <html>; `rules` change parameters. List all hooks: node scripts/presets.mjs hooks",
+  "signals": {
+    "kick": "smooth(audio.bass, 0.85, 0.12)"
+  },
+  "bind": [
+    { "css": "--preset-kick", "expr": "s.kick * p.mood.strength", "round": 2 },
+    { "attr": "playing", "expr": "player.playing ? 'yes' : 'no'" }
+  ],
+  "rules": [
+    { "when": "viewport.w < 900", "set": { "layout.sidebar": "rail" } }
+  ]
+}

@@ -10,7 +10,7 @@
     "web": "node scripts/presets.mjs index && vite",
     "web:build": "node scripts/presets.mjs index && vite build",
     "presets:check": "node scripts/presets.mjs check",
-    "test:presets": "node --test scripts/schema.test.mjs scripts/scenes.test.mjs sidecar/presets.test.js",
+    "test:presets": "node --test scripts/expr.test.mjs scripts/schema.test.mjs scripts/logic.test.mjs scripts/draw.test.mjs scripts/scenes.test.mjs sidecar/presets.test.js",
     "presets:index": "node scripts/presets.mjs index",
     "sidecar": "npm start --prefix sidecar",
     "test": "npm test --prefix sidecar",

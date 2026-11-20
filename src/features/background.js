@@ -5,7 +5,9 @@ import { clamp, h } from "../lib/dom.js";
 import { toast } from "../lib/toast.js";
 import { startParticles, stopParticles } from "../presets/bg-fx.js";
 import { isScene, startScene, stopScene } from "../presets/bg-scenes.js";
-import { cfg } from "../presets/runtime.js";
+import { reactive } from "../presets/reactive.js";
+import { startProgramBg, stopProgramBg } from "../presets/programs.js";
+import { assetUrl, cfg, programFor } from "../presets/runtime.js";
 import { app } from "../state.js";
 import { renderMain } from "../ui/main-view.js";
 import { currentPosition, renderPlayer } from "../ui/player.js";
@@ -113,9 +115,17 @@ function ensureBgLayer() {
     h("div", { class: "fx-blob fx-b3" }),
     h("canvas", { id: "bg-particles", class: "bg-canvas" }),
   );
+  // Preset wallpaper (files from the preset folder): lowest layer, below the track's own cover/video.
+  const wallImg = h("img", { id: "bg-wall-img", class: "bg-wall", alt: "" });
+  const wallVideo = h("video", { id: "bg-wall-video", class: "bg-wall", loop: true, playsinline: true });
+  wallVideo.muted = true;
+  wallVideo.defaultMuted = true;
+  for (const el of [wallImg, wallVideo]) el.addEventListener("error", () => el.classList.remove("on"));
   layer = h(
     "div",
     { id: "bg-layer", class: "bg-layer" },
+    wallImg,
+    wallVideo,
     art,
     video,
     fx,
@@ -127,8 +137,45 @@ function ensureBgLayer() {
   return layer;
 }
 
+/**
+ * Preset wallpaper = `background.image` / `background.video` (assets in the preset folder).
+ * `wallpaper: "always"` keeps it visible; `"fallback"` shows it only while the playing track brings no
+ * cover / video of its own (nothing playing, no thumbnail, track media switched off by user or preset).
+ */
+export function applyWallpaper() {
+  ensureBgLayer();
+  const bg = cfg().background;
+  const img = document.getElementById("bg-wall-img");
+  const vid = document.getElementById("bg-wall-video");
+  const track = app.state?.currentTrack;
+  const trackMedia = Boolean(mediaOn() && track && ((app.bg.art && track.thumbnail) || app.videoBg));
+  const show = Boolean((bg.image || bg.video) && (bg.wallpaper === "always" || !trackMedia));
+  const set = (el, rel) => {
+    const url = rel ? assetUrl(rel) : "";
+    if ((el.dataset.src ?? "") === url) return;
+    el.dataset.src = url;
+    if (url) el.src = url;
+    else {
+      el.removeAttribute("src");
+      if (el === vid) el.load();
+    }
+  };
+
+  set(img, bg.video ? "" : bg.image);
+  img.classList.toggle("on", show && !bg.video && Boolean(bg.image));
+
+  set(vid, bg.video);
+  vid.poster = bg.video && bg.image ? assetUrl(bg.image) : "";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const playVideo = show && Boolean(bg.video);
+  vid.classList.toggle("on", playVideo);
+  if (playVideo && !reduce) vid.play().catch(() => {});
+  else vid.pause();
+}
+
 export function updateVideoBg() {
   const layer = ensureBgLayer();
+  applyWallpaper();
   const bgVideo = document.getElementById("bg-video");
   const bgArt = document.getElementById("bg-art");
   const track = app.state?.currentTrack;
@@ -261,6 +308,7 @@ function bgReactLoop() {
     punchSmooth *= 0.9;
   }
   const punch = punchSmooth < 0.01 ? 0 : Math.pow(punchSmooth, 1.5);
+  reactive.punch = punch;
   if (Math.abs(punch - punchShown) < 0.004) return;
   punchShown = punch;
   document.documentElement.style.setProperty("--music-punch", punch.toFixed(3));
@@ -270,6 +318,7 @@ requestAnimationFrame(bgReactLoop);
 /** Apply background effect of current preset (called on preset switch or settings change). */
 export function applyBackgroundEffect() {
   const layer = ensureBgLayer();
+  applyWallpaper();
   const bg = cfg().background;
   layer.dataset.effect = bg.effect;
   const css = getComputedStyle(document.documentElement);
@@ -282,7 +331,14 @@ export function applyBackgroundEffect() {
 
   // Both canvas effects share #bg-particles: only one of them runs at a time.
   const canvas = document.getElementById("bg-particles");
-  if (bg.effect === "particles") {
+  const program = programFor("backgrounds", bg.effect);
+  if (program) {
+    // Preset-provided effect (draw.json)
+    stopParticles();
+    stopScene();
+    startProgramBg(canvas, program, { count: bg.count, colors: palette });
+  } else if (bg.effect === "particles") {
+    stopProgramBg();
     stopScene();
     startParticles(canvas, {
       count: bg.count,
@@ -292,6 +348,7 @@ export function applyBackgroundEffect() {
       colors: palette,
     });
   } else if (isScene(bg.effect)) {
+    stopProgramBg();
     stopParticles();
     // `colors` stays raw here: empty means "use the scene's own palette"
     startScene(canvas, bg.effect, {
@@ -303,6 +360,7 @@ export function applyBackgroundEffect() {
       colors: bg.colors,
     });
   } else {
+    stopProgramBg();
     stopParticles();
     stopScene();
   }

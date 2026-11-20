@@ -1,10 +1,11 @@
 {
-  "schema": 1,
+  "schema": 2,
   "id": "classic",
   "name": "Classic",
   "version": "1.0.0",
   "author": "Zimusix",
   "description": "Default Zimusix interface: left sidebar, bottom player, blurred album art background.",
   "tags": ["default", "dark"],
-  "preview": "preview.png"
+  "preview": "preview.png",
+  "modules": "modules.json"
 }

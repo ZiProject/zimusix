@@ -3,14 +3,12 @@ import * as api from "../../api.js";
 import { h } from "../../lib/dom.js";
 import { icon } from "../../lib/icons.js";
 import { renderMain } from "../main-view.js";
-import { settingControl } from "../preset-settings.js";
+import { customizeBody } from "../preset-settings.js";
 import {
   activeEntry,
   activeKey,
   listEntries,
   presetsDir,
-  resetPresetSettings,
-  userValuesOf,
 } from "../../presets/runtime.js";
 
 /** Preview image; if missing, displays fallback colored box with preset initial. */
@@ -27,15 +25,24 @@ function previewBox(entry) {
   return box;
 }
 
-/** Summary chips of active modules in preset. */
-function moduleChips(manifest) {
+/** Summary chips of the preset (values come from whatever sections ITS schema defines). */
+function moduleChips(entry) {
+  const sec = entry.manifest.sections;
+  const pick = (label, section, key) => (sec[section]?.[key] !== undefined ? `${label}: ${sec[section][key]}` : null);
   const chips = [
-    `layout: ${manifest.layout.shell}`,
-    `artwork: ${manifest.artwork.style}`,
-    `bg: ${manifest.background.effect}`,
-    `viz: ${manifest.visualizer.type}`,
-    `lyrics: ${manifest.lyrics.mode}`,
-  ];
+    pick("layout", "layout", "shell"),
+    pick("artwork", "artwork", "style"),
+    pick("bg", "background", "effect"),
+    pick("viz", "visualizer", "type"),
+    pick("lyrics", "lyrics", "mode"),
+  ].filter(Boolean);
+  const core = new Set(["layout", "controls", "artwork", "info", "background", "visualizer", "lyrics", "theme"]);
+  const custom = Object.keys(sec).filter((name) => !core.has(name));
+  if (custom.length) chips.push(`+ ${custom.join(", ")}`);
+  const l = entry.logic;
+  if (l && (l.signals.length || l.binds.length || l.rules.length)) chips.push("⚡ hooks");
+  const d = entry.draw;
+  if (d && (Object.keys(d.visualizers).length || Object.keys(d.backgrounds).length)) chips.push("✦ draw");
   return h("div", { class: "preset-chips" }, chips.map((text) => h("span", { class: "preset-chip" }, text)));
 }
 
@@ -75,7 +82,7 @@ function presetCard(entry, active) {
       ),
       m.author ? h("p", { class: "muted small" }, `Author: ${m.author}`) : null,
       m.description ? h("p", { class: "preset-desc" }, m.description) : null,
-      moduleChips(m),
+      moduleChips(entry),
       notes.length
         ? h(
             "details",
@@ -100,18 +107,15 @@ function presetCard(entry, active) {
 
 function settingsPanel() {
   const entry = activeEntry();
-  const settings = entry?.manifest?.settings ?? [];
   const head = h("h3", null, `Customize: ${entry?.manifest?.name ?? "Classic"}`);
-  if (!settings.length)
-    return h("section", { class: "preset-settings" }, head, h("p", { class: "muted" }, "This preset has no configurable settings."));
-  const values = userValuesOf(entry.key);
+  const body = customizeBody(() => renderMain());
+  if (!body) return h("section", { class: "preset-settings" }, head, h("p", { class: "muted" }, "No preset is active."));
   return h(
     "section",
     { class: "preset-settings" },
     head,
-    h("p", { class: "muted small" }, "Configurable parameters exposed by preset author. Changes apply immediately and are saved per preset."),
-    h("div", { class: "preset-settings-grid" }, settings.map((s) => settingControl(s, values[s.key] ?? s.default))),
-    h("button", { class: "small", onclick: () => { resetPresetSettings(); renderMain(); } }, "Reset preset to defaults"),
+    h("p", { class: "muted small" }, "Parameters exposed by the preset author, plus an advanced editor for every parameter in its schema. Changes apply immediately and are saved per preset."),
+    ...body,
   );
 }
 

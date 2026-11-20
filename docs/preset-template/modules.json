@@ -1,0 +1,12 @@
+{
+  "extends": "core",
+  "doc": "Start from the core schema and add your own module. Delete \"extends\" and paste the output of `node scripts/presets.mjs eject <dir>` for a fully standalone schema.",
+  "sections": {
+    "mood": {
+      "doc": "Example custom module — rename it, add parameters, style them in style.css.",
+      "params": {
+        "strength": { "type": "number", "min": 0, "max": 1, "step": 0.05, "default": 0.6, "doc": "How strongly the UI reacts to the beat", "emit": { "css": "--mood-strength" } }
+      }
+    }
+  }
+}
