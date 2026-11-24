@@ -1,0 +1,51 @@
+name: Release Build and Attach Artifacts
+
+on:
+  release:
+    types: [created, edited]
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+    permissions:
+      contents: write  # needed to upload release assets
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies (ci)
+        run: npm ci
+
+      - name: Run setup script
+        run: npm run setup
+
+      - name: Build Tauri app
+        run: npm run build
+
+      # Collect artifacts produced by Tauri (msi, nsis, etc.)
+      - name: Gather build artifacts
+        id: gather
+        run: |
+          echo "::set-output name=files::$(
+            Get-ChildItem -Path "zimusix\\src-tauri\\target\\release\\bundle" -Recurse -Include *.exe,*.deb,*.AppImage,*.msi,*.nsis,*.zip,*.tar.gz |
+            ForEach-Object { $_.FullName } |
+            Sort-Object |
+            -join ';'
+          )"
+
+      - name: Upload assets to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.gather.outputs.files }}
+          tag_name: ${{ github.event.release.tag_name }}
+          name: ${{ github.event.release.name }}
+          draft: ${{ github.event.release.draft }}
+          prerelease: ${{ github.event.release.prerelease }}
