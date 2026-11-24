@@ -1,81 +1,93 @@
-name: Release Build and Attach Artifacts
+name: Release Build
 
 on:
   release:
-    types: [created, edited]
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-upload:
+  build-windows:
     runs-on: windows-latest
-    permissions:
-      contents: write # needed to upload release assets
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      # -------------------------------------------------
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # -------------------------------------------------
-      - name: Enable long paths (Git)
-        run: git config --system core.longpaths true
-
-      # -------------------------------------------------
-      - name: Install Rust toolchain (x86_64-pc-windows-msvc)
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-pc-windows-msvc
-          default: true
-
-      # -------------------------------------------------
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
 
-      # -------------------------------------------------
-      - name: Install root npm deps
-        run: npm ci
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      # -------------------------------------------------
-      - name: Install side‑car dependencies
-        # Use workspace variable to locate side‑car folder at repo root
-        working-directory: ${{ github.workspace }}/sidecar
-        run: npm ci
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
 
-      # -------------------------------------------------
-      - name: Run setup script
+      # npm install (gốc) + npm install --prefix sidecar
+      - name: Setup
         run: npm run setup
 
-      # -------------------------------------------------
-      - name: Clean previous build artifacts
-        run: cargo clean # works from repo root; removes stale Rust outputs
+      # beforeBuildCommand trong tauri.conf.json sẽ tự chạy `npm run bundle && npm run web:build`
+      #
+      # Hiện tại chỉ build file .exe để test: --no-bundle bỏ qua bước đóng gói
+      # (.msi, .nsis, .deb, .AppImage). Khi cần build đầy đủ, hãy comment dòng
+      # `--no-bundle` và bỏ comment dòng `npm run build` bên dưới.
+      - name: Build (tauri build)
+        run: npm run build -- --no-bundle
+        # run: npm run build
 
-      # -------------------------------------------------
-      - name: Build Tauri app
-        run: npm run build
-
-      # -------------------------------------------------
-      # Collect only .exe artifacts for a quick test build
-      - name: Gather build artifacts (only .exe)
-        id: gather
+      - name: Prepare release asset
+        id: asset
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          echo "::set-output name=files::$( 
-            Get-ChildItem -Path "zimusix\\src-tauri\\target\\release\\bundle" -Recurse -Include *.exe |
-            ForEach-Object { $_.FullName } |
-            Sort-Object -join ';'
-          )"
+          set -euo pipefail
+          EXE="src-tauri/target/release/zimusix.exe"
+          if [ ! -f "$EXE" ]; then
+            echo "::error::Không tìm thấy $EXE sau khi build"
+            ls -la src-tauri/target/release || true
+            exit 1
+          fi
+          NAME="Zimusix_${TAG:-dev}_x64.exe"
+          mkdir -p dist-release
+          cp "$EXE" "dist-release/$NAME"
+          echo "path=dist-release/$NAME" >> "$GITHUB_OUTPUT"
+          ls -la dist-release
 
-      # -------------------------------------------------
-      - name: Upload assets to Release
+      # --- Đính kèm vào Release (chỉ khi chạy từ sự kiện release) ---
+      # Các bản đóng gói khác đang tắt. Khi cần, dùng `npm run build` (không --no-bundle)
+      # và thêm vào danh sách `files` bên dưới:
+      #   src-tauri/target/release/bundle/msi/*.msi
+      #   src-tauri/target/release/bundle/nsis/*.exe
+      #   src-tauri/target/release/bundle/deb/*.deb
+      #   src-tauri/target/release/bundle/appimage/*.AppImage
+      - name: Upload .exe to Release
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.gather.outputs.files }}
           tag_name: ${{ github.event.release.tag_name }}
-          name: ${{ github.event.release.name }}
-          draft: ${{ github.event.release.draft }}
-          prerelease: ${{ github.event.release.prerelease }}
+          files: |
+            ${{ steps.asset.outputs.path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Chạy tay: chỉ lưu vào Artifacts để kiểm tra ---
+      - name: Upload .exe as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zimusix-windows-exe
+          path: ${{ steps.asset.outputs.path }}
+          if-no-files-found: error
