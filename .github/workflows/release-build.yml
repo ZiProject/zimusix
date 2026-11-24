@@ -30,15 +30,15 @@ jobs:
       - name: Build Tauri app
         run: npm run build
 
-      # Collect artifacts produced by Tauri (msi, nsis, etc.)
-      - name: Gather build artifacts
+      # Collect only .exe artifacts for quick test builds (other formats commented out)
+      - name: Gather build artifacts (only .exe)
         id: gather
         run: |
+          # Only .exe files
           echo "::set-output name=files::$(
-            Get-ChildItem -Path "zimusix\\src-tauri\\target\\release\\bundle" -Recurse -Include *.exe,*.deb,*.AppImage,*.msi,*.nsis,*.zip,*.tar.gz |
+            Get-ChildItem -Path "zimusix\\src-tauri\\target\\release\\bundle" -Recurse -Include *.exe |
             ForEach-Object { $_.FullName } |
-            Sort-Object |
-            -join ';'
+            Sort-Object -join ';'
           )"
 
       - name: Upload assets to Release
