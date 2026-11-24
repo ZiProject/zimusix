@@ -43,7 +43,9 @@ jobs:
 
       # -------------------------------------------------
       - name: Install side‑car dependencies
-        working-directory: src-tauri/resources/sidecar
+        # Use explicit Windows path and cmd shell to avoid PowerShell path parsing issues
+        working-directory: ${{ github.workspace }}\\src-tauri\\resources\\sidecar
+        shell: cmd
         run: npm ci
 
       # -------------------------------------------------
