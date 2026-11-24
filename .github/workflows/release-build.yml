@@ -1,12 +1,15 @@
 name: Release Build
 
+# Chạy khi một Release được tạo trên GitHub.
+# Có thể chạy tay (Actions → Run workflow) để thử build mà không cần tạo Release:
+# khi đó file .exe chỉ được đưa vào "Artifacts" của lần chạy, không đính kèm vào Release.
 on:
   release:
     types: [created]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write # cần để đính kèm file vào Release
 
 jobs:
   build-windows:
@@ -23,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22 # app yêu cầu Node >= 20.3; node.exe này cũng được đóng gói vào resources
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -39,14 +42,42 @@ jobs:
       - name: Setup
         run: npm run setup
 
-      # beforeBuildCommand trong tauri.conf.json sẽ tự chạy `npm run bundle && npm run web:build`
-      #
+      # Chuẩn bị resources (sidecar + node_modules + node.exe + ffmpeg) = `npm run bundle`.
+      # Tách riêng khỏi beforeBuildCommand để còn dọn symlink/junction trước khi Tauri quét
+      # `resources/**/*` (npm ci trên Windows có thể tạo node_modules/zimusix trỏ ngược về
+      # thư mục gốc repo → vòng lặp vô hạn, lỗi "resource path ... doesn't exist").
+      - name: Bundle sidecar resources
+        run: npm run bundle
+
+      - name: Remove symlinks/junctions from resources
+        run: |
+          node -e '
+            const fs = require("fs"), path = require("path");
+            let n = 0;
+            const walk = (dir) => {
+              for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+                const p = path.join(dir, e.name);
+                if (fs.lstatSync(p).isSymbolicLink()) {
+                  console.log("removing link: " + p + " -> " + fs.readlinkSync(p));
+                  try { fs.unlinkSync(p); } catch { fs.rmdirSync(p); }
+                  n++;
+                } else if (e.isDirectory()) walk(p);
+              }
+            };
+            walk("src-tauri/resources");
+            console.log("removed " + n + " link(s)");
+          '
+
+      # `npm run bundle` đã chạy ở trên nên ghi đè beforeBuildCommand chỉ còn build frontend.
+      - name: Write CI Tauri config
+        run: echo '{"build":{"beforeBuildCommand":"npm run web:build"}}' > src-tauri/tauri.ci.conf.json
+
       # Hiện tại chỉ build file .exe để test: --no-bundle bỏ qua bước đóng gói
       # (.msi, .nsis, .deb, .AppImage). Khi cần build đầy đủ, hãy comment dòng
-      # `--no-bundle` và bỏ comment dòng `npm run build` bên dưới.
+      # `--no-bundle` và bỏ comment dòng `npm run build ...` bên dưới.
       - name: Build (tauri build)
-        run: npm run build -- --no-bundle
-        # run: npm run build
+        run: npm run build -- --no-bundle --config src-tauri/tauri.ci.conf.json
+        # run: npm run build -- --config src-tauri/tauri.ci.conf.json
 
       - name: Prepare release asset
         id: asset
